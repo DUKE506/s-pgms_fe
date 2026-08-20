@@ -29,7 +29,7 @@
 - URL 세그먼트는 영어(kebab-case), 화면에 보이는 라벨은 한글 유지. 경호건은 `security-case`로 표기
 - 모달로 처리하는 화면(담당자 배정, 게스트 발급, 근무자 등록)은 별도 라우트를 주지 않고 목록 페이지 내 UI 상태로 처리
 - 아직 실제 화면이 없는 라우트는 `ScreenPlaceholder`(`src/shared/components/ScreenPlaceholder.tsx`, 라벨 + 목업 anchor id 표시)로 채워져 있으며 roadmap Phase 1-4에서 화면이 만들어질 때마다 하나씩 교체됨
-- 토스트 알림: `useToastStore`(`src/shared/hooks/useToastStore.ts`) + `ToastViewport`(`src/shared/components/ToastViewport.tsx`, `App.tsx`에 전역 마운트). 기능만 구현되어 있고 스타일은 Phase 0 "공용 UI 최소 세트" 작업에서 입힘
+- 토스트 알림: `useToastStore`(`src/shared/hooks/useToastStore.ts`) + `ToastViewport`(`src/shared/components/ToastViewport.tsx`, `App.tsx`에 전역 마운트)
 - `usePermission(allow)` 훅(`src/shared/hooks/usePermission.ts`): `ProtectedRoute`와 같은 role 체크 로직을 재사용 — 화면 내 버튼/영역 단위 조건부 렌더링에 사용 예정
 
 ### 경찰 (`/`)
@@ -37,7 +37,7 @@
 | 경로                     | 화면                            | 비고                                    |
 | ------------------------ | ------------------------------- | ---------------------------------------- |
 | `/`                      | 로그인                          | 비인증 시                                |
-| `/dashboard`             | 1, 2 (본청/지역청 대시보드)     | role별 scope만 다름, 같은 라우트 공유. 본청/지역청 전용 |
+| `/dashboard`             | 1, 2 (현황 대시보드)            | role별 scope만 다름, 같은 라우트 공유. 본청/지역청/경찰서 (게스트 제외) |
 | `/history`               | 1h, 2h, 8 (이력 조회 목록)      | 본청/지역청/경찰서 공통, role별 scope만 다름 |
 | `/history/:id`           | 1h/2h/8h (이력 상세)            | 본청/지역청/경찰서 공통                  |
 | `/security-cases`        | 3 (경호목록)                    | 경찰서/게스트                            |
@@ -67,8 +67,17 @@
   - neutral(회색) 팔레트가 Tailwind 기본 `slate`와 정확히 일치해 커스텀 팔레트 없이 그대로 사용 (`--background`=slate-100, `--foreground`=slate-900 등)
   - 경호건 상태 배지 6색(`docs/project-overview.md` "상태 정의" 표)을 `--color-status-*` 토큰으로 노출 (`bg-status-assigned` 등으로 사용). 6개 중 접수/경호완료/종결/취소 4개는 Tailwind 기본 gray-500/blue-600/slate-700/red-600과 동일하지만, 상태뱃지 컴포넌트가 이 6개 토큰만 참조하면 되도록 하나의 semantic 세트로 통일. 배정(`#F0B20A`)/경호중(`#15AB59`) 2개만 실제 커스텀 값
   - radius는 shadcn 기본값(`--radius: 0.625rem`)이 목업 실측치(카드/인풋 10~12px)와 근접해 그대로 사용
-  - 사이드바 전용 토큰(`--sidebar-*`)은 목업의 다크 slate-900 사이드바를 기준으로 잡았으나, 아직 실제 사이드바 컴포넌트를 만들기 전이라 공용 UI 세트 작업에서 조정될 수 있음
+  - 사이드바 전용 토큰(`--sidebar-*`)은 목업의 다크 slate-900 사이드바를 기준으로 잡았고, 아래 `Sidebar` 컴포넌트로 실제 검증함
   - 다크모드(`.dark` 블록)는 제품 요구사항이 아니라 shadcn 기본값(grayscale) 그대로 둠 — status 6색만 라이트와 동일하게 고정
+
+### 공용 UI 세트
+
+- shadcn 컴포넌트: `Button`, `Card`, `Table`, `Dialog`, `Input`, `Label` (`src/components/ui/`, 필요할 때마다 `npx shadcn add <component>`로 추가). `Button`의 `outline` variant는 기본값(`bg-background`)이 페이지 배경과 같은 색이라 `bg-card`(흰색)로 수정해둠 — shadcn CLI로 다른 컴포넌트를 다시 추가하면서 `button.tsx`가 덮어써지면 이 수정도 같이 사라지니 재적용 필요
+- `StatusBadge`(`src/shared/components/StatusBadge.tsx`): 경호건 상태 6개 → `--color-status-*` 토큰 매핑
+- `Sidebar`(`src/shared/components/Sidebar.tsx`): 도메인 무관 rail 프리미티브. `xl`(1280px) 이상에서 좌측 고정 76px 세로 rail, 그 미만은 전부 모바일 취급해 하단 고정 플로팅 pill 아이콘 바로 반응형 전환 (목업이 데스크톱 1920px/모바일 390px 두 크기만 제공하고 중간 태블릿 크기가 없어서, 그 사이 전부를 모바일 레이아웃으로 처리하기로 함). nav 항목 목록(`items`)은 도메인이 주입
+- `PoliceAppShell`(`src/features/police/layout/PoliceAppShell.tsx`), `CompanyAppShell`(`src/features/company/layout/CompanyAppShell.tsx`): `Sidebar` + 콘텐츠 영역을 조합하는 도메인별 레이아웃. `routes.tsx`의 모든 경찰/본사 화면 라우트가 `ProtectedRoute` 안에서 이 셸로 감싸짐 (로그인 화면 2개는 셸 없음). 경찰 sidebar 항목은 role별로 다름 — 본청/지역청은 `현황`+`이력` 2개, 경찰서는 `현황`+`경호목록`+`이력`+`게스트` 4개, 게스트는 `경호목록` 1개만. 본사는 role 무관 `대시보드`+`경호관리`+`근무자`+`이력` 4개 고정. 로그아웃 버튼도 여기 포함 (`useAuthStore.getState().logout()` + 진영별 로그인으로 이동)
+- 로그인 화면 2개(`PoliceLoginPage`, `CompanyLoginPage`)는 `Card`+`Input`+`Label`+`Button`으로 재스타일링. `CardTitle`은 시맨틱 heading이 아닌 `div`라 접근성/테스트를 위해 쓰지 않고, 같은 스타일 클래스를 적용한 실제 `<h1>`을 직접 사용
+- 로고 배지 텍스트("PGMS")는 목업에서 화면마다 다르게 표기된 것(회사는 "SL", 본청은 "본청" 등)을 통일한 것 — 실제 요구사항이 확정되면 변경
 
 ## 폴더 구조
 
