@@ -1,111 +1,117 @@
 ---
 name: run-s-pgms
-description: Build, run, and drive the s-pgms web app (Vite + React) for verification — launch the dev server, log in as a 경찰/본사 test account, click through screens, take screenshots, check console errors. Use when asked to run, start, or screenshot s-pgms, or to confirm a change works in the real app (not just tests).
+description: s-pgms 웹앱(Vite + React)을 빌드/실행/구동해서 검증한다 — dev server를 띄우고, 경찰/본사 테스트 계정으로 로그인하고, 화면을 클릭해보고, 스크린샷을 찍고, 콘솔 에러를 확인한다. s-pgms를 실행/시작/스크린샷하거나, 변경사항이 실제 앱에서 (테스트만이 아니라) 동작하는지 확인해달라는 요청에 사용한다.
 ---
 
-s-pgms is a Vite + React + TypeScript SPA (경찰/본사 배치·관리 시스템, still
-early — see `../../../docs/project-overview.md`). For agent/automated use,
-drive it via the Playwright REPL driver at `driver.mjs` in this skill
-directory. All paths below are relative to the repo root (`s-pgms/`).
+s-pgms는 Vite + React + TypeScript SPA다 (경찰/본사 배치·관리 시스템, 아직
+초기 단계 — `../../../docs/project-overview.md` 참고). 에이전트/자동화
+용도로는 이 스킬 디렉터리의 Playwright REPL 드라이버(`driver.mjs`)로
+구동한다. 아래 경로는 모두 저장소 루트(`s-pgms/`) 기준 상대 경로다.
 
-## Prerequisites
+## 사전 준비
 
 ```bash
 npm install
-npx playwright install chromium   # ~300MB, one-time; cached outside node_modules
+npx playwright install chromium   # 약 300MB, 최초 1회만; node_modules 밖에 캐시됨
 ```
 
-## Run (agent path)
+## 실행 (에이전트 경로)
 
-Pipe commands into the driver over stdin — no tmux needed, it processes
-one line at a time and prints a result before the next:
+드라이버 stdin에 커맨드를 파이프로 흘려보낸다 — tmux 불필요, 한 줄씩
+순차 처리하고 다음 줄로 넘어가기 전에 결과를 출력한다:
 
 ```bash
 node .claude/skills/run-s-pgms/driver.mjs <<'EOF'
 start-server
 launch
 login-police gangnam password123
-wait text=경찰 로그인 성공
-ss 01-police-dashboard
+wait text=경호목록
+ss 01-police-security-cases
 storage
 console
 quit
 EOF
 ```
 
-Screenshots land in `.claude/skills/run-s-pgms/shots/` (override with
-`SCREENSHOT_DIR`). The dev server runs on a fixed port (`5199`, override
-with `PORT`) so it won't collide with a manually-run `npm run dev`.
+스크린샷은 `.claude/skills/run-s-pgms/shots/`에 저장된다 (`SCREENSHOT_DIR`로
+재정의 가능). dev server는 고정 포트(`5199`, `PORT`로 재정의 가능)에서 떠서
+수동으로 띄운 `npm run dev`와 충돌하지 않는다.
 
-### Commands
+### 커맨드
 
-| command | what it does |
+| 커맨드 | 하는 일 |
 |---|---|
-| `start-server` | launch `npm run dev` on the driver's port, wait until it responds |
-| `stop-server` | kill whatever is listening on the driver's port |
-| `launch` | start the server if needed, then launch headless Chromium |
-| `nav <path>` | go to `http://localhost:<port><path>` |
-| `login-police <id> <password>` | go to `/`, fill the 경찰 로그인 form, submit |
-| `login-company <id> <password>` | go to `/admin`, fill the 본사 로그인 form, submit |
-| `fill <selector> <text...>` | fill an input |
-| `click <selector>` | click via CSS selector |
-| `click-text <text>` | click the element containing this text |
-| `wait <selector-or-text=...>` | wait up to 10s for a selector (Playwright text= locators work) |
-| `ss [name]` | screenshot → `shots/<name>.png` |
-| `storage [key]` | print a `localStorage` value (default key: `auth-storage`) |
-| `text [selector]` | print `innerText` of an element (default: whole page) |
-| `eval <js>` | evaluate an expression in the page, print JSON |
-| `console` | print collected `console.error`/`pageerror` messages since `launch` |
-| `quit` | close the browser and stop the server |
+| `start-server` | 드라이버 포트에서 `npm run dev` 실행, 응답할 때까지 대기 |
+| `stop-server` | 드라이버 포트에서 리스닝 중인 프로세스를 kill |
+| `launch` | 필요하면 서버부터 띄운 뒤, headless Chromium 실행 |
+| `nav <path>` | `http://localhost:<port><path>`로 이동 |
+| `login-police <id> <password>` | `/`로 이동, 경찰 로그인 폼 채우고 제출 |
+| `login-company <id> <password>` | `/admin`으로 이동, 본사 로그인 폼 채우고 제출 |
+| `fill <selector> <text...>` | input 채우기 |
+| `click <selector>` | CSS 셀렉터로 클릭 |
+| `click-text <text>` | 해당 텍스트를 포함한 요소 클릭 |
+| `wait <selector-or-text=...>` | 셀렉터가 나타날 때까지 최대 10초 대기 (Playwright `text=` 로케이터 사용 가능) |
+| `ss [name]` | 스크린샷 → `shots/<name>.png` |
+| `storage [key]` | `localStorage` 값 출력 (기본 key: `auth-storage`) |
+| `text [selector]` | 요소의 `innerText` 출력 (기본: 페이지 전체) |
+| `eval <js>` | 페이지에서 표현식 평가, JSON으로 출력 |
+| `console` | `launch` 이후 수집된 `console.error`/`pageerror` 메시지 출력 |
+| `quit` | 브라우저 닫고 서버 정지 |
 
-Test accounts live in `src/mocks/data/accounts.ts` (all passwords
-`password123`): police — `hq`/`gyeonggi`/`gangnam`/`gangnamguest1`;
-company — `sysadmin`/`opadmin`/`hqmanager1`.
+테스트 계정은 `src/mocks/data/accounts.ts`에 있다 (비밀번호는 전부
+`password123`): 경찰 — `hq`/`gyeonggi`/`gangnam`/`gangnamguest1`;
+본사 — `sysadmin`/`opadmin`/`hqmanager1`.
 
-## Run (human path)
-
-```bash
-npm run dev   # opens on the next free port starting at 5173
-```
-
-## Test suite
+## 실행 (사람 경로)
 
 ```bash
-npm run test   # vitest run — unit/integration tests, MSW-backed
+npm run dev   # 5173부터 시작해서 비어있는 다음 포트에서 열림
 ```
 
-## Gotchas
+## 테스트 스위트
 
-- **Commands must be queued, not fired concurrently.** A heredoc piped
-  into readline emits every `line` event back-to-back without waiting
-  for the previous async command handler to finish — without the
-  `Promise` queue in `driver.mjs`, `launch` and the command right after
-  it race, and everything after `launch` fails with `ERROR: launch
-  first` because `page` isn't set yet. If you extend the driver, keep
-  routing commands through that queue.
-- **Use a fixed `--strictPort`.** Plain `vite` picks the next free port
-  silently, so a leftover dev server from an earlier session (there was
-  one squatting on 5173 during development) makes the driver connect to
-  the wrong instance. The driver always launches on `PORT` (default
-  `5199`) with `--strictPort` and kills anything already there first.
-- **Windows-only `killPort`.** `driver.mjs`'s port-killing uses
-  `netstat`/`taskkill` (this project's dev machine is Windows). Swap in
-  `lsof -ti:$PORT | xargs kill` if running this on Linux/macOS.
-- **The two login pages have no design mock.** `docs/PGMS_UI_mock.dc.html`
-  covers screens 1–12 (post-login); the login screens were built
-  functionality-first, so don't expect them to match a visual spec —
-  compare against `src/features/auth/pages/*LoginPage.tsx` instead.
+```bash
+npm run test   # vitest run — MSW 기반 unit/integration 테스트
+```
 
-## Troubleshooting
+## 주의사항 (Gotchas)
 
-- **`ERROR: launch first` on every command:** the queue fix above wasn't
-  applied, or `launch` itself errored — check the line right after
-  `launch` printed `browser launched`.
-- **`TIMEOUT waiting for server`:** something else is already bound to
-  port `5199` and wasn't killed cleanly — run `stop-server`, or set
-  `PORT` to a free one.
-- **`wait` times out on a login success stub:** `/dashboard` and
-  `/admin/dashboard` are temporary placeholders
-  (`src/app/DashboardStub.tsx`) until the router+guard work lands; the
-  text to wait for is literally `"경찰 로그인 성공"` / `"본사 로그인 성공"`,
-  not a real dashboard heading.
+- **커맨드는 동시가 아니라 큐로 순차 실행되어야 한다.** heredoc으로 stdin에
+  흘려보내면 readline이 이전 async 커맨드 핸들러가 끝나길 기다리지 않고
+  모든 `line` 이벤트를 연달아 발생시킨다 — `driver.mjs`의 `Promise` 큐가
+  없으면 `launch`와 바로 다음 커맨드가 경합하고, `page`가 아직 세팅되기
+  전이라 `launch` 이후 모든 커맨드가 `ERROR: launch first`로 실패한다.
+  드라이버를 확장할 때도 이 큐를 계속 거치도록 유지할 것.
+- **`--strictPort`로 포트를 고정한다.** 그냥 `vite`는 비어있는 다음 포트를
+  조용히 골라버려서, 이전 세션에서 남은 dev server(개발 중 5173을 이미
+  점유한 인스턴스가 있었음)가 있으면 드라이버가 엉뚱한 인스턴스에 붙게 된다.
+  드라이버는 항상 `PORT`(기본 `5199`)에서 `--strictPort`로 띄우고, 이미
+  떠있는 게 있으면 먼저 kill한다.
+- **`killPort`는 Windows 전용이다.** `driver.mjs`의 포트 kill 로직은
+  `netstat`/`taskkill`을 쓴다 (이 프로젝트의 개발 환경이 Windows). Linux/macOS
+  에서 돌린다면 `lsof -ti:$PORT | xargs kill`로 바꿔야 한다.
+- **로그인 화면 2개는 디자인 목업이 없다.** `docs/PGMS_UI_mock.dc.html`은
+  화면 1–12(로그인 이후)만 다루고, 로그인 화면은 기능 위주로 만들어졌다 —
+  비주얼 스펙과 비교하지 말고 `src/features/auth/pages/*LoginPage.tsx` 자체를
+  기준으로 볼 것.
+- **로그인 성공 후 이동 경로는 role마다 다르다.** `getDefaultRouteForRole()`
+  (`src/features/auth/lib/defaultRoute.ts`)이 유일한 매핑 소스: 본청/지역청
+  → `/dashboard`, 경찰서/게스트 → `/security-cases`, 본사 3개 role →
+  `/admin/dashboard`. `login-police`로 어떤 계정을 쓰느냐에 따라 `wait`으로
+  기다려야 할 화면 라벨이 달라진다.
+
+## 트러블슈팅
+
+- **모든 커맨드에서 `ERROR: launch first`가 뜬다:** 위 큐 관련 수정이
+  빠졌거나 `launch` 자체가 에러났을 수 있다 — `launch` 바로 다음 줄에
+  `browser launched`가 찍혔는지 확인.
+- **`TIMEOUT waiting for server`:** 포트 `5199`에 이미 다른 게 떠 있는데
+  깔끔하게 kill되지 않은 경우 — `stop-server`를 실행하거나 `PORT`를 비어있는
+  값으로 지정.
+- **`wait`이 로그인 성공 화면에서 타임아웃난다:** `/dashboard`,
+  `/security-cases`, `/admin/dashboard` 등은 아직 `ScreenPlaceholder`
+  (`src/shared/components/ScreenPlaceholder.tsx`) 상태다 — roadmap
+  Phase 1-4에서 화면이 만들어질 때마다 교체된다. `wait`에 넘길 텍스트는
+  로그인한 계정의 role이 실제로 도착하는 화면의 라벨(예: `경호목록`,
+  `본청/지역청 대시보드`)이어야 하며, role별 목적지는
+  `getDefaultRouteForRole()`을 따른다.

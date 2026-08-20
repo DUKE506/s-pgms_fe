@@ -1,9 +1,9 @@
-// REPL driver for s-pgms (Vite + React web app).
-// Launches the Vite dev server, drives it with Playwright Chromium
-// (headless), and exposes commands over stdin for an agent to pipe in.
+// s-pgms(Vite + React 웹앱)용 REPL 드라이버.
+// Vite dev server를 띄우고 Playwright Chromium(headless)으로 구동하며,
+// 에이전트가 파이프로 흘려보낼 수 있도록 stdin으로 커맨드를 받는다.
 //
-// Usage: node .claude/skills/run-s-pgms/driver.mjs
-// Then type commands, one per line (see SKILL.md for the list).
+// 사용법: node .claude/skills/run-s-pgms/driver.mjs
+// 커맨드를 한 줄씩 입력 (전체 목록은 SKILL.md 참고)
 
 import { chromium } from 'playwright'
 import { spawn, execSync } from 'node:child_process'
@@ -40,8 +40,8 @@ async function waitForPort(port, timeoutMs) {
   return false
 }
 
-// Windows-only (this project's dev machine). Adjust for other platforms
-// if this driver is ever run elsewhere.
+// Windows 전용 구현 (이 프로젝트의 개발 환경 기준). 다른 OS에서 이 드라이버를
+// 돌린다면 여기를 그 플랫폼에 맞게 바꿔야 함.
 function killPort(port) {
   try {
     const out = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, { encoding: 'utf8' })
@@ -50,7 +50,7 @@ function killPort(port) {
       if (pid) execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' })
     }
   } catch {
-    // nothing listening on that port — fine
+    // 해당 포트에 아무것도 떠 있지 않으면 정상 — 그냥 넘어감
   }
 }
 
@@ -125,8 +125,8 @@ const COMMANDS = {
     catch { console.log('TIMEOUT:', sel) }
   },
 
-  // App-specific helper: log in as a police-mode account (경찰서/본청/지역청/게스트).
-  // Fixture accounts live in src/mocks/data/accounts.ts.
+  // 앱 전용 헬퍼: 경찰 모드 계정(경찰서/본청/지역청/게스트)으로 로그인.
+  // fixture 계정은 src/mocks/data/accounts.ts에 있음.
   async 'login-police'(args) {
     if (!page) return console.log('ERROR: launch first')
     const [id, password] = args.split(' ')
@@ -138,7 +138,7 @@ const COMMANDS = {
     console.log('submitted police login for', id)
   },
 
-  // App-specific helper: log in as a company-mode account (시스템관리자/운영관리자/본부관리자).
+  // 앱 전용 헬퍼: 본사 모드 계정(시스템관리자/운영관리자/본부관리자)으로 로그인.
   async 'login-company'(args) {
     if (!page) return console.log('ERROR: launch first')
     const [id, password] = args.split(' ')
@@ -184,10 +184,10 @@ const COMMANDS = {
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: 'driver> ' })
 
-// Commands must run one at a time. A piped-in heredoc emits every 'line'
-// event back-to-back without waiting for the async handler above to
-// finish, so without this queue "launch" and "login-police" race each
-// other and "launch" never gets far enough to set up `page`.
+// 커맨드는 반드시 하나씩 순차 실행되어야 함. 파이프로 흘려보낸 heredoc은
+// 위 async 핸들러가 끝나길 기다리지 않고 모든 'line' 이벤트를 연달아
+// 발생시키므로, 이 큐가 없으면 "launch"와 "login-police"가 서로 경합해서
+// "launch"가 `page`를 세팅하기도 전에 다음 커맨드가 실행돼버림.
 let queue = Promise.resolve()
 
 async function handleLine(line) {
