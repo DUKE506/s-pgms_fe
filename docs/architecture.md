@@ -79,3 +79,11 @@ src/
 - 백엔드: 별도 ASP.NET 백엔드 개발자가 개발 중 (아직 개발 단계, API 미확정)
 - 프론트 개발 전략: MSW(Mock Service Worker)로 mock API를 먼저 구축해 화면 개발을 진행하고, 실제 API가 준비되면 fetch 함수만 교체
 - 데이터 모델 설계 방향: DB 스키마를 먼저 정하지 않고, 화면이 필요로 하는 필드를 기준으로 먼저 설계한다 (DB는 아직 미확정이며 UI 요구에 따라 바뀔 수 있음). 이렇게 도출된 데이터 형태가 사실상 ASP.NET 백엔드에 제안하는 API 계약안이 됨
+
+### MSW mock 구조
+
+- 폴더: `src/mocks/handlers/`(도메인별 분리: `auth.ts`, `security-case.ts`, `worker.ts`, `guest.ts`), `src/mocks/data/`(in-memory fixture), `src/mocks/browser.ts`(dev worker), `src/mocks/server.ts`(vitest node server)
+- Phase 0-1 범위 우선 구현: 계정/사용자(로그인), 경호건(상태머신 + 관리번호/경호코드 발급 규칙), 배치요청
+- 상태 저장: in-memory 배열을 요청마다 mutate하는 간단한 store (DB 아님, 새로고침/HMR 시 리셋)
+- 통합: `main.tsx`는 `import.meta.env.DEV`일 때만 worker 시작, Vitest는 `setupTests.ts`에서 `server.listen()/resetHandlers()/close()` 훅 연동
+- 실제 API 전환 대비: `features/*/api/`의 fetch 함수 안에서만 엔드포인트를 참조 — 전환 시 그 함수만 교체
