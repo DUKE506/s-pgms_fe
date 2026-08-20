@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 현황
 
-`s-pgms`는 현재 `npm create vite`로 생성된 손대지 않은 Vite + React + TypeScript 스캐폴드입니다. 아직 앱 고유의 기능은 없고, `src/App.tsx`도 기본 카운터 예제 그대로입니다. 앱의 실제 목적과 구조가 정해지면 이 섹션을 갱신하세요.
+`s-pgms`는 경찰(본청/지역경찰청/경찰서)과 민간 경비업체(본사)가 함께 사용하는 민간경호(신변보호) 배치·관리 시스템입니다. 프로젝트 개요, 계정 권한 체계, 업무 워크플로우, 화면 목록, 상태/관리번호 체계는 [`docs/project-overview.md`](docs/project-overview.md)를 참고하세요.
+
+코드 자체는 아직 `npm create vite` 스캐폴드 상태이며, `src/App.tsx`도 기본 카운터 예제 그대로입니다.
+
+기술적 설계 결정(인증, 라우팅, 상태관리 등)은 [`docs/architecture.md`](docs/architecture.md) 참고.
+
+개발 우선순위(Phase별 로드맵)는 [`docs/roadmap.md`](docs/roadmap.md) 참고.
 
 ## 명령어
 
@@ -12,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` — `tsc -b`로 타입체크 후 프로덕션 빌드
 - `npm run lint` — ESLint 실행
 - `npm run preview` — 프로덕션 빌드 결과물을 로컬에서 미리보기
-- 아직 테스트 러너는 구성되어 있지 않음
+- `npm run test` — Vitest 테스트 실행
 
 ## 아키텍처 노트
 
