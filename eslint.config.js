@@ -18,5 +18,10 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // shadcn/ui 컴포넌트가 컴포넌트와 함께 variants(cva) 상수를 같이
+      // export하는 패턴을 표준으로 씀 (예: Button + buttonVariants)
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    },
   },
 ])

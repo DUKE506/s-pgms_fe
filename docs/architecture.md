@@ -57,6 +57,19 @@
 | `/admin/workers`                | 11 (근무자 목록/등록)       | 등록은 목록 내 모달                |
 | `/admin/history`                | 12 (이력 조회)              |                                     |
 
+## 스타일링 / UI
+
+- CSS: **Tailwind CSS v4** (`@tailwindcss/vite` 플러그인, config-less CSS-first 방식 — `tailwind.config.js` 없이 `src/index.css`의 `@theme`에서 토큰 정의)
+- 컴포넌트: **shadcn/ui** (`radix-nova` 스타일, Radix UI 기반). `npx shadcn@latest add <component>`로 필요한 컴포넌트를 `src/components/ui/`에 그때그때 추가 — npm 패키지가 아니라 소스를 프로젝트에 복사해오는 방식이라 자유롭게 커스터마이징
+- import 별칭: `@/*` → `./src/*` (`tsconfig.json`/`tsconfig.app.json`의 `paths`, `vite.config.ts`의 `resolve.alias`)
+- 폰트: **Pretendard Variable** (`pretendard` npm 패키지, dynamic subset — 브라우저가 실제 쓰는 글자의 유니코드 범위만 골라 요청). 목업 전체가 Pretendard 단일 폰트, weight 400/500/600/700만 사용
+- 디자인 토큰은 `docs/PGMS_UI_mock.dc.html` 목업에서 실측한 값 — 색상 사용 빈도를 직접 세어서 추출함:
+  - neutral(회색) 팔레트가 Tailwind 기본 `slate`와 정확히 일치해 커스텀 팔레트 없이 그대로 사용 (`--background`=slate-100, `--foreground`=slate-900 등)
+  - 경호건 상태 배지 6색(`docs/project-overview.md` "상태 정의" 표)을 `--color-status-*` 토큰으로 노출 (`bg-status-assigned` 등으로 사용). 6개 중 접수/경호완료/종결/취소 4개는 Tailwind 기본 gray-500/blue-600/slate-700/red-600과 동일하지만, 상태뱃지 컴포넌트가 이 6개 토큰만 참조하면 되도록 하나의 semantic 세트로 통일. 배정(`#F0B20A`)/경호중(`#15AB59`) 2개만 실제 커스텀 값
+  - radius는 shadcn 기본값(`--radius: 0.625rem`)이 목업 실측치(카드/인풋 10~12px)와 근접해 그대로 사용
+  - 사이드바 전용 토큰(`--sidebar-*`)은 목업의 다크 slate-900 사이드바를 기준으로 잡았으나, 아직 실제 사이드바 컴포넌트를 만들기 전이라 공용 UI 세트 작업에서 조정될 수 있음
+  - 다크모드(`.dark` 블록)는 제품 요구사항이 아니라 shadcn 기본값(grayscale) 그대로 둠 — status 6색만 라이트와 동일하게 고정
+
 ## 폴더 구조
 
 기능(도메인) 기준 — 경찰과 본사가 화면을 거의 공유하지 않는 별개 도메인이라 채택.
@@ -73,8 +86,12 @@ src/
       pages/, hooks/, api/
   shared/                   # 도메인 무관 공용 (버튼/테이블/상태뱃지/모달 등 UI 프리미티브)
     components/, hooks/, lib/, types/
+  components/ui/            # shadcn/ui가 생성하는 원본 컴포넌트 (shadcn CLI 전용, 직접 수정 지양)
+  lib/utils.ts              # shadcn의 cn() 헬퍼 (shadcn init이 생성)
   mocks/                    # MSW 핸들러
 ```
+
+`components/ui/`는 shadcn CLI(`npx shadcn add <component>`)가 관리하는 원본 primitive이고, `shared/components/`는 그걸 조합해 만드는 우리 프로젝트 전용 공용 컴포넌트 — 계층이 다르다.
 
 테스트는 대상 파일 옆에 co-locate (예: `Component.test.tsx`).
 
