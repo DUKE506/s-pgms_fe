@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react'
 import App from './App'
 
 describe('App', () => {
-  it('renders without crashing', () => {
+  it('renders the police login page at the root route', () => {
     render(<App />)
-    expect(screen.getByText('Get started')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '경찰 로그인' })).toBeInTheDocument()
   })
 })

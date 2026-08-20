@@ -14,6 +14,13 @@
 - 권한 없는 접근: 대상 라우트를 렌더링하지 않고 라우트 가드 단계에서 차단 + 토스트 알림 후 이전 화면/로그인 후 기본 화면으로 리다이렉트
 - 게스트 계정: 경찰서(피전)가 발급/관리. 타 관할 협조 시 특정 경호건만 볼 수 있는 계정을 발급해 경찰 로그인 화면에서 로그인
 
+### 로그인/토큰 갱신 API 계약 (MSW mock 기준)
+
+- `POST /api/auth/police/login`, `POST /api/auth/company/login` — 요청 `{ id, password }`, 응답 `{ user: { id, name, role }, accessToken, refreshToken }`. 실패 시 401
+- `POST /api/auth/refresh` — 요청 `{ refreshToken }`, 응답 `{ accessToken, refreshToken }` (재발급 시 둘 다 새로 발급/rotate). refreshToken 자체가 유효하지 않으면 401 → 클라이언트는 로그아웃 처리
+- 인터셉터: `apiFetch` (`src/features/auth/api/client.ts`)가 401 응답을 받으면 `/api/auth/refresh` 호출 → 성공 시 새 accessToken으로 원 요청 1회만 재시도, 실패 시 세션 클리어
+- `/dashboard`, `/admin/dashboard`는 현재 로그인 성공 확인용 임시 stub(`src/app/DashboardStub.tsx`) — 라우터+`ProtectedRoute` 가드 작업에서 실제 화면으로 교체 예정
+
 ## 라우팅
 
 - 라이브러리: `react-router` (v7)
@@ -71,7 +78,7 @@ src/
 ## 상태관리
 
 - 서버 상태(경호건 목록/상세, 배치요청 등 API 데이터): **TanStack Query**. 로딩/에러/캐싱/재요청을 직접 구현하지 않고 활용. MSW mock 단계와 궁합이 좋고, 이후 실제 API 전환 시 fetch 함수만 교체하면 됨
-- 클라이언트 전역 상태(로그인 사용자 정보, role, accessToken/refreshToken): **Zustand**. axios 인터셉터 등 React 컴포넌트 트리 밖에서도 `getState()`로 동기 접근 가능해서 채택 (Context API는 트리 밖에서 접근이 번거로움)
+- 클라이언트 전역 상태(로그인 사용자 정보, role, accessToken/refreshToken): **Zustand**. fetch 래퍼의 401 인터셉트 로직 등 React 컴포넌트 트리 밖에서도 `getState()`로 동기 접근 가능해서 채택 (Context API는 트리 밖에서 접근이 번거로움)
 - UI 로컬 상태(모달 열림/닫힘 등): 전역 상태 대신 컴포넌트 로컬 `useState`
 
 ## API / 백엔드
