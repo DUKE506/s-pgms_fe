@@ -7,10 +7,9 @@
 
 ## 참고 — 루프 자동화 관련
 
-Phase 0~1 초반 화면 몇 개는 사람이 직접 구현/검토하며 신뢰할 수 있는 자동검증(테스트) 패턴을 먼저 확립한다.
-그 이후에 hook 기반 edit 루프, 필요 시 작업 단위(`/loop`) 자동화를 붙이는 순서로 진행한다.
+Phase 0에서 사람이 직접 구현/검토하며 자동검증 패턴을 먼저 확립했다: MSW mock, 로그인/인증, 라우터+가드, 공용 UI 세트(디자인 토큰, shadcn 컴포넌트, Sidebar/AppShell)까지 완료되면서 화면마다 새로 디자인 판단을 할 필요가 줄었고, `run-s-pgms` 드라이버(`.claude/skills/run-s-pgms/`)로 실제 브라우저 스크린샷 검증도 가능해졌다.
 
-실제로 Loop를 붙일 때는 `roadmap.md` 전체를 하나의 Loop 목표로 삼지 않는다. 화면 구현처럼 목업 대조·디자인 판단이 필요한 작업은 자동 루프 후보에서 제외하고, 기계적으로 pass/fail을 검증할 수 있는 좁은 하위 작업 하나를 첫 Loop 대상으로 고른다 (`TASK.md`/`LOOP_INSTRUCTIONS.md`/`PROGRESS.md`/`outputs/` 구조 적용).
+이 상태를 근거로 Phase 1부터는 화면 구현 자체를 loop 대상으로 삼기로 했다 (2026-08-20 결정) — 단, "목업과 맞는지"는 여전히 사람이 스크린샷을 보고 판단해야 하므로 완전 자동검증은 아니다. 그래서 **화면 1개 = 1 iteration, 반드시 사용자 승인을 받아야 다음 화면으로 진행**하는 형태로 운영한다 (ScheduleWakeup 기반 무인 자동진행 아님 — 대화 턴 안에서 사람이 매번 다음으로 진행시킴). 구조는 `.claude/loop-screens/`에 `TASK.md`/`LOOP_INSTRUCTIONS.md`/`PROGRESS.md`로 구성했다.
 
 ## Phase 0 — 기반
 
