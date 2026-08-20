@@ -44,6 +44,7 @@ EOF
 | `start-server` | 드라이버 포트에서 `npm run dev` 실행, 응답할 때까지 대기 |
 | `stop-server` | 드라이버 포트에서 리스닝 중인 프로세스를 kill |
 | `launch` | 필요하면 서버부터 띄운 뒤, headless Chromium 실행 |
+| `viewport <width> <height>` | 브라우저 뷰포트 크기 변경 (반응형/모바일 확인용, 예: `viewport 390 844`) |
 | `nav <path>` | `http://localhost:<port><path>`로 이동 |
 | `login-police <id> <password>` | `/`로 이동, 경찰 로그인 폼 채우고 제출 |
 | `login-company <id> <password>` | `/admin`으로 이동, 본사 로그인 폼 채우고 제출 |

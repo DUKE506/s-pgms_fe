@@ -87,6 +87,13 @@ const COMMANDS = {
     console.log('browser launched')
   },
 
+  async viewport(args) {
+    if (!page) return console.log('ERROR: launch first')
+    const [width, height] = args.split(' ').map(Number)
+    await page.setViewportSize({ width, height })
+    console.log('viewport ->', width, 'x', height)
+  },
+
   async nav(p) {
     if (!page) return console.log('ERROR: launch first')
     await page.goto(BASE + (p || '/'))
