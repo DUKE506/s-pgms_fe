@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { policeLogin } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
+import { getDefaultRouteForRole } from '../lib/defaultRoute'
 
 function PoliceLoginPage() {
   const [id, setId] = useState('')
@@ -16,7 +17,7 @@ function PoliceLoginPage() {
     try {
       const session = await policeLogin(id, password)
       setSession(session)
-      navigate('/dashboard')
+      navigate(getDefaultRouteForRole(session.user.role))
     } catch {
       setError('아이디 또는 비밀번호가 올바르지 않습니다')
     }

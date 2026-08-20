@@ -19,15 +19,18 @@
 - `POST /api/auth/police/login`, `POST /api/auth/company/login` — 요청 `{ id, password }`, 응답 `{ user: { id, name, role }, accessToken, refreshToken }`. 실패 시 401
 - `POST /api/auth/refresh` — 요청 `{ refreshToken }`, 응답 `{ accessToken, refreshToken }` (재발급 시 둘 다 새로 발급/rotate). refreshToken 자체가 유효하지 않으면 401 → 클라이언트는 로그아웃 처리
 - 인터셉터: `apiFetch` (`src/features/auth/api/client.ts`)가 401 응답을 받으면 `/api/auth/refresh` 호출 → 성공 시 새 accessToken으로 원 요청 1회만 재시도, 실패 시 세션 클리어
-- `/dashboard`, `/admin/dashboard`는 현재 로그인 성공 확인용 임시 stub(`src/app/DashboardStub.tsx`) — 라우터+`ProtectedRoute` 가드 작업에서 실제 화면으로 교체 예정
+- 로그인 성공 후 이동 경로는 role마다 다름 — `getDefaultRouteForRole()` (`src/features/auth/lib/defaultRoute.ts`)가 유일한 매핑 소스: 본청/지역청 → `/dashboard`, 경찰서/게스트 → `/security-cases`, 시스템관리자/운영관리자/본부관리자 → `/admin/dashboard`. `ProtectedRoute`가 권한 없는 접근을 리다이렉트할 때도 같은 함수를 사용
 
 ## 라우팅
 
 - 라이브러리: `react-router` (v7)
 - 모바일: 별도 라우트로 분리하지 않고 단일 라우트 + 반응형 레이아웃으로 처리 (PWA 적용 여부와 무관한 결정)
-- 라우트 가드: `<ProtectedRoute allow={[...]}>` 래퍼 컴포넌트로 구현 (loader 방식 아님). Zustand 스토어를 렌더링 시점에 동기적으로 읽어 판단하므로 별도 비동기 처리 없이 렌더 전에 차단 가능
+- 라우트 가드: `<ProtectedRoute allow={[...]}>` 래퍼 컴포넌트로 구현 (loader 방식 아님, `src/app/ProtectedRoute.tsx`). Zustand 스토어를 렌더링 시점에 동기적으로 읽어 판단하므로 별도 비동기 처리 없이 렌더 전에 차단 가능. 미인증이면 현재 경로가 `/admin`으로 시작하는지로 진영을 판별해 해당 로그인으로 리다이렉트, 권한 없는 role이면 토스트 알림 후 `getDefaultRouteForRole()`로 리다이렉트
 - URL 세그먼트는 영어(kebab-case), 화면에 보이는 라벨은 한글 유지. 경호건은 `security-case`로 표기
 - 모달로 처리하는 화면(담당자 배정, 게스트 발급, 근무자 등록)은 별도 라우트를 주지 않고 목록 페이지 내 UI 상태로 처리
+- 아직 실제 화면이 없는 라우트는 `ScreenPlaceholder`(`src/shared/components/ScreenPlaceholder.tsx`, 라벨 + 목업 anchor id 표시)로 채워져 있으며 roadmap Phase 1-4에서 화면이 만들어질 때마다 하나씩 교체됨
+- 토스트 알림: `useToastStore`(`src/shared/hooks/useToastStore.ts`) + `ToastViewport`(`src/shared/components/ToastViewport.tsx`, `App.tsx`에 전역 마운트). 기능만 구현되어 있고 스타일은 Phase 0 "공용 UI 최소 세트" 작업에서 입힘
+- `usePermission(allow)` 훅(`src/shared/hooks/usePermission.ts`): `ProtectedRoute`와 같은 role 체크 로직을 재사용 — 화면 내 버튼/영역 단위 조건부 렌더링에 사용 예정
 
 ### 경찰 (`/`)
 

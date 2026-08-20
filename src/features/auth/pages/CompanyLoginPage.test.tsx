@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import CompanyLoginPage from './CompanyLoginPage'
-import DashboardStub from '../../../app/DashboardStub'
 import { companyAccounts } from '../../../mocks/data/accounts'
 import { useAuthStore } from '../store/authStore'
 
@@ -10,7 +9,7 @@ function renderAtRoot() {
   const router = createMemoryRouter(
     [
       { path: '/admin', element: <CompanyLoginPage /> },
-      { path: '/admin/dashboard', element: <DashboardStub label="본사" /> },
+      { path: '/admin/dashboard', element: <p>대시보드 도착</p> },
     ],
     { initialEntries: ['/admin'] },
   )
@@ -22,7 +21,7 @@ describe('CompanyLoginPage', () => {
     useAuthStore.setState({ user: null, accessToken: null, refreshToken: null })
   })
 
-  it('logs in with a valid account and navigates to the dashboard stub', async () => {
+  it('logs in with a valid account and navigates to /admin/dashboard', async () => {
     const account = companyAccounts[0]
     renderAtRoot()
 
@@ -30,7 +29,7 @@ describe('CompanyLoginPage', () => {
     fireEvent.change(screen.getByLabelText('비밀번호'), { target: { value: account.password } })
     fireEvent.click(screen.getByRole('button', { name: '로그인' }))
 
-    await waitFor(() => expect(screen.getByText('본사 로그인 성공')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('대시보드 도착')).toBeInTheDocument())
     expect(useAuthStore.getState().user?.id).toBe(account.id)
   })
 

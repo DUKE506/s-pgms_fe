@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { companyLogin } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
+import { getDefaultRouteForRole } from '../lib/defaultRoute'
 
 function CompanyLoginPage() {
   const [id, setId] = useState('')
@@ -16,7 +17,7 @@ function CompanyLoginPage() {
     try {
       const session = await companyLogin(id, password)
       setSession(session)
-      navigate('/admin/dashboard')
+      navigate(getDefaultRouteForRole(session.user.role))
     } catch {
       setError('아이디 또는 비밀번호가 올바르지 않습니다')
     }
