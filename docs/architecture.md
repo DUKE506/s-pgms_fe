@@ -72,12 +72,13 @@
 
 ### 공용 UI 세트
 
-- shadcn 컴포넌트: `Button`, `Card`, `Table`, `Dialog`, `Input`, `Label` (`src/components/ui/`, 필요할 때마다 `npx shadcn add <component>`로 추가). `Button`의 `outline` variant는 기본값(`bg-background`)이 페이지 배경과 같은 색이라 `bg-card`(흰색)로 수정해둠 — shadcn CLI로 다른 컴포넌트를 다시 추가하면서 `button.tsx`가 덮어써지면 이 수정도 같이 사라지니 재적용 필요
+- shadcn 컴포넌트: `Button`, `Card`, `Table`, `Dialog`, `Input`, `Label`, `Select` (`src/components/ui/`, 필요할 때마다 `npx shadcn add <component>`로 추가). `Button`의 `outline` variant는 기본값(`bg-background`)이 페이지 배경과 같은 색이라 `bg-card`(흰색)로 수정해둠 — shadcn CLI로 다른 컴포넌트를 다시 추가하면서 `button.tsx`가 덮어써지면 이 수정도 같이 사라지니 재적용 필요. `Table`의 `TableHeader`도 같은 이유로 헤더 배경(`bg-slate-50`, 목업 실측 `#f8fafc`)을 추가해둠
 - `StatusBadge`(`src/shared/components/StatusBadge.tsx`): 경호건 상태 6개 → `--color-status-*` 토큰 매핑
 - `Sidebar`(`src/shared/components/Sidebar.tsx`): 도메인 무관 rail 프리미티브. `xl`(1280px) 이상에서 좌측 고정 76px 세로 rail, 그 미만은 전부 모바일 취급해 하단 고정 플로팅 pill 아이콘 바로 반응형 전환 (목업이 데스크톱 1920px/모바일 390px 두 크기만 제공하고 중간 태블릿 크기가 없어서, 그 사이 전부를 모바일 레이아웃으로 처리하기로 함). nav 항목 목록(`items`)은 도메인이 주입
 - `PoliceAppShell`(`src/features/police/layout/PoliceAppShell.tsx`), `CompanyAppShell`(`src/features/company/layout/CompanyAppShell.tsx`): `Sidebar` + 콘텐츠 영역을 조합하는 도메인별 레이아웃. `routes.tsx`의 모든 경찰/본사 화면 라우트가 `ProtectedRoute` 안에서 이 셸로 감싸짐 (로그인 화면 2개는 셸 없음). 경찰 sidebar 항목은 role별로 다름 — 본청/지역청은 `현황`+`이력` 2개, 경찰서는 `현황`+`경호목록`+`이력`+`게스트` 4개, 게스트는 `경호목록` 1개만. 본사는 role 무관 `대시보드`+`경호관리`+`근무자`+`이력` 4개 고정. 로그아웃 버튼도 여기 포함 (`useAuthStore.getState().logout()` + 진영별 로그인으로 이동)
 - 로그인 화면 2개(`PoliceLoginPage`, `CompanyLoginPage`)는 `Card`+`Input`+`Label`+`Button`으로 재스타일링. `CardTitle`은 시맨틱 heading이 아닌 `div`라 접근성/테스트를 위해 쓰지 않고, 같은 스타일 클래스를 적용한 실제 `<h1>`을 직접 사용
 - 로고 배지 텍스트("PGMS")는 목업에서 화면마다 다르게 표기된 것(회사는 "SL", 본청은 "본청" 등)을 통일한 것 — 실제 요구사항이 확정되면 변경
+- 본사 화면 상단 breadcrumb: 목업은 화면마다 "에스텍 본사 / 메뉴명"(상세는 "에스텍 본사 / 메뉴명 / 케이스ID") 형태로 조직명을 접두어로 붙이지만, 본사 모드는 에스텍 직원만 쓰는 화면이라 조직명 표시가 불필요하다고 판단해 "에스텍 본사" 접두어는 뺌(2026-08-21, 배치요청 목록 화면에서 결정, 이후 구현하는 본사 화면에도 동일 적용). 그 위에 추가로: breadcrumb 남은 부분이 바로 아래 `h1`과 완전히 겹치는 최상위 목록 화면(예: 경호관리 목록 — breadcrumb "경호관리" = h1 "경호관리")은 breadcrumb 자체를 생략하고 `h1`만 표시. 반대로 상세 화면(`h1`이 케이스 식별자 등 다른 텍스트라 겹치지 않는 경우, 예: `/admin/security-cases/:id`)은 "경호관리 / 26-02-강남경찰서"처럼 부모 메뉴명 + 현재 항목 breadcrumb를 유지
 
 ## 폴더 구조
 

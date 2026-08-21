@@ -26,6 +26,7 @@ export interface SecurityCase {
   id: string
   receiptNumber: string
   policeStation: string
+  jurisdiction: string
   status: SecurityCaseStatus
   caseType: CaseType
   subject: SecurityCaseSubject
@@ -37,9 +38,18 @@ export interface SecurityCase {
   policeContact: SecurityCasePoliceContact
   requester: string
   createdAt: string
+  assignee?: string
+  securityCode?: string
 }
 
 export type SecurityCaseCreateInput = Omit<
   SecurityCase,
-  'id' | 'receiptNumber' | 'status' | 'policeStation' | 'createdAt'
+  | 'id'
+  | 'receiptNumber'
+  | 'status'
+  | 'policeStation'
+  | 'jurisdiction'
+  | 'createdAt'
+  | 'assignee'
+  | 'securityCode'
 >

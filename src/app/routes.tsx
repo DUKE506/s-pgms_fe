@@ -8,12 +8,16 @@ import type { Role } from '../features/auth/store/authStore'
 import ProtectedRoute from './ProtectedRoute'
 import ScreenPlaceholder from '../shared/components/ScreenPlaceholder'
 import SecurityCaseNewPage from '../features/police/pages/SecurityCaseNewPage'
+import RequestListPage from '../features/company/pages/RequestListPage'
 
 const POLICE_DASHBOARD: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_HISTORY: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_STATION_AND_GUEST: Role[] = ['경찰서', '게스트']
 const POLICE_STATION_ONLY: Role[] = ['경찰서']
 const COMPANY_ALL: Role[] = ['시스템관리자', '운영관리자', '본부관리자']
+// 본부관리자는 "본인이 배정받은 경호건"만 조회/처리 가능 — 배치요청 목록/담당자
+// 배정은 그 위 권한(시스템관리자/운영관리자)만 접근 (project-overview.md 계정 권한 체계)
+const COMPANY_ADMIN: Role[] = ['시스템관리자', '운영관리자']
 
 function policeScreen(allow: Role[], label: string, screenIds: string[]): ReactNode {
   return (
@@ -56,7 +60,16 @@ export const routes: RouteObject[] = [
 
   { path: '/admin', element: <CompanyLoginPage /> },
   { path: '/admin/dashboard', element: companyScreen(COMPANY_ALL, '본사 전체 대시보드', ['6']) },
-  { path: '/admin/requests', element: companyScreen(COMPANY_ALL, '배치요청 목록', ['6b']) },
+  {
+    path: '/admin/requests',
+    element: (
+      <ProtectedRoute allow={COMPANY_ADMIN}>
+        <CompanyAppShell>
+          <RequestListPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
   { path: '/admin/security-cases', element: companyScreen(COMPANY_ALL, '경호목록', ['6d']) },
   { path: '/admin/security-cases/:id', element: companyScreen(COMPANY_ALL, '배정 경호건 상세', ['7']) },
   { path: '/admin/workers', element: companyScreen(COMPANY_ALL, '근무자 목록', ['11']) },

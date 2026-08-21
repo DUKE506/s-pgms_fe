@@ -17,11 +17,13 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   )
 }
 
+// bg-slate-50: 목업 테이블 헤더 배경(#f8fafc) 실측값 — shadcn 기본은 헤더 배경이 없어서 추가.
+// shadcn CLI로 table을 다시 add하면 이 수정도 함께 사라지니 재적용 필요 (button.tsx의 outline variant와 동일한 사정).
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("bg-slate-50 [&_tr]:border-b", className)}
       {...props}
     />
   )
