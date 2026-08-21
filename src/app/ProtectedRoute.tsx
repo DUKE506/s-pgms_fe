@@ -22,7 +22,7 @@ function ProtectedRoute({ allow, children }: ProtectedRouteProps) {
   useEffect(() => {
     if (forbidden && !hasShownToast.current) {
       hasShownToast.current = true
-      useToastStore.getState().show('접근 권한이 없습니다')
+      useToastStore.getState().show('접근 권한이 없습니다', 'error')
     }
   }, [forbidden])
 

@@ -7,6 +7,7 @@ import CompanyAppShell from '../features/company/layout/CompanyAppShell'
 import type { Role } from '../features/auth/store/authStore'
 import ProtectedRoute from './ProtectedRoute'
 import ScreenPlaceholder from '../shared/components/ScreenPlaceholder'
+import SecurityCaseNewPage from '../features/police/pages/SecurityCaseNewPage'
 
 const POLICE_DASHBOARD: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_HISTORY: Role[] = ['본청', '지역청', '경찰서']
@@ -40,7 +41,16 @@ export const routes: RouteObject[] = [
   { path: '/history', element: policeScreen(POLICE_HISTORY, '이력 조회 목록', ['1h', '2h', '8']) },
   { path: '/history/:id', element: policeScreen(POLICE_HISTORY, '이력 상세', ['1h', '2h', '8h']) },
   { path: '/security-cases', element: policeScreen(POLICE_STATION_AND_GUEST, '경호목록', ['3']) },
-  { path: '/security-cases/new', element: policeScreen(POLICE_STATION_ONLY, '접수/배치요구서 작성', ['4']) },
+  {
+    path: '/security-cases/new',
+    element: (
+      <ProtectedRoute allow={POLICE_STATION_ONLY}>
+        <PoliceAppShell>
+          <SecurityCaseNewPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
   { path: '/security-cases/:id', element: policeScreen(POLICE_STATION_AND_GUEST, '경호 상세', ['5']) },
   { path: '/guests', element: policeScreen(POLICE_STATION_ONLY, '게스트 계정 관리', ['9']) },
 
