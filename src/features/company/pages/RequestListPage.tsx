@@ -28,9 +28,11 @@ import type { SecurityCase } from '../../police/types/securityCase'
 const ALL = '전체'
 
 // 탭 4개 모두 element 종류(span/Link)와 무관하게 동일한 박스 크기를 갖도록
-// 높이를 고정하고 base 클래스를 공유한다.
+// 높이를 고정하고 base 클래스를 공유한다. h-9/text-button: Button/Input과
+// 높이·글자 크기를 맞춤 (2026-08-22) — 공용 Tab 컴포넌트가 아직 없어서
+// 이 화면에만 로컬로 적용.
 const TAB_BASE =
-  'inline-flex h-10 shrink-0 items-center justify-center rounded-lg px-4.5 text-sm font-semibold'
+  'inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4.5 text-button font-semibold'
 
 function formatDate(dateLike: string) {
   const d = new Date(dateLike)

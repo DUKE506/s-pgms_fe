@@ -33,12 +33,14 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+// text-section-title(14px/700, 목업 실측값, 2026-08-22): shadcn 기본
+// text-base(16px)/font-medium보다 목업 섹션 제목에 가까움.
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
       className={cn(
-        "font-heading text-base leading-snug font-medium group-data-[size=sm]/card:text-sm",
+        "font-heading text-section-title leading-snug font-bold group-data-[size=sm]/card:text-sm",
         className
       )}
       {...props}

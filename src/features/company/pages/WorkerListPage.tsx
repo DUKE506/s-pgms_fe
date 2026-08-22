@@ -41,11 +41,11 @@ function WorkerListPage() {
               placeholder="이름 · 사번 검색"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-card pl-8 md:text-field"
+              className="bg-card pl-8"
               aria-label="이름 사번 검색"
             />
           </div>
-          <Button size="lg" onClick={() => setDialogOpen(true)} className="shrink-0 text-button font-semibold">
+          <Button onClick={() => setDialogOpen(true)} className="shrink-0">
             <Plus />
             근무자 등록
           </Button>
@@ -71,19 +71,19 @@ function WorkerListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-table-header font-semibold">이름</TableHead>
-                  <TableHead className="text-table-header font-semibold">사번</TableHead>
-                  <TableHead className="text-table-header font-semibold">부서</TableHead>
-                  <TableHead className="text-table-header font-semibold">연락처</TableHead>
+                  <TableHead>이름</TableHead>
+                  <TableHead>사번</TableHead>
+                  <TableHead>부서</TableHead>
+                  <TableHead>연락처</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((w) => (
                   <TableRow key={w.id}>
-                    <TableCell className="text-table-body">{w.name}</TableCell>
-                    <TableCell className="text-table-body">{w.employeeId}</TableCell>
-                    <TableCell className="text-table-body">{w.department}</TableCell>
-                    <TableCell className="text-table-body">{w.phone}</TableCell>
+                    <TableCell>{w.name}</TableCell>
+                    <TableCell>{w.employeeId}</TableCell>
+                    <TableCell>{w.department}</TableCell>
+                    <TableCell>{w.phone}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -20,7 +20,8 @@ function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md px-3 py-1 text-xs font-semibold text-white',
+        // 11px: 목업 실측값(docs/PGMS_UI_mock.dc.html 리스트 행 상태뱃지 기준, 2026-08-22)
+        'inline-flex items-center rounded-md px-3 py-1 text-[11px] font-semibold text-white',
         STATUS_COLOR[status],
         className,
       )}

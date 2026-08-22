@@ -65,12 +65,14 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   )
 }
 
+// text-table-header(11px/600), text-table-body(13px, TableCell 쪽): 목업 실측값
+// (docs/PGMS_UI_mock.dc.html) 기준, shadcn 기본 text-sm(14px) 상속보다 작음 (2026-08-22).
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
+        "h-10 px-2 text-left align-middle text-table-header font-semibold whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}
@@ -83,7 +85,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        "p-2 align-middle text-table-body whitespace-nowrap [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}

@@ -51,43 +51,39 @@ function RegisterWorkerDialog({ open, onOpenChange }: RegisterWorkerDialogProps)
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="worker-name" className="text-label">이름</Label>
+            <Label htmlFor="worker-name">이름</Label>
             <Input
               id="worker-name"
               placeholder="이름 입력"
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
-              className="md:text-field"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="worker-employee-id" className="text-label">사번</Label>
+            <Label htmlFor="worker-employee-id">사번</Label>
             <Input
               id="worker-employee-id"
               placeholder="사번 입력"
               value={form.employeeId}
               onChange={(e) => update('employeeId', e.target.value)}
-              className="md:text-field"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="worker-department" className="text-label">부서</Label>
+            <Label htmlFor="worker-department">부서</Label>
             <Input
               id="worker-department"
               placeholder="부서 입력"
               value={form.department}
               onChange={(e) => update('department', e.target.value)}
-              className="md:text-field"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="worker-phone" className="text-label">휴대전화번호</Label>
+            <Label htmlFor="worker-phone">휴대전화번호</Label>
             <Input
               id="worker-phone"
               placeholder="010-0000-0000"
               value={form.phone}
               onChange={(e) => update('phone', e.target.value)}
-              className="md:text-field"
             />
           </div>
         </div>
@@ -95,19 +91,17 @@ function RegisterWorkerDialog({ open, onOpenChange }: RegisterWorkerDialogProps)
         <div className="flex gap-2.5 pt-1.5 xl:justify-end">
           <Button
             type="button"
-            size="lg"
             variant="secondary"
             onClick={() => handleOpenChange(false)}
-            className="flex-1 px-6 text-button font-semibold xl:flex-none"
+            className="flex-1 px-6 xl:flex-none"
           >
             취소
           </Button>
           <Button
             type="button"
-            size="lg"
             disabled={!isValid || mutation.isPending}
             onClick={() => mutation.mutate()}
-            className="flex-1 px-6 text-button font-semibold xl:flex-none"
+            className="flex-1 px-6 xl:flex-none"
           >
             등록
           </Button>

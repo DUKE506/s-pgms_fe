@@ -46,3 +46,13 @@ Phase 2~4는 Phase 1 끝나고 이 표에 이어서 추가.
   dedupe됨. 이어서 버튼-인풋-카운트뱃지 높이 불일치(h-8/h-9/h-10 혼재)도
   지적받아 Button size="lg"(h-9, 기존 variant 재사용)로 통일. 근무자 목록
   화면 승인 완료.
+- 2026-08-22: 근무자 목록 화면에서 검증한 타이포그래피/높이 토큰을 공용
+  컴포넌트(`components/ui/table.tsx`·`button.tsx`·`input.tsx`·`label.tsx`·
+  `select.tsx`·`card.tsx`)와 `shared/components/StatusBadge.tsx` 기본값에
+  반영 — 이제 화면마다 개별 클래스를 안 박아도 자동 적용됨. WorkerListPage/
+  RegisterWorkerDialog의 중복 오버라이드 제거. RequestListPage의 탭
+  (TAB_BASE)은 공용 Tab 컴포넌트가 없어서 h-9/text-button으로 로컬 적용.
+  CardTitle(섹션 제목, 14px/700)·StatusBadge(11px)도 같이 포함. 로그인 2개
+  (목업 없음)/SecurityCaseNewPage(s4)/RequestListPage+AssignManagerDialog
+  (s6b/s6c)/WorkerListPage+RegisterWorkerDialog(s11/s11b) 전 화면 스크린샷+
+  getComputedStyle 실측으로 회귀 확인, 콘솔 에러 없음.
