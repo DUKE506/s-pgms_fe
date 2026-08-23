@@ -8,7 +8,7 @@
 |---|---|---|---|---|---|
 | 1 | [경찰서] 접수 / 배치요구서 작성 | `s4` `s4m` | 완료 | `747c0bd` | |
 | 2 | [본사] 배치요청 목록 + 담당자 배정 | `s6b` `s6c` | 완료 | `fee6fd0` | |
-| 3 | [본사] 배정 경호건 상세 | `s7a` `s7c` `s7d` `s7e` `s7` `s7b` | 대기 | | |
+| 3 | [본사] 배정 경호건 상세 | `s7a` `s7c` `s7d` `s7e` `s7` `s7b` | 구현중 (검증필요) | | 기능 구현 완료, 추가 검증 후 완료 처리 예정 |
 | 4 | [경찰서] 경호 상세 (연장·단축 모달 포함) | `s5` `s5-recv` `s5-assigned` `s5m` `s5-ext` `s5-ext-short` `s5m-ext` `s5m-ext-short` | 대기 | | |
 
 Phase 2~4는 Phase 1 끝나고 이 표에 이어서 추가.
@@ -56,3 +56,16 @@ Phase 2~4는 Phase 1 끝나고 이 표에 이어서 추가.
   (목업 없음)/SecurityCaseNewPage(s4)/RequestListPage+AssignManagerDialog
   (s6b/s6c)/WorkerListPage+RegisterWorkerDialog(s11/s11b) 전 화면 스크린샷+
   getComputedStyle 실측으로 회귀 확인, 콘솔 에러 없음.
+- 2026-08-23: 항목 3(배정 경호건 상세) 데이터모델/MSW/컴포넌트(BaseInfoForm/
+  BaseInfoSummaryCard/ScheduleInitDialog/ScheduleGroupDialog/ScheduleSection/
+  AttachmentsSection)/페이지/테스트 구현. 사용자 피드백 4건 반영: 관리번호
+  표시(접수단계 "undefined" 노출 → `shared/lib/managementNumber.ts`의
+  formatManagementNumber로 접수번호만 표시, 배정 후엔 "접수번호 · 경호코드"),
+  XL 레이아웃(중앙정렬 max-w-3xl 래퍼 제거해 요약/스케줄/첨부가 XL에서 전체
+  폭 사용 — BaseInfoForm만 자체 mx-auto max-w-3xl 유지), 배정 시 상태변경+
+  경호코드 발급 로직 확인. 레이아웃 수정 중 BaseInfoForm이 nested flex-col
+  안에서 mx-auto만 있고 w-full이 없어 stretch 대신 shrink-to-fit(768px→559px)
+  되는 버그 발견/수정. build/lint/test(33/33) 통과, 브라우저 실측 확인.
+  **사용자 요청으로 커밋은 진행하되 추가 검증이 더 필요한 상태 — 완료 체크
+  보류.** 다음 세션에서 나머지 검증(전체 플로우 재확인) 마친 뒤 완료로
+  전환.

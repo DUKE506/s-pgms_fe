@@ -1,7 +1,24 @@
 import { http, HttpResponse } from 'msw'
 import { companyAccounts, policeAccounts } from '../data/accounts'
-import { assignManager, createSecurityCase, securityCases } from '../data/securityCases'
-import type { SecurityCaseCreateInput } from '../../features/police/types/securityCase'
+import {
+  assignManager,
+  createInitialSchedule,
+  createSecurityCase,
+  findSecurityCase,
+  registerBaseInfo,
+  securityCases,
+  setDestructionCertFile,
+  setPreMeeting,
+  setSecurityPlanFile,
+  setWorkerConsentFile,
+  upsertScheduleGroup,
+} from '../data/securityCases'
+import type {
+  CaseBaseInfo,
+  ScheduleGroup,
+  SecurityCaseCreateInput,
+  WorkSchedule,
+} from '../../features/police/types/securityCase'
 
 function accountFromAuthHeader(request: Request) {
   const auth = request.headers.get('Authorization') ?? ''
@@ -58,4 +75,126 @@ export const securityCaseHandlers = [
 
     return HttpResponse.json(updated)
   }),
+
+  http.get('/api/security-cases/:id', ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request) && !accountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const record = findSecurityCase(params.id as string)
+    if (!record) {
+      return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
+    }
+    return HttpResponse.json(record)
+  }),
+
+  // 화면 7c: 기본정보 등록/수정
+  http.put('/api/security-cases/:id/base-info', async ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const input = (await request.json()) as CaseBaseInfo
+    const updated = registerBaseInfo(params.id as string, input)
+    if (!updated) {
+      return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  // 화면 7e: 배치기간+근무시간 입력 → 일자별 스케줄 자동 생성
+  http.post('/api/security-cases/:id/schedule', async ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const input = (await request.json()) as {
+      startDate: string
+      endDate: string
+      startTime: string
+      endTime: string
+    }
+    const updated = createInitialSchedule(params.id as string, input)
+    if (!updated) {
+      return HttpResponse.json(
+        { message: '기본정보 등록 후 스케줄을 생성할 수 있습니다' },
+        { status: 409 },
+      )
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  // 화면 7b: 특정 일자의 근무 그룹 추가/수정
+  http.put('/api/security-cases/:id/schedule/:date/groups', async ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const group = (await request.json()) as ScheduleGroup
+    const updated = upsertScheduleGroup(params.id as string, params.date as string, group)
+    if (!updated) {
+      return HttpResponse.json({ message: '스케줄을 찾을 수 없습니다' }, { status: 404 })
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  http.put('/api/security-cases/:id/schedule/pre-meeting', async ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const preMeeting = (await request.json()) as WorkSchedule['preMeeting']
+    const updated = setPreMeeting(params.id as string, preMeeting)
+    if (!updated) {
+      return HttpResponse.json({ message: '스케줄을 찾을 수 없습니다' }, { status: 404 })
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  // 첨부(경호계획서/개인정보동의서/파기확인서): 실제 업로드 없이 파일명만 저장
+  http.put('/api/security-cases/:id/attachments/security-plan', async ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+    const { fileName } = (await request.json()) as { fileName: string }
+    const updated = setSecurityPlanFile(params.id as string, fileName)
+    if (!updated) {
+      return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  http.put(
+    '/api/security-cases/:id/attachments/destruction-cert',
+    async ({ request, params }) => {
+      if (!companyAccountFromAuthHeader(request)) {
+        return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+      }
+      const { fileName } = (await request.json()) as { fileName: string }
+      const updated = setDestructionCertFile(params.id as string, fileName)
+      if (!updated) {
+        return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
+      }
+      return HttpResponse.json(updated)
+    },
+  ),
+
+  http.put(
+    '/api/security-cases/:id/attachments/worker-consent/:workerId',
+    async ({ request, params }) => {
+      if (!companyAccountFromAuthHeader(request)) {
+        return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+      }
+      const { fileName } = (await request.json()) as { fileName: string }
+      const updated = setWorkerConsentFile(
+        params.id as string,
+        params.workerId as string,
+        fileName,
+      )
+      if (!updated) {
+        return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
+      }
+      return HttpResponse.json(updated)
+    },
+  ),
 ]
