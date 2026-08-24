@@ -11,6 +11,7 @@ import SecurityCaseNewPage from '../features/police/pages/SecurityCaseNewPage'
 import RequestListPage from '../features/company/pages/RequestListPage'
 import WorkerListPage from '../features/company/pages/WorkerListPage'
 import SecurityCaseDetailPage from '../features/company/pages/SecurityCaseDetailPage'
+import SecurityCaseListPage from '../features/company/pages/SecurityCaseListPage'
 
 const POLICE_DASHBOARD: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_HISTORY: Role[] = ['본청', '지역청', '경찰서']
@@ -72,7 +73,16 @@ export const routes: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  { path: '/admin/security-cases', element: companyScreen(COMPANY_ALL, '경호목록', ['6d']) },
+  {
+    path: '/admin/security-cases',
+    element: (
+      <ProtectedRoute allow={COMPANY_ALL}>
+        <CompanyAppShell>
+          <SecurityCaseListPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
   {
     path: '/admin/security-cases/:id',
     element: (

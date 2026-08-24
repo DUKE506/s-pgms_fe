@@ -27,6 +27,15 @@ export async function registerBaseInfo(id: string, input: CaseBaseInfo): Promise
   return unwrap(res, '기본정보 등록에 실패했습니다')
 }
 
+export async function cancelAssignedCase(id: string, reason: string): Promise<SecurityCase> {
+  const res = await apiFetch(`/security-cases/${id}/cancel`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  })
+  return unwrap(res, '경호취소에 실패했습니다')
+}
+
 export async function createSchedule(
   id: string,
   input: { startDate: string; endDate: string; startTime: string; endTime: string },

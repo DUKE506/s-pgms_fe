@@ -26,7 +26,7 @@ function Sidebar({ items, logoLabel, userLabel, onLogout }: SidebarProps) {
 
   return (
     <>
-      <aside className="hidden xl:sticky xl:top-0 xl:flex h-screen w-[76px] shrink-0 flex-col items-center gap-1.5 bg-sidebar py-5">
+      <aside className="hidden xl:sticky xl:top-0 xl:z-40 xl:flex h-screen w-[76px] shrink-0 flex-col items-center gap-1.5 bg-sidebar py-5">
         <div className="mb-5 flex h-9 w-9 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#edf4ff] to-[#b3cfff] text-[13px] font-bold text-sidebar-primary-foreground">
           {logoLabel}
         </div>
@@ -65,7 +65,7 @@ function Sidebar({ items, logoLabel, userLabel, onLogout }: SidebarProps) {
         </button>
       </aside>
 
-      <nav className="xl:hidden fixed bottom-[18px] left-1/2 -translate-x-1/2 flex gap-8 rounded-full bg-sidebar px-8 py-3 shadow-lg">
+      <nav className="xl:hidden fixed bottom-[18px] left-1/2 z-40 -translate-x-1/2 flex gap-8 rounded-full bg-sidebar px-8 py-3 shadow-lg">
         {items.map((item) => {
           const active = isActive(pathname, item.href)
           return (

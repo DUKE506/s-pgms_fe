@@ -9,6 +9,15 @@ export async function listPendingRequests(): Promise<SecurityCase[]> {
   return res.json() as Promise<SecurityCase[]>
 }
 
+// 화면 6d: 상태 무관 전체 경호건 목록 (담당자 배정 후 확인/추적용)
+export async function listSecurityCases(): Promise<SecurityCase[]> {
+  const res = await apiFetch('/security-cases')
+  if (!res.ok) {
+    throw new Error('경호목록을 불러오지 못했습니다')
+  }
+  return res.json() as Promise<SecurityCase[]>
+}
+
 export async function assignManager(caseId: string, managerId: string): Promise<SecurityCase> {
   const res = await apiFetch(`/security-cases/${caseId}/assign`, {
     method: 'POST',
@@ -19,4 +28,11 @@ export async function assignManager(caseId: string, managerId: string): Promise<
     throw new Error('담당자 배정에 실패했습니다')
   }
   return res.json() as Promise<SecurityCase>
+}
+
+export async function cancelPendingRequest(caseId: string): Promise<void> {
+  const res = await apiFetch(`/security-cases/${caseId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    throw new Error('배치요청 취소에 실패했습니다')
+  }
 }

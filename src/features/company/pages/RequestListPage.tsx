@@ -1,8 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
-import { Search, UserPlus } from 'lucide-react'
+import { MoreVertical, Search, Trash2, UserPlus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -19,20 +24,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
 import { listPendingRequests } from '../api/requests'
 import { listManagers } from '../api/managers'
 import AssignManagerDialog from '../components/AssignManagerDialog'
+import CancelPendingCaseDialog from '../components/CancelPendingCaseDialog'
+import DispatchRequestViewDialog from '../components/DispatchRequestViewDialog'
+import SecurityCaseTabs from '../components/SecurityCaseTabs'
 import type { SecurityCase } from '../../police/types/securityCase'
 
 const ALL = '전체'
-
-// 탭 4개 모두 element 종류(span/Link)와 무관하게 동일한 박스 크기를 갖도록
-// 높이를 고정하고 base 클래스를 공유한다. h-9/text-button: Button/Input과
-// 높이·글자 크기를 맞춤 (2026-08-22) — 공용 Tab 컴포넌트가 아직 없어서
-// 이 화면에만 로컬로 적용.
-const TAB_BASE =
-  'inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4.5 text-button font-semibold'
 
 function formatDate(dateLike: string) {
   const d = new Date(dateLike)
@@ -57,6 +57,8 @@ function RequestListPage() {
   const [stationFilter, setStationFilter] = useState(ALL)
   const [search, setSearch] = useState('')
   const [targetCase, setTargetCase] = useState<SecurityCase | null>(null)
+  const [cancelTargetCase, setCancelTargetCase] = useState<SecurityCase | null>(null)
+  const [viewCase, setViewCase] = useState<SecurityCase | null>(null)
 
   const requests = requestsQuery.data ?? []
 
@@ -78,32 +80,7 @@ function RequestListPage() {
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
       <h1 className="text-xl font-bold text-foreground">경호관리</h1>
 
-      <div className="flex gap-2 overflow-x-auto">
-        <span className={cn(TAB_BASE, 'bg-primary text-primary-foreground')}>
-          배치요청 {requests.length}
-        </span>
-        <Link
-          to="/admin/security-cases"
-          className={cn(
-            TAB_BASE,
-            'border border-border bg-card text-foreground hover:bg-muted',
-          )}
-        >
-          경호목록
-        </Link>
-        <span
-          aria-disabled="true"
-          className={cn(TAB_BASE, 'cursor-not-allowed border border-border bg-card text-muted-foreground/50')}
-        >
-          연장요청
-        </span>
-        <span
-          aria-disabled="true"
-          className={cn(TAB_BASE, 'cursor-not-allowed border border-border bg-card text-muted-foreground/50')}
-        >
-          단축요청
-        </span>
-      </div>
+      <SecurityCaseTabs active="배치요청" />
 
       <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
         <Select
@@ -179,7 +156,11 @@ function RequestListPage() {
               </TableHeader>
               <TableBody>
                 {filteredRequests.map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow
+                    key={r.id}
+                    className="cursor-pointer"
+                    onClick={() => setViewCase(r)}
+                  >
                     <TableCell>{r.receiptNumber}</TableCell>
                     <TableCell>{r.policeStation}</TableCell>
                     <TableCell>{r.jurisdiction}</TableCell>
@@ -188,11 +169,27 @@ function RequestListPage() {
                       {formatDate(r.startDate)} ~ {formatEndDate(r.endDate)}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end">
-                        <Button size="sm" onClick={() => setTargetCase(r)}>
-                          <UserPlus />
-                          배정
-                        </Button>
+                      <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm" aria-label="더보기">
+                              <MoreVertical />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => setTargetCase(r)}>
+                              <UserPlus />
+                              배정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => setCancelTargetCase(r)}
+                            >
+                              <Trash2 />
+                              취소
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -205,14 +202,33 @@ function RequestListPage() {
             {filteredRequests.map((r) => (
               <div
                 key={r.id}
-                className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
+                onClick={() => setViewCase(r)}
+                className="flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-foreground">{r.receiptNumber}</span>
-                  <Button size="icon-sm" onClick={() => setTargetCase(r)}>
-                    <UserPlus />
-                    <span className="sr-only">배정</span>
-                  </Button>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon-sm" aria-label="더보기">
+                          <MoreVertical />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => setTargetCase(r)}>
+                          <UserPlus />
+                          배정
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onSelect={() => setCancelTargetCase(r)}
+                        >
+                          <Trash2 />
+                          취소
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
@@ -236,6 +252,17 @@ function RequestListPage() {
         managers={managersQuery.data ?? []}
         onOpenChange={(open) => !open && setTargetCase(null)}
       />
+      <CancelPendingCaseDialog
+        targetCase={cancelTargetCase}
+        onOpenChange={(open) => !open && setCancelTargetCase(null)}
+      />
+      {viewCase && (
+        <DispatchRequestViewDialog
+          securityCase={viewCase}
+          open
+          onOpenChange={(open) => !open && setViewCase(null)}
+        />
+      )}
     </main>
   )
 }

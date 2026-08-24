@@ -1,5 +1,5 @@
 import type { Worker } from '../api/workers'
-import type { CaseBaseInfo, SecurityCase } from '../../police/types/securityCase'
+import type { CaseBaseInfo, MeasurePeriod, SecurityCase } from '../../police/types/securityCase'
 
 function formatDate(dateLike: string) {
   const d = new Date(dateLike)
@@ -7,6 +7,13 @@ function formatDate(dateLike: string) {
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${yyyy}.${mm}.${dd}`
+}
+
+function formatMeasure(items: string[], period: MeasurePeriod | null | undefined): string {
+  if (items.length === 0) return ''
+  const joined = items.join(', ')
+  if (!period?.startDate || !period.endDate) return joined
+  return `${joined} (${formatDate(period.startDate)} ~ ${formatDate(period.endDate)})`
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -20,7 +27,10 @@ function Field({ label, value }: { label: string; value: string }) {
 
 function workerNames(baseInfo: CaseBaseInfo, workers: Worker[], onlyDefault: boolean) {
   const ids = baseInfo.defaultWorkers.filter((w) => !onlyDefault || w.isDefault).map((w) => w.workerId)
-  const names = ids.map((id) => workers.find((w) => w.id === id)?.name ?? id)
+  const names = ids.map((id) => {
+    const worker = workers.find((w) => w.id === id)
+    return worker ? `${worker.name}(${worker.employeeId})` : id
+  })
   return names.length > 0 ? names.join(', ') : '-'
 }
 
@@ -76,14 +86,29 @@ function BaseInfoSummaryCard({ securityCase, workers, onEdit }: BaseInfoSummaryC
       </div>
 
       <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:justify-between">
-        <Field label="안전조치" value={baseInfo.safetyMeasures.join(', ')} />
-        <Field label="긴급응급조치" value={baseInfo.emergencyMeasures.join(', ') || '해당 없음'} />
-        <Field label="잠정조치" value={baseInfo.provisionalMeasures.join(', ') || '해당 없음'} />
+        <Field
+          label="안전조치"
+          value={formatMeasure(baseInfo.safetyMeasures, baseInfo.safetyMeasuresPeriod)}
+        />
+        <Field
+          label="긴급응급조치"
+          value={formatMeasure(baseInfo.emergencyMeasures, baseInfo.emergencyMeasuresPeriod) || '해당 없음'}
+        />
+        <Field
+          label="잠정조치"
+          value={formatMeasure(baseInfo.provisionalMeasures, baseInfo.provisionalMeasuresPeriod) || '해당 없음'}
+        />
         <Field
           label="긴급임시조치"
-          value={baseInfo.emergencyTempMeasures.join(', ') || '해당 없음'}
+          value={
+            formatMeasure(baseInfo.emergencyTempMeasures, baseInfo.emergencyTempMeasuresPeriod) ||
+            '해당 없음'
+          }
         />
-        <Field label="임시조치" value={baseInfo.temporaryMeasures.join(', ') || '해당 없음'} />
+        <Field
+          label="임시조치"
+          value={formatMeasure(baseInfo.temporaryMeasures, baseInfo.temporaryMeasuresPeriod) || '해당 없음'}
+        />
       </div>
     </div>
   )

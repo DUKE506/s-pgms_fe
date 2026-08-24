@@ -1,6 +1,10 @@
 export type CaseType = '스토킹' | '가정폭력' | '교제폭력' | '협박' | '기타' | '사건미접수'
 export type SecurityCaseStatus = '접수' | '배정' | '경호중' | '경호완료' | '종결' | '취소'
 
+// 본사 경호목록(s6d)에는 배정 이후~진행 중인 건만 보인다 — 종결/취소는 이력 조회
+// 화면(Phase 3, 아직 미구현) 쪽 소관이라 여기서는 제외한다 (2026-08-24 결정).
+export const ACTIVE_SECURITY_CASE_STATUSES: SecurityCaseStatus[] = ['배정', '경호중', '경호완료']
+
 export interface SecurityCaseSubject {
   nameInitial: string
   gender: string
@@ -29,6 +33,13 @@ export interface CaseWorkerAssignment {
   isDefault: boolean // 대표근무자 — 근무 스케줄 생성 시 배치기간 전체에 자동 배정
 }
 
+// 5개 조치 섹션 각각에 붙는 적용기간 — 섹션 안에서 체크된 항목 전체에 공통 적용되는
+// 기간 하나(항목별 개별 기간 아님, 2026-08-24 결정). 체크된 항목이 없으면 null.
+export interface MeasurePeriod {
+  startDate: string
+  endDate: string
+}
+
 export interface CaseBaseInfo {
   workHours: string // "09:00 ~ 18:00" 기본 경호 근무시간, 배치요구서 값에서 수정 가능
   defaultWorkers: CaseWorkerAssignment[]
@@ -46,6 +57,11 @@ export interface CaseBaseInfo {
   provisionalMeasures: string[]
   emergencyTempMeasures: string[]
   temporaryMeasures: string[]
+  safetyMeasuresPeriod: MeasurePeriod | null
+  emergencyMeasuresPeriod: MeasurePeriod | null
+  provisionalMeasuresPeriod: MeasurePeriod | null
+  emergencyTempMeasuresPeriod: MeasurePeriod | null
+  temporaryMeasuresPeriod: MeasurePeriod | null
 }
 
 export interface ScheduleAssignment {
@@ -66,16 +82,22 @@ export interface ScheduleDay {
   groups: ScheduleGroup[]
 }
 
-export interface PreMeeting {
-  enabled: boolean // 근무시간 외 별도 진행 여부
-  date: string
+export interface PreMeetingAssignment {
   workerId: string
   startTime: string
   endTime: string
 }
 
+// 등록 여부를 별도 플래그로 안 두고 레코드 존재 자체로 표현한다 — 등록 안 됐으면
+// null (2026-08-24 결정: 시스템이 "근무시간 내/외" 여부를 판단하지 않고, 등록은
+// 순수하게 사용자가 필요할 때만 하는 CRUD로 둔다).
+export interface PreMeeting {
+  date: string
+  assignments: PreMeetingAssignment[]
+}
+
 export interface WorkSchedule {
-  preMeeting: PreMeeting
+  preMeeting: PreMeeting | null
   days: ScheduleDay[]
 }
 
@@ -108,6 +130,10 @@ export interface SecurityCase {
   baseInfo?: CaseBaseInfo
   workSchedule?: WorkSchedule
   attachments?: CaseAttachments
+  // 배정 상태 이후 경호취소 시에만 채워짐 (project-overview.md: 접수 단계 취소는
+  // DB 삭제라 이 필드가 필요 없음)
+  cancelReason?: string
+  canceledAt?: string
 }
 
 export type SecurityCaseCreateInput = Omit<

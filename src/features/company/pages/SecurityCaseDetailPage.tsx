@@ -12,6 +12,7 @@ import ScheduleSection from '../components/ScheduleSection'
 import ScheduleInitDialog from '../components/ScheduleInitDialog'
 import ScheduleGroupDialog from '../components/ScheduleGroupDialog'
 import AttachmentsSection from '../components/AttachmentsSection'
+import CancelAssignedCaseDialog from '../components/CancelAssignedCaseDialog'
 import type { ScheduleGroup } from '../../police/types/securityCase'
 
 interface GroupDialogState {
@@ -30,6 +31,7 @@ function SecurityCaseDetailPage() {
 
   const [editingBaseInfo, setEditingBaseInfo] = useState(false)
   const [scheduleInitOpen, setScheduleInitOpen] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
   const [groupDialog, setGroupDialog] = useState<GroupDialogState | null>(null)
   // ScheduleGroupDialog는 상시 마운트된 채 open만 토글되므로, 그 내부 useState(특이사항/
   // 근무자 목록)가 대상 그룹이 바뀔 때 새로 초기화되도록 key로 강제 리마운트시킨다. 닫힐 때는
@@ -82,13 +84,15 @@ function SecurityCaseDetailPage() {
               <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
               <StatusBadge status={securityCase.status} />
             </div>
-            <button
-              type="button"
-              disabled
-              className="cursor-not-allowed rounded-lg bg-destructive/40 px-4.5 py-2.5 text-sm font-semibold text-white"
-            >
-              경호취소
-            </button>
+            {securityCase.status === '배정' && (
+              <button
+                type="button"
+                onClick={() => setCancelOpen(true)}
+                className="rounded-lg bg-destructive px-4.5 py-2.5 text-sm font-semibold text-white hover:bg-destructive/90"
+              >
+                경호취소
+              </button>
+            )}
           </div>
         )}
 
@@ -164,6 +168,11 @@ function SecurityCaseDetailPage() {
         securityCase={securityCase}
         open={scheduleInitOpen}
         onOpenChange={setScheduleInitOpen}
+      />
+      <CancelAssignedCaseDialog
+        securityCase={securityCase}
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
       />
       <ScheduleGroupDialog
         key={groupDialogKey}

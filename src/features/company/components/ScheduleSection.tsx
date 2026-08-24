@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Switch } from '@/components/ui/switch'
 import { setPreMeeting } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
+import PreMeetingDialog from './PreMeetingDialog'
 import type { Worker } from '../api/workers'
 import type { ScheduleDay, ScheduleGroup, SecurityCase } from '../../police/types/securityCase'
 
@@ -18,7 +18,8 @@ function formatDateWithWeekday(dateOnly: string) {
 }
 
 function workerName(workers: Worker[], workerId: string) {
-  return workers.find((w) => w.id === workerId)?.name ?? workerId
+  const worker = workers.find((w) => w.id === workerId)
+  return worker ? `${worker.name} (${worker.employeeId})` : workerId
 }
 
 function duration(startTime: string, endTime: string): string {
@@ -79,17 +80,18 @@ interface ScheduleSectionProps {
 function ScheduleSection({ securityCase, workers, onAddGroup, onEditGroup }: ScheduleSectionProps) {
   const schedule = securityCase.workSchedule!
   const [expandedDate, setExpandedDate] = useState<string | null>(schedule.days[0]?.date ?? null)
+  const [preMeetingDialogOpen, setPreMeetingDialogOpen] = useState(false)
   const queryClient = useQueryClient()
   const showToast = useToastStore((state) => state.show)
 
-  const preMeetingMutation = useMutation({
-    mutationFn: (enabled: boolean) =>
-      setPreMeeting(securityCase.id, { ...schedule.preMeeting, enabled }),
+  const deletePreMeetingMutation = useMutation({
+    mutationFn: () => setPreMeeting(securityCase.id, null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
+      showToast('사전미팅이 삭제되었습니다', 'success')
     },
     onError: () => {
-      showToast('사전미팅 설정 변경에 실패했습니다', 'error')
+      showToast('사전미팅 삭제에 실패했습니다', 'error')
     },
   })
 
@@ -111,19 +113,57 @@ function ScheduleSection({ securityCase, workers, onAddGroup, onEditGroup }: Sch
       <div className="rounded-lg border border-border p-4">
         <div className="mb-1.5 flex items-center justify-between">
           <div className="text-sm font-bold text-foreground">사전미팅</div>
-          <label className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">근무시간 외 별도 진행</span>
-            <Switch
-              checked={schedule.preMeeting.enabled}
-              onCheckedChange={(checked) => preMeetingMutation.mutate(checked)}
-            />
-          </label>
+          {schedule.preMeeting ? (
+            <div className="flex items-center gap-3 text-[11px] font-semibold">
+              <button
+                type="button"
+                onClick={() => setPreMeetingDialogOpen(true)}
+                className="text-primary hover:underline"
+                aria-label="사전미팅 수정"
+              >
+                수정
+              </button>
+              <button
+                type="button"
+                onClick={() => deletePreMeetingMutation.mutate()}
+                className="text-destructive hover:underline"
+                aria-label="사전미팅 삭제"
+              >
+                삭제
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPreMeetingDialogOpen(true)}
+              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+              aria-label="사전미팅 추가"
+            >
+              <Plus className="size-3.5" />
+              추가
+            </button>
+          )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          근무일 근무시간 내에 사전미팅을 진행할 경우 토글을 꺼두면 되며 별도 시간 등록이
-          필요하지 않습니다. 근무시간 외 진행 시 토글을 켜서 날짜·근무자·시작/종료시간을
-          등록하세요.
-        </p>
+        {schedule.preMeeting ? (
+          <div className="flex flex-col gap-2.5">
+            <div className="text-xs font-semibold text-foreground">{schedule.preMeeting.date}</div>
+            <div className="flex flex-col gap-2">
+              {schedule.preMeeting.assignments.map((a, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-800">
+                    {workerName(workers, a.workerId)}
+                  </span>
+                  <span className="text-xs font-medium text-foreground">
+                    {a.startTime} ~ {a.endTime}{' '}
+                    <span className="text-muted-foreground">· {duration(a.startTime, a.endTime)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">등록된 사전미팅이 없습니다</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-2.5">
@@ -195,6 +235,13 @@ function ScheduleSection({ securityCase, workers, onAddGroup, onEditGroup }: Sch
           )
         })}
       </div>
+
+      <PreMeetingDialog
+        securityCase={securityCase}
+        workers={workers}
+        open={preMeetingDialogOpen}
+        onOpenChange={setPreMeetingDialogOpen}
+      />
     </div>
   )
 }

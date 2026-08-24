@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { createSchedule } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
+import HourMinuteSelect from './HourMinuteSelect'
 import type { SecurityCase } from '../../police/types/securityCase'
 
 interface ScheduleInitDialogProps {
@@ -59,15 +60,11 @@ function ScheduleInitDialog({ securityCase, open, onOpenChange }: ScheduleInitDi
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="schedule-start-time">근무시간</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="schedule-start-time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            />
+          <Label>근무시간</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <HourMinuteSelect value={startTime} onChange={setStartTime} ariaLabel="시작시간" />
             <span className="text-sm text-muted-foreground">~</span>
-            <Input value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+            <HourMinuteSelect value={endTime} onChange={setEndTime} ariaLabel="종료시간" />
           </div>
         </div>
 

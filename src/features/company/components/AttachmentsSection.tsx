@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { FileText } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -7,6 +7,7 @@ import {
   setWorkerConsentFile,
 } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
+import DispatchRequestViewDialog from './DispatchRequestViewDialog'
 import type { Worker } from '../api/workers'
 import type { SecurityCase } from '../../police/types/securityCase'
 
@@ -66,6 +67,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
   const queryClient = useQueryClient()
   const showToast = useToastStore((state) => state.show)
   const roster = securityCase.baseInfo?.defaultWorkers ?? []
+  const [dispatchViewOpen, setDispatchViewOpen] = useState(false)
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
@@ -145,22 +147,36 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
         <div className="mb-1 flex items-center justify-between">
           <div className="text-sm font-bold text-foreground">배치요구서</div>
         </div>
-        <p className="mb-3.5 text-[11px] text-muted-foreground">피전이 작성한 원본 문서입니다</p>
+        <p className="mb-3.5 text-[11px] text-muted-foreground">
+          피전이 신규 접수 시 작성한 내용입니다
+        </p>
         <div className="flex items-center justify-between rounded-lg border border-dashed border-blue-300 bg-blue-50 p-4">
           <div className="flex items-center gap-3">
             <FileText className="size-5 text-blue-700" />
             <div>
               <div className="text-sm font-semibold text-foreground">
-                배치요구서_{securityCase.securityCode ?? securityCase.receiptNumber}.pdf
+                {securityCase.receiptNumber} 배치요구서
               </div>
               <div className="text-[11px] text-muted-foreground">
                 등록일 · {securityCase.createdAt.slice(0, 10)}
               </div>
             </div>
           </div>
-          <span className="text-xs font-semibold text-blue-700">보기</span>
+          <button
+            type="button"
+            onClick={() => setDispatchViewOpen(true)}
+            className="text-xs font-semibold text-blue-700"
+          >
+            보기
+          </button>
         </div>
       </div>
+
+      <DispatchRequestViewDialog
+        securityCase={securityCase}
+        open={dispatchViewOpen}
+        onOpenChange={setDispatchViewOpen}
+      />
 
       <div className="rounded-xl border border-border bg-card p-5.5">
         <div className="mb-1 text-sm font-bold text-foreground">파기확인서 등록</div>

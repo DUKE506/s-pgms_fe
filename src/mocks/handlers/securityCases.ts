@@ -2,6 +2,8 @@ import { http, HttpResponse } from 'msw'
 import { companyAccounts, policeAccounts } from '../data/accounts'
 import {
   assignManager,
+  cancelAssignedCase,
+  cancelPendingCase,
   createInitialSchedule,
   createSecurityCase,
   findSecurityCase,
@@ -73,6 +75,33 @@ export const securityCaseHandlers = [
       return HttpResponse.json({ message: '배정할 수 없는 상태입니다' }, { status: 409 })
     }
 
+    return HttpResponse.json(updated)
+  }),
+
+  // 접수취소: 상태값 없이 DB에서 삭제
+  http.delete('/api/security-cases/:id', ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const ok = cancelPendingCase(params.id as string)
+    if (!ok) {
+      return HttpResponse.json({ message: '취소할 수 없는 상태입니다' }, { status: 409 })
+    }
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // 경호취소: 배정 상태 이후 사유와 함께 '취소' 상태로 전환
+  http.put('/api/security-cases/:id/cancel', async ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const { reason } = (await request.json()) as { reason: string }
+    const updated = cancelAssignedCase(params.id as string, reason)
+    if (!updated) {
+      return HttpResponse.json({ message: '취소할 수 없는 상태입니다' }, { status: 409 })
+    }
     return HttpResponse.json(updated)
   }),
 

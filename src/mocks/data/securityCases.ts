@@ -5,6 +5,9 @@ import type {
   SecurityCase,
   SecurityCaseCreateInput,
 } from '../../features/police/types/securityCase'
+import { loadPersisted, savePersisted } from './persist'
+
+const STORAGE_KEY = 's-pgms:security-cases'
 
 const JURISDICTION_BY_STATION: Record<string, string> = {
   강남경찰서: '서울지방경찰청',
@@ -62,7 +65,7 @@ function seedPendingCase(input: {
   }
 }
 
-export const securityCases: SecurityCase[] = [
+const SEED_CASES: SecurityCase[] = [
   seedPendingCase({
     id: 'case-seed-1',
     policeStation: '강남경찰서',
@@ -105,8 +108,32 @@ export const securityCases: SecurityCase[] = [
   }),
 ]
 
-let nextCaseId = 1
-let nextSecurityCodeSeq = 1
+export const securityCases: SecurityCase[] = loadPersisted(STORAGE_KEY, SEED_CASES)
+
+function persist() {
+  savePersisted(STORAGE_KEY, securityCases)
+}
+
+// 카운터 자체는 persist하지 않고, 로드된(=새로고침 전 저장된) 데이터에서 이미 쓰인
+// 최댓값을 읽어 다음 값을 계산한다 — 배열만 정상 저장돼 있으면 항상 정합성 있게
+// 이어서 발급된다.
+function deriveNextSeq(pattern: RegExp, values: (string | undefined)[]): number {
+  const max = values.reduce((acc, v) => {
+    const m = v?.match(pattern)
+    if (!m) return acc
+    return Math.max(acc, Number(m[1]))
+  }, 0)
+  return max + 1
+}
+
+let nextCaseId = deriveNextSeq(
+  /^case-(\d+)$/,
+  securityCases.map((c) => c.id),
+)
+let nextSecurityCodeSeq = deriveNextSeq(
+  /^ST(\d+)$/,
+  securityCases.map((c) => c.securityCode),
+)
 
 export function issueReceiptNumber(policeStation: string, now = new Date()): string {
   const yy = String(now.getFullYear()).slice(2)
@@ -136,6 +163,7 @@ export function createSecurityCase(
     createdAt: new Date().toISOString(),
   }
   securityCases.push(record)
+  persist()
   return record
 }
 
@@ -147,6 +175,30 @@ export function assignManager(caseId: string, managerName: string): SecurityCase
   record.status = '배정'
   record.assignee = managerName
   record.securityCode = issueSecurityCode()
+  persist()
+  return record
+}
+
+// 접수취소: 아직 경호코드가 발급되지 않은 상태라 상태값으로 남기지 않고 DB에서
+// 완전히 삭제한다 (project-overview.md 취소 규칙).
+export function cancelPendingCase(caseId: string): boolean {
+  const index = securityCases.findIndex((c) => c.id === caseId)
+  if (index === -1 || securityCases[index].status !== '접수') return false
+  securityCases.splice(index, 1)
+  persist()
+  return true
+}
+
+// 경호취소: 배정 상태 이후(경호코드 발급 후)라 상태값 '취소'로 전환하고 이력에
+// 남긴다 — 사유를 필수로 받는다 (project-overview.md 취소 규칙).
+export function cancelAssignedCase(caseId: string, reason: string): SecurityCase | null {
+  const record = securityCases.find((c) => c.id === caseId)
+  if (!record || record.status !== '배정') return null
+
+  record.status = '취소'
+  record.cancelReason = reason
+  record.canceledAt = new Date().toISOString()
+  persist()
   return record
 }
 
@@ -159,6 +211,7 @@ export function registerBaseInfo(caseId: string, input: CaseBaseInfo): SecurityC
   const record = securityCases.find((c) => c.id === caseId)
   if (!record) return null
   record.baseInfo = input
+  persist()
   return record
 }
 
@@ -207,9 +260,10 @@ export function createInitialSchedule(
   }
 
   record.workSchedule = {
-    preMeeting: { enabled: false, date: '', workerId: '', startTime: '', endTime: '' },
+    preMeeting: null,
     days,
   }
+  persist()
   return record
 }
 
@@ -228,6 +282,7 @@ export function upsertScheduleGroup(
   const idx = day.groups.findIndex((g) => g.id === group.id)
   if (idx >= 0) day.groups[idx] = group
   else day.groups.push(group)
+  persist()
   return record
 }
 
@@ -238,6 +293,7 @@ export function setPreMeeting(
   const record = securityCases.find((c) => c.id === caseId)
   if (!record?.workSchedule) return null
   record.workSchedule.preMeeting = preMeeting
+  persist()
   return record
 }
 
@@ -256,6 +312,7 @@ export function setSecurityPlanFile(caseId: string, fileName: string): SecurityC
   const record = securityCases.find((c) => c.id === caseId)
   if (!record) return null
   ensureAttachments(record).securityPlanFileName = fileName
+  persist()
   return record
 }
 
@@ -263,6 +320,7 @@ export function setDestructionCertFile(caseId: string, fileName: string): Securi
   const record = securityCases.find((c) => c.id === caseId)
   if (!record) return null
   ensureAttachments(record).destructionCertFileName = fileName
+  persist()
   return record
 }
 
@@ -274,5 +332,6 @@ export function setWorkerConsentFile(
   const record = securityCases.find((c) => c.id === caseId)
   if (!record) return null
   ensureAttachments(record).workerConsentFileNames[workerId] = fileName
+  persist()
   return record
 }

@@ -12,47 +12,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
-import { upsertScheduleGroup } from '../api/securityCaseDetail'
+import { setPreMeeting } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
+import HourMinuteSelect from './HourMinuteSelect'
 import type { Worker } from '../api/workers'
-import type { ScheduleAssignment, ScheduleGroup, SecurityCase } from '../../police/types/securityCase'
+import type { PreMeeting, PreMeetingAssignment, SecurityCase } from '../../police/types/securityCase'
 
-function defaultTimes(workHours: string): { start: string; end: string } {
-  const [start, end] = workHours.split('~').map((v) => v.trim())
-  return { start: start || '09:00', end: end || '18:00' }
-}
-
-interface ScheduleGroupDialogProps {
+interface PreMeetingDialogProps {
   securityCase: SecurityCase
   workers: Worker[]
-  date: string | null
-  group: ScheduleGroup | null
+  open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-function ScheduleGroupDialog({
-  securityCase,
-  workers,
-  date,
-  group,
-  onOpenChange,
-}: ScheduleGroupDialogProps) {
-  const open = date != null
-  const { start, end } = defaultTimes(securityCase.baseInfo?.workHours ?? '09:00 ~ 18:00')
-  const groupLabel = (() => {
-    if (!group || !date) return null
-    const day = securityCase.workSchedule?.days.find((d) => d.date === date)
-    const index = day?.groups.findIndex((g) => g.id === group.id) ?? -1
-    return index >= 0 ? `그룹 ${index + 1}` : null
-  })()
+// 근무 스케줄과 달리 그룹 개념이 없어 근무자 행을 플랫하게 추가/삭제한다
+// (2026-08-24 결정). 등록 여부는 별도 플래그가 아니라 레코드 존재 자체로
+// 표현하므로, 이 모달은 순수하게 날짜+근무자별 시간을 CRUD하는 역할만 한다.
+function PreMeetingDialog({ securityCase, workers, open, onOpenChange }: PreMeetingDialogProps) {
+  const existing = securityCase.workSchedule?.preMeeting ?? null
 
-  const [note, setNote] = useState(group?.note ?? '')
-  const [assignments, setAssignments] = useState<ScheduleAssignment[]>(
-    group?.assignments ?? [
-      { workerId: workers[0]?.id ?? '', startTime: start, endTime: end, isOff: false },
-    ],
+  const [date, setDate] = useState(existing?.date ?? securityCase.startDate)
+  const [assignments, setAssignments] = useState<PreMeetingAssignment[]>(
+    existing?.assignments ?? [{ workerId: workers[0]?.id ?? '', startTime: '09:00', endTime: '10:00' }],
   )
   const queryClient = useQueryClient()
   const showToast = useToastStore((state) => state.show)
@@ -61,7 +43,7 @@ function ScheduleGroupDialog({
     onOpenChange(false)
   }
 
-  function updateAssignment(index: number, patch: Partial<ScheduleAssignment>) {
+  function updateAssignment(index: number, patch: Partial<PreMeetingAssignment>) {
     setAssignments((prev) => prev.map((a, i) => (i === index ? { ...a, ...patch } : a)))
   }
 
@@ -72,7 +54,7 @@ function ScheduleGroupDialog({
       showToast('추가할 수 있는 근무자가 없습니다', 'error')
       return
     }
-    setAssignments((prev) => [...prev, { workerId: next.id, startTime: start, endTime: end, isOff: false }])
+    setAssignments((prev) => [...prev, { workerId: next.id, startTime: '09:00', endTime: '10:00' }])
   }
 
   function removeAssignment(index: number) {
@@ -81,20 +63,16 @@ function ScheduleGroupDialog({
 
   const mutation = useMutation({
     mutationFn: () => {
-      const payload: ScheduleGroup = {
-        id: group?.id ?? `${securityCase.id}-${date}-group-${Date.now()}`,
-        note,
-        assignments,
-      }
-      return upsertScheduleGroup(securityCase.id, date!, payload)
+      const payload: PreMeeting = { date, assignments }
+      return setPreMeeting(securityCase.id, payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
-      showToast('근무 그룹이 저장되었습니다', 'success')
+      showToast('사전미팅이 저장되었습니다', 'success')
       resetAndClose()
     },
     onError: () => {
-      showToast('근무 그룹 저장에 실패했습니다', 'error')
+      showToast('사전미팅 저장에 실패했습니다', 'error')
     },
   })
 
@@ -102,16 +80,20 @@ function ScheduleGroupDialog({
     <Dialog open={open} onOpenChange={(next) => !next && resetAndClose()}>
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>그룹 추가/수정</DialogTitle>
+          <DialogTitle>사전미팅 {existing ? '수정' : '추가'}</DialogTitle>
           <p className="text-xs text-muted-foreground">
-            {formatManagementNumber(securityCase.receiptNumber, securityCase.securityCode)} · {date}
-            {groupLabel ? ` · ${groupLabel}` : ''}
+            {formatManagementNumber(securityCase.receiptNumber, securityCase.securityCode)}
           </p>
         </DialogHeader>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="group-note">이 그룹의 특이사항</Label>
-          <Input id="group-note" value={note} onChange={(e) => setNote(e.target.value)} />
+          <Label htmlFor="pre-meeting-date">날짜</Label>
+          <Input
+            id="pre-meeting-date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </div>
 
         <div className="flex flex-col gap-3.5">
@@ -119,25 +101,16 @@ function ScheduleGroupDialog({
             <div key={index} className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-foreground">근무자 {index + 1}</span>
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">휴무</span>
-                    <Switch
-                      checked={assignment.isOff}
-                      onCheckedChange={(checked) => updateAssignment(index, { isOff: checked })}
-                    />
-                  </label>
-                  {assignments.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeAssignment(index)}
-                      className="text-muted-foreground hover:text-destructive"
-                      aria-label={`근무자 ${index + 1} 삭제`}
-                    >
-                      <X className="size-4" />
-                    </button>
-                  )}
-                </div>
+                {assignments.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeAssignment(index)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label={`근무자 ${index + 1} 삭제`}
+                  >
+                    <X className="size-4" />
+                  </button>
+                )}
               </div>
               <Select
                 value={assignment.workerId}
@@ -154,17 +127,17 @@ function ScheduleGroupDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex items-center gap-2">
-                <Input
+              <div className="flex flex-wrap items-center gap-2">
+                <HourMinuteSelect
                   value={assignment.startTime}
-                  disabled={assignment.isOff}
-                  onChange={(e) => updateAssignment(index, { startTime: e.target.value })}
+                  onChange={(v) => updateAssignment(index, { startTime: v })}
+                  ariaLabel={`근무자 ${index + 1} 시작시간`}
                 />
                 <span className="text-sm text-muted-foreground">~</span>
-                <Input
+                <HourMinuteSelect
                   value={assignment.endTime}
-                  disabled={assignment.isOff}
-                  onChange={(e) => updateAssignment(index, { endTime: e.target.value })}
+                  onChange={(v) => updateAssignment(index, { endTime: v })}
+                  ariaLabel={`근무자 ${index + 1} 종료시간`}
                 />
               </div>
             </div>
@@ -176,7 +149,7 @@ function ScheduleGroupDialog({
             className="flex w-fit items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
           >
             <Plus className="size-3.5" />
-            근무자 추가 (이 그룹에)
+            근무자 추가
           </button>
         </div>
 
@@ -198,4 +171,4 @@ function ScheduleGroupDialog({
   )
 }
 
-export default ScheduleGroupDialog
+export default PreMeetingDialog

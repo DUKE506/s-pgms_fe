@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import SecurityCaseDetailPage from './SecurityCaseDetailPage'
@@ -41,12 +41,37 @@ describe('SecurityCaseDetailPage', () => {
     useAuthStore.setState({ user: null, accessToken: null, refreshToken: null })
   })
 
-  it('기본정보 미등록 상태에서는 empty state를 보여주고 경호취소는 비활성이다', async () => {
+  it('기본정보 미등록 상태에서도 배정 상태면 경호취소 버튼이 활성이다', async () => {
     loginAsAdmin()
     renderPage(assignedCaseId())
 
     expect(await screen.findByText('기본정보가 등록되지 않았습니다')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '경호취소' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '경호취소' })).toBeEnabled()
+  })
+
+  it('경호취소는 사유 입력이 필수이고, 입력하면 상태가 취소로 바뀐다', async () => {
+    loginAsAdmin()
+    const caseId = assignedCaseId()
+    renderPage(caseId)
+    await screen.findByText('기본정보가 등록되지 않았습니다')
+
+    fireEvent.click(screen.getByRole('button', { name: '경호취소' }))
+    const dialog = await screen.findByRole('dialog')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '경호취소' }))
+    expect(await within(dialog).findByText('취소 사유를 입력해주세요')).toBeInTheDocument()
+
+    fireEvent.change(within(dialog).getByLabelText('취소 사유'), {
+      target: { value: '피해자 요청으로 경호취소' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '경호취소' }))
+
+    await waitFor(() => {
+      const updated = securityCases.find((c) => c.id === caseId)!
+      expect(updated.status).toBe('취소')
+      expect(updated.cancelReason).toBe('피해자 요청으로 경호취소')
+    })
+    expect(screen.queryByRole('button', { name: '경호취소' })).not.toBeInTheDocument()
   })
 
   it('기본정보 등록 → 스케줄 생성 → 그룹 수정까지 전체 흐름이 동작한다', async () => {

@@ -15,8 +15,17 @@ import {
 import { cn } from '@/lib/utils'
 import { registerBaseInfo } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
+import DispatchRequestViewDialog from './DispatchRequestViewDialog'
+import HourMinuteSelect from './HourMinuteSelect'
 import type { Worker } from '../api/workers'
-import type { CaseBaseInfo, CaseWorkerAssignment, SecurityCase } from '../../police/types/securityCase'
+import type {
+  CaseBaseInfo,
+  CaseWorkerAssignment,
+  MeasurePeriod,
+  SecurityCase,
+} from '../../police/types/securityCase'
+
+const EMPTY_PERIOD: MeasurePeriod = { startDate: '', endDate: '' }
 
 const SAFETY_MEASURES = ['맞춤형 순찰', '임시숙소', '스마트워치', 'CCTV']
 const EMERGENCY_MEASURES = ['1호', '2호']
@@ -45,11 +54,27 @@ interface FormState {
   provisionalMeasures: string[]
   emergencyTempMeasures: string[]
   temporaryMeasures: string[]
+  // 체크된 항목이 없어도 입력 UI 상태는 항상 들고 있다가, 제출 시점에 selected가
+  // 비어있으면 null로 바꿔 저장한다 (컨트롤드 인풋을 null과 오가게 하지 않기 위함).
+  safetyMeasuresPeriod: MeasurePeriod
+  emergencyMeasuresPeriod: MeasurePeriod
+  provisionalMeasuresPeriod: MeasurePeriod
+  emergencyTempMeasuresPeriod: MeasurePeriod
+  temporaryMeasuresPeriod: MeasurePeriod
 }
 
 function buildInitialState(securityCase: SecurityCase): FormState {
   if (securityCase.baseInfo) {
-    return { ...securityCase.baseInfo, workers: [...securityCase.baseInfo.defaultWorkers] }
+    const baseInfo = securityCase.baseInfo
+    return {
+      ...baseInfo,
+      workers: [...baseInfo.defaultWorkers],
+      safetyMeasuresPeriod: baseInfo.safetyMeasuresPeriod ?? EMPTY_PERIOD,
+      emergencyMeasuresPeriod: baseInfo.emergencyMeasuresPeriod ?? EMPTY_PERIOD,
+      provisionalMeasuresPeriod: baseInfo.provisionalMeasuresPeriod ?? EMPTY_PERIOD,
+      emergencyTempMeasuresPeriod: baseInfo.emergencyTempMeasuresPeriod ?? EMPTY_PERIOD,
+      temporaryMeasuresPeriod: baseInfo.temporaryMeasuresPeriod ?? EMPTY_PERIOD,
+    }
   }
   const investigator = splitContact(securityCase.policeContact.investigator)
   const victimOfficer = splitContact(securityCase.policeContact.victimOfficer)
@@ -69,14 +94,34 @@ function buildInitialState(securityCase: SecurityCase): FormState {
     provisionalMeasures: [],
     emergencyTempMeasures: [],
     temporaryMeasures: [],
+    safetyMeasuresPeriod: EMPTY_PERIOD,
+    emergencyMeasuresPeriod: EMPTY_PERIOD,
+    provisionalMeasuresPeriod: EMPTY_PERIOD,
+    emergencyTempMeasuresPeriod: EMPTY_PERIOD,
+    temporaryMeasuresPeriod: EMPTY_PERIOD,
   }
 }
 
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
+function FormSection({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: ReactNode
+  children: ReactNode
+}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        {action ? (
+          <div className="flex items-center justify-between">
+            <CardTitle>{title}</CardTitle>
+            {action}
+          </div>
+        ) : (
+          <CardTitle>{title}</CardTitle>
+        )}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">{children}</CardContent>
     </Card>
@@ -122,6 +167,37 @@ function MeasureChips({
   )
 }
 
+// 7~11번 조치 섹션 공통 — 체크된 항목이 하나라도 있을 때만 나타나는 기간 입력
+// (섹션당 기간 1개, nullable — 2026-08-24 결정)
+function MeasurePeriodFields({
+  period,
+  onChange,
+}: {
+  period: MeasurePeriod
+  onChange: (period: MeasurePeriod) => void
+}) {
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row">
+      <div className="flex flex-1 flex-col gap-1.5">
+        <Label>적용 시작일</Label>
+        <Input
+          type="date"
+          value={period.startDate}
+          onChange={(e) => onChange({ ...period, startDate: e.target.value })}
+        />
+      </div>
+      <div className="flex flex-1 flex-col gap-1.5">
+        <Label>적용 종료일</Label>
+        <Input
+          type="date"
+          value={period.endDate}
+          onChange={(e) => onChange({ ...period, endDate: e.target.value })}
+        />
+      </div>
+    </div>
+  )
+}
+
 interface BaseInfoFormProps {
   securityCase: SecurityCase
   workers: Worker[]
@@ -131,6 +207,7 @@ interface BaseInfoFormProps {
 
 function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInfoFormProps) {
   const [form, setForm] = useState<FormState>(() => buildInitialState(securityCase))
+  const [dispatchViewOpen, setDispatchViewOpen] = useState(false)
   const queryClient = useQueryClient()
   const showToast = useToastStore((state) => state.show)
 
@@ -187,6 +264,15 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
         provisionalMeasures: form.provisionalMeasures,
         emergencyTempMeasures: form.emergencyTempMeasures,
         temporaryMeasures: form.temporaryMeasures,
+        safetyMeasuresPeriod: form.safetyMeasures.length > 0 ? form.safetyMeasuresPeriod : null,
+        emergencyMeasuresPeriod:
+          form.emergencyMeasures.length > 0 ? form.emergencyMeasuresPeriod : null,
+        provisionalMeasuresPeriod:
+          form.provisionalMeasures.length > 0 ? form.provisionalMeasuresPeriod : null,
+        emergencyTempMeasuresPeriod:
+          form.emergencyTempMeasures.length > 0 ? form.emergencyTempMeasuresPeriod : null,
+        temporaryMeasuresPeriod:
+          form.temporaryMeasures.length > 0 ? form.temporaryMeasuresPeriod : null,
       }
       return registerBaseInfo(securityCase.id, input)
     },
@@ -199,6 +285,8 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
       showToast('기본정보 등록에 실패했습니다', 'error')
     },
   })
+
+  const [workHoursStart, workHoursEnd] = form.workHours.split('~').map((v) => v.trim())
 
   return (
     // w-full이 꼭 필요함: 상위가 flex-col 컨테이너라 mx-auto만 있으면 auto margin이
@@ -213,7 +301,18 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
         </p>
       </div>
 
-      <FormSection title="1. 경호대상자">
+      <FormSection
+        title="1. 경호대상자"
+        action={
+          <button
+            type="button"
+            onClick={() => setDispatchViewOpen(true)}
+            className="rounded-md border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+          >
+            배치요구서 원본보기
+          </button>
+        }
+      >
         <div className="flex flex-col gap-1.5">
           <Label>성명 (성만 표기)</Label>
           <Input value={securityCase.subject.nameInitial} disabled />
@@ -242,12 +341,20 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
 
       <FormSection title="3. 배치시간">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="work-hours">기본 경호 근무 시간</Label>
-          <Input
-            id="work-hours"
-            value={form.workHours}
-            onChange={(e) => update('workHours', e.target.value)}
-          />
+          <Label>기본 경호 근무 시간</Label>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <HourMinuteSelect
+              value={workHoursStart}
+              onChange={(next) => update('workHours', `${next} ~ ${workHoursEnd}`)}
+              ariaLabel="시작시간"
+            />
+            <span className="text-sm text-muted-foreground">~</span>
+            <HourMinuteSelect
+              value={workHoursEnd}
+              onChange={(next) => update('workHours', `${workHoursStart} ~ ${next}`)}
+              ariaLabel="종료시간"
+            />
+          </div>
         </div>
         <p className="text-[11px] text-muted-foreground">
           배치요구서의 시간을 기본값으로 불러오며, 필요 시 수정할 수 있습니다.
@@ -274,7 +381,7 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
                   <SelectContent>
                     {workers.map((w) => (
                       <SelectItem key={w.id} value={w.id}>
-                        {w.name}
+                        {w.name} ({w.employeeId})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -316,32 +423,22 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
       </FormSection>
 
       <FormSection title="5. 담당 경찰관">
+        <p className="-mt-2 text-[11px] text-muted-foreground">
+          배치요구서에 등록된 값이 표기됩니다. 변경이 필요하면 배치요구서를 작성한 경찰서에
+          문의하세요.
+        </p>
         <div className="flex flex-col gap-1.5">
           <Label>수사관</Label>
           <div className="flex gap-2.5">
-            <Input
-              placeholder="이름"
-              value={form.investigatorName}
-              onChange={(e) => update('investigatorName', e.target.value)}
-            />
-            <Input
-              placeholder="연락처"
-              value={form.investigatorPhone}
-              onChange={(e) => update('investigatorPhone', e.target.value)}
-            />
+            <Input placeholder="이름" value={form.investigatorName} disabled />
+            <Input placeholder="연락처" value={form.investigatorPhone} disabled />
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>피전 (담당 경찰관)</Label>
           <div className="flex gap-2.5">
-            <Input
-              value={form.victimOfficerName}
-              onChange={(e) => update('victimOfficerName', e.target.value)}
-            />
-            <Input
-              value={form.victimOfficerPhone}
-              onChange={(e) => update('victimOfficerPhone', e.target.value)}
-            />
+            <Input value={form.victimOfficerName} disabled />
+            <Input value={form.victimOfficerPhone} disabled />
           </div>
         </div>
       </FormSection>
@@ -385,6 +482,12 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
           selected={form.safetyMeasures}
           onToggle={(v) => toggleMeasure('safetyMeasures', v)}
         />
+        {form.safetyMeasures.length > 0 && (
+          <MeasurePeriodFields
+            period={form.safetyMeasuresPeriod}
+            onChange={(p) => update('safetyMeasuresPeriod', p)}
+          />
+        )}
       </FormSection>
 
       <FormSection title="8. 긴급응급조치">
@@ -393,6 +496,12 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
           selected={form.emergencyMeasures}
           onToggle={(v) => toggleMeasure('emergencyMeasures', v)}
         />
+        {form.emergencyMeasures.length > 0 && (
+          <MeasurePeriodFields
+            period={form.emergencyMeasuresPeriod}
+            onChange={(p) => update('emergencyMeasuresPeriod', p)}
+          />
+        )}
       </FormSection>
 
       <FormSection title="9. 잠정조치">
@@ -401,6 +510,12 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
           selected={form.provisionalMeasures}
           onToggle={(v) => toggleMeasure('provisionalMeasures', v)}
         />
+        {form.provisionalMeasures.length > 0 && (
+          <MeasurePeriodFields
+            period={form.provisionalMeasuresPeriod}
+            onChange={(p) => update('provisionalMeasuresPeriod', p)}
+          />
+        )}
       </FormSection>
 
       <FormSection title="10. 긴급임시조치">
@@ -409,6 +524,12 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
           selected={form.emergencyTempMeasures}
           onToggle={(v) => toggleMeasure('emergencyTempMeasures', v)}
         />
+        {form.emergencyTempMeasures.length > 0 && (
+          <MeasurePeriodFields
+            period={form.emergencyTempMeasuresPeriod}
+            onChange={(p) => update('emergencyTempMeasuresPeriod', p)}
+          />
+        )}
       </FormSection>
 
       <FormSection title="11. 임시조치">
@@ -417,6 +538,12 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
           selected={form.temporaryMeasures}
           onToggle={(v) => toggleMeasure('temporaryMeasures', v)}
         />
+        {form.temporaryMeasures.length > 0 && (
+          <MeasurePeriodFields
+            period={form.temporaryMeasuresPeriod}
+            onChange={(p) => update('temporaryMeasuresPeriod', p)}
+          />
+        )}
       </FormSection>
 
       <div className="flex justify-end gap-2.5">
@@ -432,6 +559,12 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
           등록
         </Button>
       </div>
+
+      <DispatchRequestViewDialog
+        securityCase={securityCase}
+        open={dispatchViewOpen}
+        onOpenChange={setDispatchViewOpen}
+      />
     </div>
   )
 }
