@@ -8,6 +8,7 @@ import type { Role } from '../features/auth/store/authStore'
 import ProtectedRoute from './ProtectedRoute'
 import ScreenPlaceholder from '../shared/components/ScreenPlaceholder'
 import SecurityCaseNewPage from '../features/police/pages/SecurityCaseNewPage'
+import PoliceSecurityCaseListPage from '../features/police/pages/SecurityCaseListPage'
 import RequestListPage from '../features/company/pages/RequestListPage'
 import WorkerListPage from '../features/company/pages/WorkerListPage'
 import SecurityCaseDetailPage from '../features/company/pages/SecurityCaseDetailPage'
@@ -47,7 +48,16 @@ export const routes: RouteObject[] = [
   { path: '/dashboard', element: policeScreen(POLICE_DASHBOARD, '현황', ['1', '2']) },
   { path: '/history', element: policeScreen(POLICE_HISTORY, '이력 조회 목록', ['1h', '2h', '8']) },
   { path: '/history/:id', element: policeScreen(POLICE_HISTORY, '이력 상세', ['1h', '2h', '8h']) },
-  { path: '/security-cases', element: policeScreen(POLICE_STATION_AND_GUEST, '경호목록', ['3']) },
+  {
+    path: '/security-cases',
+    element: (
+      <ProtectedRoute allow={POLICE_STATION_AND_GUEST}>
+        <PoliceAppShell>
+          <PoliceSecurityCaseListPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
   {
     path: '/security-cases/new',
     element: (

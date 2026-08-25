@@ -49,13 +49,27 @@ export const securityCaseHandlers = [
   }),
 
   http.get('/api/security-cases', ({ request }) => {
-    if (!companyAccountFromAuthHeader(request)) {
-      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    const companyAccount = companyAccountFromAuthHeader(request)
+    if (companyAccount) {
+      const status = new URL(request.url).searchParams.get('status')
+      const list = status ? securityCases.filter((c) => c.status === status) : securityCases
+      return HttpResponse.json(list)
     }
 
-    const status = new URL(request.url).searchParams.get('status')
-    const list = status ? securityCases.filter((c) => c.status === status) : securityCases
-    return HttpResponse.json(list)
+    const policeAccount = accountFromAuthHeader(request)
+    if (policeAccount) {
+      // 경찰서 계정은 자기 경찰서 소속 건만 조회 — 계정명이 곧 policeStation 값과
+      // 일치하도록 mock 데이터가 구성돼 있다(mocks/data/accounts.ts). 게스트 계정은
+      // 아직 화면 9/10(게스트 계정 발급/특정 건 할당)이 미구현이라 할당된 건이
+      // 없으므로 빈 목록을 반환한다.
+      const list =
+        policeAccount.role === '경찰서'
+          ? securityCases.filter((c) => c.policeStation === policeAccount.name)
+          : []
+      return HttpResponse.json(list)
+    }
+
+    return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
   }),
 
   http.post('/api/security-cases/:id/assign', async ({ request, params }) => {

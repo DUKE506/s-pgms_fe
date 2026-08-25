@@ -65,6 +65,32 @@ function seedPendingCase(input: {
   }
 }
 
+// 경찰서 경호목록(s3) 화면 검증용 — 접수 상태만 있던 기존 seed로는 배정/경호중/
+// 경호완료 상태의 행이 하나도 없어 강남경찰서 소속으로 각 상태를 하나씩 보강한다
+// (2026-08-25 결정). seedPendingCase는 항상 접수 상태만 만들기 때문에 배정 이후
+// 상태를 표현하려면 status/assignee/securityCode를 직접 덮어써야 한다.
+function seedActiveCase(input: {
+  id: string
+  policeStation: string
+  receiptNumber: string
+  requestedAt: string
+  startDate: string
+  endDate: string
+  nameInitial: string
+  status: '배정' | '경호중' | '경호완료'
+  assignee: string
+  securityCode: string
+}): SecurityCase {
+  const base = seedPendingCase(input)
+  return {
+    ...base,
+    status: input.status,
+    assignee: input.assignee,
+    securityCode: input.securityCode,
+    subject: { ...base.subject, nameInitial: input.nameInitial },
+  }
+}
+
 const SEED_CASES: SecurityCase[] = [
   seedPendingCase({
     id: 'case-seed-1',
@@ -105,6 +131,42 @@ const SEED_CASES: SecurityCase[] = [
     requestedAt: '2026-02-07T00:00:00.000Z',
     startDate: '2026-02-20',
     endDate: '2026-03-06',
+  }),
+  seedActiveCase({
+    id: 'case-seed-6',
+    policeStation: '강남경찰서',
+    receiptNumber: '26-01-강남경찰서',
+    requestedAt: '2026-01-08T00:00:00.000Z',
+    startDate: '2026-02-01',
+    endDate: '2026-02-15',
+    nameInitial: '윤○○',
+    status: '배정',
+    assignee: '김민수',
+    securityCode: 'ST101',
+  }),
+  seedActiveCase({
+    id: 'case-seed-7',
+    policeStation: '강남경찰서',
+    receiptNumber: '26-03-강남경찰서',
+    requestedAt: '2026-01-02T00:00:00.000Z',
+    startDate: '2026-01-05',
+    endDate: '2026-01-19',
+    nameInitial: '홍○○',
+    status: '경호중',
+    assignee: '이영희',
+    securityCode: 'ST102',
+  }),
+  seedActiveCase({
+    id: 'case-seed-8',
+    policeStation: '강남경찰서',
+    receiptNumber: '26-04-강남경찰서',
+    requestedAt: '2026-01-10T00:00:00.000Z',
+    startDate: '2026-01-18',
+    endDate: '2026-02-01',
+    nameInitial: '강○○',
+    status: '경호완료',
+    assignee: '박준혁',
+    securityCode: 'ST103',
   }),
 ]
 
