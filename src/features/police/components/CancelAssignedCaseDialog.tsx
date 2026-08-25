@@ -84,10 +84,9 @@ function CancelAssignedCaseDialog({ securityCase, open, onOpenChange }: CancelAs
           </Button>
           <Button
             type="button"
-            variant="destructive"
             disabled={mutation.isPending}
             onClick={handleSubmit}
-            className="px-5"
+            className="bg-destructive px-5 text-white hover:bg-destructive/90"
           >
             경호취소
           </Button>

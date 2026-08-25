@@ -36,6 +36,13 @@ function findCase(receiptNumber: string) {
   return securityCases.find((c) => c.receiptNumber === receiptNumber)!
 }
 
+// 액션 버튼은 데스크톱 헤더/모바일 하단 두 곳에 동시에 렌더링되고 반응형
+// CSS로만 토글되므로(jsdom은 미디어쿼리를 평가하지 않음) 항상 두 개씩 잡힌다
+// — 첫 번째(데스크톱 헤더)만 골라 쓴다.
+function firstButton(name: string) {
+  return screen.getAllByRole('button', { name })[0]
+}
+
 describe('PoliceSecurityCaseDetailPage', () => {
   beforeEach(() => {
     useAuthStore.setState({ user: null, accessToken: null, refreshToken: null })
@@ -47,7 +54,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     renderAt(record.id)
 
     await screen.findByText('기본정보')
-    fireEvent.click(screen.getByRole('button', { name: '접수취소' }))
+    fireEvent.click(firstButton('접수취소'))
 
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: '접수취소' }))
@@ -62,7 +69,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     renderAt(record.id)
 
     await screen.findByText('기본정보')
-    fireEvent.click(screen.getByRole('button', { name: '경호취소' }))
+    fireEvent.click(firstButton('경호취소'))
 
     const dialog = await screen.findByRole('dialog')
     fireEvent.change(within(dialog).getByLabelText('취소 사유'), {
@@ -81,12 +88,12 @@ describe('PoliceSecurityCaseDetailPage', () => {
     renderAt(record.id)
 
     await screen.findByText('기본정보')
-    fireEvent.click(screen.getByRole('button', { name: '연장/단축' }))
+    fireEvent.click(firstButton('연장/단축'))
 
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(within(dialog).getByRole('button', { name: '연장 요청' }))
 
-    expect(await screen.findByText('연장 요청 중 · 승인 대기')).toBeInTheDocument()
+    expect(await screen.findAllByText('연장 요청 중 · 승인 대기')).not.toHaveLength(0)
     expect(record.pendingPeriodRequest?.type).toBe('연장')
   })
 
@@ -96,7 +103,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     renderAt(record.id)
 
     await screen.findByText('기본정보')
-    const closeButton = screen.getByRole('button', { name: '종결' })
+    const closeButton = firstButton('종결')
     expect(closeButton).not.toBeDisabled()
     fireEvent.click(closeButton)
 
@@ -122,6 +129,6 @@ describe('PoliceSecurityCaseDetailPage', () => {
     renderAt(record.id)
 
     await screen.findByText('기본정보')
-    expect(screen.getByRole('button', { name: '종결' })).toBeDisabled()
+    expect(firstButton('종결')).toBeDisabled()
   })
 })

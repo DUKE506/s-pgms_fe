@@ -45,10 +45,9 @@ function CancelPendingCaseDialog({ securityCase, open, onOpenChange }: CancelPen
           </Button>
           <Button
             type="button"
-            variant="destructive"
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
-            className="px-5"
+            className="bg-destructive px-5 text-white hover:bg-destructive/90"
           >
             접수취소
           </Button>

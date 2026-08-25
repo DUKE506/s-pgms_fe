@@ -15,6 +15,67 @@ import PeriodRequestDialog from '../components/PeriodRequestDialog'
 import CancelPendingCaseDialog from '../components/CancelPendingCaseDialog'
 import CancelAssignedCaseDialog from '../components/CancelAssignedCaseDialog'
 import CloseCaseDialog from '../components/CloseCaseDialog'
+import type { SecurityCase } from '../types/securityCase'
+
+// 활성 액션(빨간 배경)과 대기/비활성 배지가 섞여 있어 톤을 두 가지로 통일한다:
+// 실행 가능한 파괴적 액션은 solid red, 대기 중이거나 아직 불가능한 상태는
+// bg-secondary(테마의 --secondary, --border와 같은 톤) — bg-muted는 이 테마에서
+// --background와 같은 색이라 배경이 사실상 안 보였음(2026-08-25 발견/수정).
+const ACTIVE_DESTRUCTIVE = 'bg-destructive text-white hover:bg-destructive/90'
+const INERT_BADGE = 'border border-border bg-secondary text-muted-foreground'
+
+interface ActionButtonsProps {
+  securityCase: SecurityCase
+  fullWidth?: boolean
+  onCancel: () => void
+  onPeriodRequest: () => void
+  onClose: () => void
+}
+
+function ActionButtons({ securityCase, fullWidth, onCancel, onPeriodRequest, onClose }: ActionButtonsProps) {
+  const canClose = securityCase.status === '경호완료' && Boolean(securityCase.attachments?.destructionCertFileName)
+  const base = cn('rounded-lg px-4.5 py-2.5 text-sm font-semibold', fullWidth && 'w-full text-center')
+
+  return (
+    <>
+      {(securityCase.status === '접수' || securityCase.status === '배정') && (
+        <button type="button" onClick={onCancel} className={cn(base, ACTIVE_DESTRUCTIVE)}>
+          {securityCase.status === '접수' ? '접수취소' : '경호취소'}
+        </button>
+      )}
+
+      {securityCase.status === '경호중' && (
+        <>
+          {securityCase.pendingPeriodRequest ? (
+            <span className={cn(base, INERT_BADGE)}>
+              {securityCase.pendingPeriodRequest.type} 요청 중 · 승인 대기
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onPeriodRequest}
+              className={cn(base, 'bg-primary text-primary-foreground hover:bg-primary/80')}
+            >
+              연장/단축
+            </button>
+          )}
+          <span className={cn(base, INERT_BADGE, 'cursor-not-allowed opacity-60')}>종결</span>
+        </>
+      )}
+
+      {securityCase.status === '경호완료' && (
+        <button
+          type="button"
+          disabled={!canClose}
+          onClick={onClose}
+          className={cn(base, canClose ? ACTIVE_DESTRUCTIVE : cn(INERT_BADGE, 'cursor-not-allowed opacity-60'))}
+        >
+          종결
+        </button>
+      )}
+    </>
+  )
+}
 
 function SecurityCaseDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -51,6 +112,13 @@ function SecurityCaseDetailPage() {
   const canRequestPeriod = securityCase.status === '경호중' && !securityCase.pendingPeriodRequest
   const canClose = securityCase.status === '경호완료' && Boolean(securityCase.attachments?.destructionCertFileName)
 
+  const actionProps = {
+    securityCase,
+    onCancel: () => setCancelOpen(true),
+    onPeriodRequest: () => setPeriodRequestOpen(true),
+    onClose: () => setCloseOpen(true),
+  }
+
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
       <p className="text-xs text-muted-foreground">{securityCase.policeStation}</p>
@@ -61,53 +129,10 @@ function SecurityCaseDetailPage() {
           <StatusBadge status={securityCase.status} className="shrink-0" />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {(securityCase.status === '접수' || securityCase.status === '배정') && (
-            <button
-              type="button"
-              onClick={() => setCancelOpen(true)}
-              className="rounded-lg bg-destructive px-4.5 py-2.5 text-sm font-semibold text-white hover:bg-destructive/90"
-            >
-              {securityCase.status === '접수' ? '접수취소' : '경호취소'}
-            </button>
-          )}
-
-          {securityCase.status === '경호중' && (
-            <>
-              {securityCase.pendingPeriodRequest ? (
-                <span className="rounded-lg border border-border bg-muted px-4.5 py-2.5 text-sm font-semibold text-muted-foreground">
-                  {securityCase.pendingPeriodRequest.type} 요청 중 · 승인 대기
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPeriodRequestOpen(true)}
-                  className="rounded-lg bg-primary px-4.5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/80"
-                >
-                  연장/단축
-                </button>
-              )}
-              <span className="cursor-not-allowed rounded-lg border border-border px-4.5 py-2.5 text-sm font-semibold text-muted-foreground/40">
-                종결
-              </span>
-            </>
-          )}
-
-          {securityCase.status === '경호완료' && (
-            <button
-              type="button"
-              disabled={!canClose}
-              onClick={() => setCloseOpen(true)}
-              className={cn(
-                'rounded-lg px-4.5 py-2.5 text-sm font-semibold',
-                canClose
-                  ? 'bg-destructive text-white hover:bg-destructive/90'
-                  : 'cursor-not-allowed border border-border text-muted-foreground/40',
-              )}
-            >
-              종결
-            </button>
-          )}
+        {/* 목업(s5)은 이 액션 버튼들을 모바일에서 헤더가 아니라 스크롤 맨 아래
+            전체폭 버튼으로 배치한다(s5m) — 데스크톱만 헤더에 유지 */}
+        <div className="hidden flex-wrap items-center gap-2.5 xl:flex">
+          <ActionButtons {...actionProps} />
         </div>
       </div>
 
@@ -121,6 +146,10 @@ function SecurityCaseDetailPage() {
         </div>
 
         <WorkerAssignmentPanel securityCase={securityCase} workers={workers} />
+      </div>
+
+      <div className="flex flex-col gap-2.5 xl:hidden">
+        <ActionButtons {...actionProps} fullWidth />
       </div>
 
       <CancelPendingCaseDialog
