@@ -15,6 +15,7 @@ import {
   setPreMeeting,
   setSecurityPlanFile,
   setWorkerConsentFile,
+  updateSecurityCase,
   upsertScheduleGroup,
 } from '../data/securityCases'
 import type {
@@ -48,6 +49,21 @@ export const securityCaseHandlers = [
     const input = (await request.json()) as SecurityCaseCreateInput
     const record = createSecurityCase(account.name, input)
     return HttpResponse.json(record, { status: 201 })
+  }),
+
+  // 화면5: 피전이 자기가 작성한 배치요구서를 수정 (경찰 전용 — 본사는 별도
+  // PUT /:id/base-info로 기본정보를 등록/수정한다)
+  http.put('/api/security-cases/:id', async ({ request, params }) => {
+    if (!accountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const input = (await request.json()) as SecurityCaseCreateInput
+    const updated = updateSecurityCase(params.id as string, input)
+    if (!updated) {
+      return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
+    }
+    return HttpResponse.json(updated)
   }),
 
   http.get('/api/security-cases', ({ request }) => {

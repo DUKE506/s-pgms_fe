@@ -33,7 +33,7 @@ function CloseCaseDialog({ securityCase, open, onOpenChange }: CloseCaseDialogPr
       <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
           <DialogTitle>종결</DialogTitle>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm font-semibold text-muted-foreground">
             {formatManagementNumber(securityCase.receiptNumber, securityCase.securityCode)}
           </p>
         </DialogHeader>
@@ -46,7 +46,13 @@ function CloseCaseDialog({ securityCase, open, onOpenChange }: CloseCaseDialogPr
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} className="px-5">
             닫기
           </Button>
-          <Button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()} className="px-5">
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate()}
+            className="px-5"
+          >
             종결
           </Button>
         </div>

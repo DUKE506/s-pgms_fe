@@ -1,6 +1,5 @@
-import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { FileText } from 'lucide-react'
-import DispatchRequestViewDialog from '../../company/components/DispatchRequestViewDialog'
 import type { SecurityCase } from '../types/securityCase'
 
 interface DocRowProps {
@@ -44,7 +43,7 @@ interface DocumentsCardProps {
 }
 
 function DocumentsCard({ securityCase }: DocumentsCardProps) {
-  const [dispatchViewOpen, setDispatchViewOpen] = useState(false)
+  const navigate = useNavigate()
   const isPending = securityCase.status === '접수'
   const securityPlanFileName = securityCase.attachments?.securityPlanFileName
   const destructionCertFileName = securityCase.attachments?.destructionCertFileName
@@ -56,7 +55,7 @@ function DocumentsCard({ securityCase }: DocumentsCardProps) {
         <DocRow
           title="배치요구서"
           subtitle="Web Form"
-          action={{ label: '보기', onClick: () => setDispatchViewOpen(true) }}
+          action={{ label: '수정', onClick: () => navigate(`/security-cases/${securityCase.id}/edit`) }}
         />
 
         {!isPending &&
@@ -77,12 +76,6 @@ function DocumentsCard({ securityCase }: DocumentsCardProps) {
             <DocRow title="파기확인서" subtitle="경호완료 후 본사에서 업로드 예정" pending />
           ))}
       </div>
-
-      <DispatchRequestViewDialog
-        securityCase={securityCase}
-        open={dispatchViewOpen}
-        onOpenChange={setDispatchViewOpen}
-      />
     </div>
   )
 }

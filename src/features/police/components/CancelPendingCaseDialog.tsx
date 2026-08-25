@@ -31,7 +31,7 @@ function CancelPendingCaseDialog({ securityCase, open, onOpenChange }: CancelPen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle>경호 취소</DialogTitle>
+          <DialogTitle>접수취소</DialogTitle>
           <p className="text-xs text-muted-foreground">{securityCase.receiptNumber}</p>
         </DialogHeader>
 
@@ -50,7 +50,7 @@ function CancelPendingCaseDialog({ securityCase, open, onOpenChange }: CancelPen
             onClick={() => mutation.mutate()}
             className="px-5"
           >
-            경호 취소
+            접수취소
           </Button>
         </div>
       </DialogContent>

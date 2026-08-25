@@ -307,6 +307,30 @@ export function createSecurityCase(
   return record
 }
 
+// 화면5: 피전이 자기가 작성한 배치요구서를 수정한다. 접수/배정 상태는 배치기간
+// (startDate/endDate)까지 포함해 전부 수정 가능하고, 경호중 이후는 화면단에서
+// 배치기간 입력을 비활성화해두므로 여기서는 항상 넘어온 값 그대로 덮어쓴다
+// (2026-08-25 결정 — 기간 변경은 경호중부터는 연장/단축 요청 몫).
+export function updateSecurityCase(
+  caseId: string,
+  input: SecurityCaseCreateInput,
+): SecurityCase | null {
+  const record = securityCases.find((c) => c.id === caseId)
+  if (!record) return null
+
+  record.subject = input.subject
+  record.caseType = input.caseType
+  record.caseSummary = input.caseSummary
+  record.startDate = input.startDate
+  record.endDate = input.endDate
+  record.location = input.location
+  record.additionalNotes = input.additionalNotes
+  record.policeContact = input.policeContact
+  record.requester = input.requester
+  persist()
+  return record
+}
+
 // 담당자 배정: 접수 → 배정 상태 전환 + 경호코드 발급 (project-overview.md 업무 워크플로우 3단계)
 export function assignManager(caseId: string, managerName: string): SecurityCase | null {
   const record = securityCases.find((c) => c.id === caseId)

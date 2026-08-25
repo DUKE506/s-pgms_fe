@@ -41,16 +41,16 @@ describe('PoliceSecurityCaseDetailPage', () => {
     useAuthStore.setState({ user: null, accessToken: null, refreshToken: null })
   })
 
-  it('접수 상태에서 경호 취소를 누르면 접수가 삭제되고 목록으로 이동한다', async () => {
+  it('접수 상태에서 접수취소를 누르면 접수가 삭제되고 목록으로 이동한다', async () => {
     loginAsStation()
     const record = findCase('26-02-강남경찰서')
     renderAt(record.id)
 
     await screen.findByText('기본정보')
-    fireEvent.click(screen.getByRole('button', { name: '경호 취소' }))
+    fireEvent.click(screen.getByRole('button', { name: '접수취소' }))
 
     const dialog = await screen.findByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: '경호 취소' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: '접수취소' }))
 
     expect(await screen.findByText('경호목록 도착')).toBeInTheDocument()
     expect(securityCases.find((c) => c.id === record.id)).toBeUndefined()
@@ -62,7 +62,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     renderAt(record.id)
 
     await screen.findByText('기본정보')
-    fireEvent.click(screen.getByRole('button', { name: '경호 취소' }))
+    fireEvent.click(screen.getByRole('button', { name: '경호취소' }))
 
     const dialog = await screen.findByRole('dialog')
     fireEvent.change(within(dialog).getByLabelText('취소 사유'), {

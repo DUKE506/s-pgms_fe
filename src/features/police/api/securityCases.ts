@@ -23,3 +23,20 @@ export async function listSecurityCases(): Promise<SecurityCase[]> {
   }
   return res.json() as Promise<SecurityCase[]>
 }
+
+// 화면5: 배치요구서 수정 — 접수/배정은 배치기간 포함 전체, 경호중 이후는
+// 화면단에서 배치기간 입력을 막아둔 채로 그대로 전송한다.
+export async function updateSecurityCase(
+  id: string,
+  input: SecurityCaseCreateInput,
+): Promise<SecurityCase> {
+  const res = await apiFetch(`/security-cases/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!res.ok) {
+    throw new Error('배치요구서 수정에 실패했습니다')
+  }
+  return res.json() as Promise<SecurityCase>
+}

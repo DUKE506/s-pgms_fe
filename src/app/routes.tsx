@@ -8,6 +8,7 @@ import type { Role } from '../features/auth/store/authStore'
 import ProtectedRoute from './ProtectedRoute'
 import ScreenPlaceholder from '../shared/components/ScreenPlaceholder'
 import SecurityCaseNewPage from '../features/police/pages/SecurityCaseNewPage'
+import SecurityCaseEditPage from '../features/police/pages/SecurityCaseEditPage'
 import PoliceSecurityCaseListPage from '../features/police/pages/SecurityCaseListPage'
 import PoliceSecurityCaseDetailPage from '../features/police/pages/SecurityCaseDetailPage'
 import RequestListPage from '../features/company/pages/RequestListPage'
@@ -75,6 +76,16 @@ export const routes: RouteObject[] = [
       <ProtectedRoute allow={POLICE_STATION_AND_GUEST}>
         <PoliceAppShell>
           <PoliceSecurityCaseDetailPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/security-cases/:id/edit',
+    element: (
+      <ProtectedRoute allow={POLICE_STATION_ONLY}>
+        <PoliceAppShell>
+          <SecurityCaseEditPage />
         </PoliceAppShell>
       </ProtectedRoute>
     ),
