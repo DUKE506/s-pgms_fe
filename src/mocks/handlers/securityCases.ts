@@ -4,10 +4,12 @@ import {
   assignManager,
   cancelAssignedCase,
   cancelPendingCase,
+  closeCase,
   createInitialSchedule,
   createSecurityCase,
   findSecurityCase,
   registerBaseInfo,
+  requestPeriodChange,
   securityCases,
   setDestructionCertFile,
   setPreMeeting,
@@ -92,9 +94,10 @@ export const securityCaseHandlers = [
     return HttpResponse.json(updated)
   }),
 
-  // 접수취소: 상태값 없이 DB에서 삭제
+  // 접수취소: 상태값 없이 DB에서 삭제. 화면5(경찰 상세)에도 같은 버튼이 있어
+  // 경찰 계정도 허용한다.
   http.delete('/api/security-cases/:id', ({ request, params }) => {
-    if (!companyAccountFromAuthHeader(request)) {
+    if (!companyAccountFromAuthHeader(request) && !accountFromAuthHeader(request)) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
     }
 
@@ -105,9 +108,10 @@ export const securityCaseHandlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
-  // 경호취소: 배정 상태 이후 사유와 함께 '취소' 상태로 전환
+  // 경호취소: 배정 상태 이후 사유와 함께 '취소' 상태로 전환. 화면5(경찰 상세)에도
+  // 같은 버튼이 있어 경찰 계정도 허용한다.
   http.put('/api/security-cases/:id/cancel', async ({ request, params }) => {
-    if (!companyAccountFromAuthHeader(request)) {
+    if (!companyAccountFromAuthHeader(request) && !accountFromAuthHeader(request)) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
     }
 
@@ -115,6 +119,37 @@ export const securityCaseHandlers = [
     const updated = cancelAssignedCase(params.id as string, reason)
     if (!updated) {
       return HttpResponse.json({ message: '취소할 수 없는 상태입니다' }, { status: 409 })
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  // 화면 5: 경호중 상태에서 연장/단축 요청 제출 (경찰 전용 — 승인은 본사 승인
+  // 화면(후속 항목) 몫이라 여기선 대기 상태로만 남긴다)
+  http.post('/api/security-cases/:id/period-request', async ({ request, params }) => {
+    if (!accountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const { type, requestedEndDate } = (await request.json()) as {
+      type: '연장' | '단축'
+      requestedEndDate: string
+    }
+    const updated = requestPeriodChange(params.id as string, type, requestedEndDate)
+    if (!updated) {
+      return HttpResponse.json({ message: '요청할 수 없는 상태입니다' }, { status: 409 })
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  // 화면 5: 경호완료 → 종결 전환 (경찰 전용, 파기확인서 업로드 후에만 가능)
+  http.put('/api/security-cases/:id/close', ({ request, params }) => {
+    if (!accountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const updated = closeCase(params.id as string)
+    if (!updated) {
+      return HttpResponse.json({ message: '종결할 수 없는 상태입니다' }, { status: 409 })
     }
     return HttpResponse.json(updated)
   }),

@@ -134,6 +134,14 @@ export interface SecurityCase {
   // DB 삭제라 이 필드가 필요 없음)
   cancelReason?: string
   canceledAt?: string
+  // 경찰서가 경호중 상태에서 연장/단축을 요청하면 즉시 반영되지 않고 여기 대기한다
+  // — 본사(운영관리자/본부관리자) 승인 화면(후속 항목)에서 승인해야 실제 startDate/
+  // endDate·근무스케줄에 반영된다(2026-08-25 결정). 대기 중엔 재요청 불가.
+  pendingPeriodRequest?: {
+    type: '연장' | '단축'
+    requestedEndDate: string
+    requestedAt: string
+  }
 }
 
 export type SecurityCaseCreateInput = Omit<

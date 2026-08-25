@@ -91,6 +91,78 @@ function seedActiveCase(input: {
   }
 }
 
+function seedDateRange(startDate: string, endDate: string): string[] {
+  const dates: string[] = []
+  let cursor = startDate
+  while (cursor <= endDate) {
+    dates.push(cursor)
+    const next = new Date(`${cursor}T00:00:00.000Z`)
+    next.setUTCDate(next.getUTCDate() + 1)
+    cursor = next.toISOString().slice(0, 10)
+  }
+  return dates
+}
+
+// 경찰 경호 상세화면(s5) 검증용 — 기본정보/근무스케줄/첨부가 전부 채워진
+// 케이스가 있어야 목업처럼 내용이 꽉 찬 화면을 확인할 수 있어 worker-1/worker-2
+// 두 명을 대표근무자로 배치기간 전체에 매일 09:00~18:00로 배정한다(2026-08-25).
+function withDemoDetail(record: SecurityCase, opts: { destructionCert: boolean }): SecurityCase {
+  const defaultWorkers = [
+    { workerId: 'worker-1', isDefault: true },
+    { workerId: 'worker-2', isDefault: true },
+  ]
+
+  const baseInfo: CaseBaseInfo = {
+    workHours: '09:00 ~ 18:00',
+    defaultWorkers,
+    investigatorName: '김수사',
+    investigatorPhone: '010-0000-0001',
+    victimOfficerName: '홍길동',
+    victimOfficerPhone: '010-9876-5432',
+    placeResidence: record.location.residence,
+    placeWorkplace: record.location.workplace,
+    placeEtc1: '',
+    placeEtc2: '',
+    safetyMeasures: ['맞춤형 순찰', '스마트워치'],
+    emergencyMeasures: ['1호'],
+    provisionalMeasures: ['2호'],
+    emergencyTempMeasures: [],
+    temporaryMeasures: ['1호'],
+    safetyMeasuresPeriod: { startDate: record.startDate, endDate: record.endDate },
+    emergencyMeasuresPeriod: null,
+    provisionalMeasuresPeriod: null,
+    emergencyTempMeasuresPeriod: null,
+    temporaryMeasuresPeriod: null,
+  }
+
+  const days = seedDateRange(record.startDate, record.endDate).map((date) => ({
+    date,
+    groups: [
+      {
+        id: `${record.id}-${date}-group-1`,
+        note: '',
+        assignments: defaultWorkers.map((w) => ({
+          workerId: w.workerId,
+          startTime: '09:00',
+          endTime: '18:00',
+          isOff: false,
+        })),
+      },
+    ],
+  }))
+
+  const attachments: CaseAttachments = {
+    securityPlanFileName: '경호계획서.pdf',
+    workerConsentFileNames: {
+      'worker-1': '동의서_최민준.pdf',
+      'worker-2': '동의서_정우진.pdf',
+    },
+    destructionCertFileName: opts.destructionCert ? `파기확인서_${record.securityCode}.pdf` : null,
+  }
+
+  return { ...record, baseInfo, workSchedule: { preMeeting: null, days }, attachments }
+}
+
 const SEED_CASES: SecurityCase[] = [
   seedPendingCase({
     id: 'case-seed-1',
@@ -144,30 +216,36 @@ const SEED_CASES: SecurityCase[] = [
     assignee: '김민수',
     securityCode: 'ST101',
   }),
-  seedActiveCase({
-    id: 'case-seed-7',
-    policeStation: '강남경찰서',
-    receiptNumber: '26-03-강남경찰서',
-    requestedAt: '2026-01-02T00:00:00.000Z',
-    startDate: '2026-01-05',
-    endDate: '2026-01-19',
-    nameInitial: '홍○○',
-    status: '경호중',
-    assignee: '이영희',
-    securityCode: 'ST102',
-  }),
-  seedActiveCase({
-    id: 'case-seed-8',
-    policeStation: '강남경찰서',
-    receiptNumber: '26-04-강남경찰서',
-    requestedAt: '2026-01-10T00:00:00.000Z',
-    startDate: '2026-01-18',
-    endDate: '2026-02-01',
-    nameInitial: '강○○',
-    status: '경호완료',
-    assignee: '박준혁',
-    securityCode: 'ST103',
-  }),
+  withDemoDetail(
+    seedActiveCase({
+      id: 'case-seed-7',
+      policeStation: '강남경찰서',
+      receiptNumber: '26-03-강남경찰서',
+      requestedAt: '2026-01-02T00:00:00.000Z',
+      startDate: '2026-01-05',
+      endDate: '2026-01-19',
+      nameInitial: '홍○○',
+      status: '경호중',
+      assignee: '이영희',
+      securityCode: 'ST102',
+    }),
+    { destructionCert: false },
+  ),
+  withDemoDetail(
+    seedActiveCase({
+      id: 'case-seed-8',
+      policeStation: '강남경찰서',
+      receiptNumber: '26-04-강남경찰서',
+      requestedAt: '2026-01-10T00:00:00.000Z',
+      startDate: '2026-01-18',
+      endDate: '2026-02-01',
+      nameInitial: '강○○',
+      status: '경호완료',
+      assignee: '박준혁',
+      securityCode: 'ST103',
+    }),
+    { destructionCert: true },
+  ),
 ]
 
 export const securityCases: SecurityCase[] = loadPersisted(STORAGE_KEY, SEED_CASES)
@@ -260,6 +338,44 @@ export function cancelAssignedCase(caseId: string, reason: string): SecurityCase
   record.status = '취소'
   record.cancelReason = reason
   record.canceledAt = new Date().toISOString()
+  persist()
+  return record
+}
+
+// 화면 5: 경찰서가 경호중 상태에서 연장(+7일 고정)/단축(배치기간 내 새 종료일)을
+// 요청한다. 즉시 반영되지 않고 대기 상태로만 남는다 — 실제 startDate/endDate·
+// 근무스케줄 반영은 본사 승인 화면(후속 항목) 몫이다. 이미 대기 중인 요청이 있으면
+// 재요청할 수 없다.
+export function requestPeriodChange(
+  caseId: string,
+  type: '연장' | '단축',
+  requestedEndDate: string,
+): SecurityCase | null {
+  const record = securityCases.find((c) => c.id === caseId)
+  if (!record || record.status !== '경호중' || record.pendingPeriodRequest) return null
+
+  record.pendingPeriodRequest = {
+    type,
+    requestedEndDate,
+    requestedAt: new Date().toISOString(),
+  }
+  persist()
+  return record
+}
+
+// 화면 5: 경호완료 상태에서 파기확인서 업로드가 끝난 뒤에만 종결 처리할 수 있다
+// (project-overview.md 업무 워크플로우 6단계, 목업 s5-done 사이드 안내문구 기준).
+export function closeCase(caseId: string): SecurityCase | null {
+  const record = securityCases.find((c) => c.id === caseId)
+  if (
+    !record ||
+    record.status !== '경호완료' ||
+    !record.attachments?.destructionCertFileName
+  ) {
+    return null
+  }
+
+  record.status = '종결'
   persist()
   return record
 }

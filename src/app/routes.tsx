@@ -9,6 +9,7 @@ import ProtectedRoute from './ProtectedRoute'
 import ScreenPlaceholder from '../shared/components/ScreenPlaceholder'
 import SecurityCaseNewPage from '../features/police/pages/SecurityCaseNewPage'
 import PoliceSecurityCaseListPage from '../features/police/pages/SecurityCaseListPage'
+import PoliceSecurityCaseDetailPage from '../features/police/pages/SecurityCaseDetailPage'
 import RequestListPage from '../features/company/pages/RequestListPage'
 import WorkerListPage from '../features/company/pages/WorkerListPage'
 import SecurityCaseDetailPage from '../features/company/pages/SecurityCaseDetailPage'
@@ -68,7 +69,16 @@ export const routes: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  { path: '/security-cases/:id', element: policeScreen(POLICE_STATION_AND_GUEST, '경호 상세', ['5']) },
+  {
+    path: '/security-cases/:id',
+    element: (
+      <ProtectedRoute allow={POLICE_STATION_AND_GUEST}>
+        <PoliceAppShell>
+          <PoliceSecurityCaseDetailPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
   { path: '/guests', element: policeScreen(POLICE_STATION_ONLY, '게스트 계정 관리', ['9']) },
 
   { path: '/admin', element: <CompanyLoginPage /> },
