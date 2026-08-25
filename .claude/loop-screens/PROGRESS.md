@@ -160,3 +160,26 @@ Phase 1 완료. Phase 2~4는 이 표에 이어서 추가.
   발견해 헤더를 `flex-col sm:flex-row`로 반응형 처리. build/lint/test(14개
   파일 49개) 통과, 4개 상태(접수/배정/경호중/경호완료) 전부 데스크톱+모바일
   브라우저 스크린샷 검증 + 연장/단축 요청 제출 실제 동작 확인.
+- 2026-08-25: 항목5 스크린샷 승인 후 사용자 피드백 4건 반영. (1) 접수/배정
+  취소 버튼 라벨 분리 — 접수 상태는 "접수취소", 배정 상태는 "경호취소"
+  (트리거 버튼 + `CancelPendingCaseDialog` 타이틀/버튼 전부). (2)
+  `PeriodRequestDialog` 단축 탭 날짜칩이 선택 시 `font-semibold`로 굵어지며
+  폭이 미세하게 늘어나던 버그 — 선택 여부와 무관하게 `font-medium` 고정으로
+  수정(색상/배경만으로 구분). (3) `CloseCaseDialog`의 관리번호 텍스트를
+  `text-xs`→`text-sm font-semibold`로 키우고, 종결 확정 버튼에 빠진
+  `variant="destructive"`를 추가(다른 취소 다이얼로그들과 통일). (4) 배치요구서
+  "읽기전용 보기"로 스코프 아웃했던 걸 뒤집어 실제 수정 기능 신규 구현 — 접수/
+  배정은 배치기간 포함 전체 수정 가능, 경호중 이후는 배치기간 입력을 비활성화
+  (값은 보이되 못 바꿈, 연장/단축 요청으로 유도하는 안내문구 추가). 모달 대신
+  `/security-cases/new`와 같은 전용 페이지로 구현하는 게 낫다는 사용자 판단에
+  따라 `SecurityCaseNewPage`의 8섹션 폼을 `features/police/components/
+  SecurityCaseForm.tsx`(공유 폼 본체)로 추출하고 `SecurityCaseNewPage`(생성)/
+  `SecurityCaseEditPage`(수정, 신규 라우트 `/security-cases/:id/edit`)가
+  이를 각자 다른 `initialForm`/`onSubmit`/`disablePeriod`로 사용하도록 리팩터.
+  MSW에 `PUT /security-cases/:id`(경찰 전용, `updateSecurityCase`) 신규 추가.
+  `DocumentsCard`의 배치요구서 행은 다이얼로그 대신 수정 페이지로 이동하는
+  링크로 교체(`DispatchRequestViewDialog` 사용 제거, 회사쪽은 그대로 유지).
+  build/lint/test(15개 파일 51개, 리팩터 후 기존 SecurityCaseNewPage 테스트
+  무변경 통과로 동등성 확인 + 신규 SecurityCaseEditPage 테스트 2개 추가) 통과,
+  4건 전부 브라우저로 실측 재확인(수정 저장 후 상세 페이지로 복귀, 재진입 시
+  저장값 유지되는 것까지 end-to-end 확인).
