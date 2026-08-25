@@ -10,9 +10,9 @@
 | 2 | [본사] 배치요청 목록 + 담당자 배정 | `s6b` `s6c` | 완료 | `fee6fd0` | |
 | 3 | [본사] 배정 경호건 상세 | `s7a` `s7c` `s7d` `s7e` `s7` `s7b` | 완료 | `3300a9c` `6abb74a` | 워크플로우 수정 다수 반영 후 완료. **미해결**: 상세 페이지에 상태 가드가 없어 URL을 직접 알면 접수 상태에서도 기본정보 등록이 가능한 우회 경로가 남아있음 — 필요시 후속 처리 |
 | 4 | [경찰서] 경찰서 경호목록 | `s3` `s3m` | 완료 | `b690fec` | 본사 쪽과 같은 이유로 Phase 2에서 앞당김 — 목록 없이 상세부터 만들면 진입 경로가 없어 같은 문제가 재발함 (2026-08-24) |
-| 5 | [경찰서] 경호 상세 (연장·단축 모달 포함) | `s5` `s5-recv` `s5-assigned` `s5m` `s5-ext` `s5-ext-short` `s5m-ext` `s5m-ext-short` | 대기 | | |
+| 5 | [경찰서] 경호 상세 (연장·단축 모달 포함) | `s5` `s5-recv` `s5-assigned` `s5-done` `s5m` `s5-ext` `s5-ext-short` `s5m-ext` `s5m-ext-short` | 완료 | `8fbde1d` | 연장/단축은 즉시반영이 아니라 "요청 제출"까지만 — 본사 승인 화면은 목업에도 없어 후속 항목으로 분리 (2026-08-25) |
 
-Phase 2~4는 Phase 1 끝나고 이 표에 이어서 추가.
+Phase 1 완료. Phase 2~4는 이 표에 이어서 추가.
 
 ## Phase 3에서 순서를 앞당긴 항목
 
@@ -127,3 +127,36 @@ Phase 2~4는 Phase 1 끝나고 이 표에 이어서 추가.
   처리(`hidden xl:flex`). 경찰 화면 breadcrumb 유지 규칙을 architecture.md에
   신규 기록(본사와 달리 h1과 겹쳐도 생략 안 함). build/lint/test(13개 파일
   44개) 통과, 데스크톱+모바일 브라우저 스크린샷 검증.
+- 2026-08-25: 항목 5(경찰 경호 상세, s5 계열) 구현 완료. 착수 전 논의에서 중요한
+  사실 확인 — 경호중 상태의 연장/단축은 목업처럼 즉시 반영되는 게 아니라
+  "요청"만 생성되고 본사(운영관리자/본부관리자)가 승인해야 실제 기간·근무스케줄에
+  반영되는 구조였음. 승인 화면은 원본 목업에도 없어(`SecurityCaseTabs`의
+  연장요청/단축요청 탭이 이미 "아직 화면 계획 없음"으로 비활성 처리돼 있었음)
+  이번 항목은 경찰 쪽 요청 제출까지만 구현하고 승인 화면은 로드맵에 후속
+  항목으로 새로 추가(위 Phase 2 표 참고, 다음 순서로 최우선 진행 예정).
+  `SecurityCase.pendingPeriodRequest` 필드 신규(대기 중엔 재요청 불가).
+
+  s5-done(경호완료 상태 뷰 + 종결 액션)은 roadmap 텍스트엔 명시적으로 안
+  묶여 있었지만 방금 만든 목록에서 경호완료 건 클릭 시 도달하는 화면이라
+  포함(사용자 확인). MSW 인가 확장: GET /workers·DELETE /:id·PUT /:id/cancel에
+  경찰 계정 허용 추가(항목4와 같은 패턴). 신규 mutation: `requestPeriodChange`
+  (경호중+대기없음 검증), `closeCase`(파기확인서 필수). 컴포넌트 다수 신규
+  (StatusStepper/BaseInfoReadCard/DocumentsCard/ConsentDocsCard/
+  WorkerAssignmentPanel/PeriodRequestDialog/Cancel*Dialog/CloseCaseDialog) —
+  배치요구서 보기는 회사쪽 DispatchRequestViewDialog 재사용, 실제 수정 기능은
+  스코프 아웃. 기본정보 카드의 경찰관정보/배치장소는 목업이 접수 상태에서
+  "-"로 그렸지만 실제로는 접수 시점부터 있는 데이터라 실값 표시로 변경(목업
+  대신 데이터 존재 여부 기준).
+
+  seed 데이터에 강남경찰서 배정/경호중/경호완료 각 1건씩 baseInfo+workSchedule+
+  attachments 풀세트를 채운 데모 케이스 추가(`withDemoDetail`) — 화면 검증에
+  필요했음. 구현 중 실제 버그 발견: `WorkerAssignmentPanel`/`PeriodRequestDialog`의
+  날짜 계산이 로컬 타임존(KST)에서 자정 Date를 만든 뒤 `toISOString()`으로
+  변환하는 패턴이라 날짜가 하루씩 밀려 `addDays`가 날짜를 전진시키지 못하고
+  `dateRange`가 무한루프에 빠짐(브라우저 탭이 완전히 멎어 Playwright 명령이
+  전부 30초 타임아웃) — `mocks/data/securityCases.ts`의 기존 `nextDate`처럼
+  UTC로 통일해 수정. 이후 모바일 헤더에서 관리번호+상태뱃지+긴 액션버튼
+  라벨("단축 요청 중 · 승인 대기")이 한 줄에서 찌그러져 줄바꿈되는 버그도
+  발견해 헤더를 `flex-col sm:flex-row`로 반응형 처리. build/lint/test(14개
+  파일 49개) 통과, 4개 상태(접수/배정/경호중/경호완료) 전부 데스크톱+모바일
+  브라우저 스크린샷 검증 + 연장/단축 요청 제출 실제 동작 확인.
