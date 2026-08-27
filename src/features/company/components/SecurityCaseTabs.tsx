@@ -8,12 +8,11 @@ import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
 // 경호관리 관련 화면(배치요청/경호목록/연장요청/단축요청) 공통 탭 바.
 // 화면마다 각자 구현하면 탭 순서·카운트가 어긋나기 쉬워(2026-08-24 실제로
 // 순서가 어긋나는 버그 발생) 여기 한 곳에서만 순서/라벨/카운트를 관리하고
-// 페이지는 현재 활성 탭만 알려주면 되도록 뽑았다. 연장요청/단축요청은
-// 아직 로드맵에 화면 계획이 없어 목업처럼 비활성 탭으로만 둔다.
+// 페이지는 현재 활성 탭만 알려주면 되도록 뽑았다.
 const TAB_BASE =
   'inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4.5 text-button font-semibold'
 
-export type SecurityCaseTabKey = '경호목록' | '배치요청'
+export type SecurityCaseTabKey = '경호목록' | '배치요청' | '연장요청' | '단축요청'
 
 interface SecurityCaseTabsProps {
   active: SecurityCaseTabKey
@@ -40,6 +39,12 @@ function SecurityCaseTabs({ active }: SecurityCaseTabsProps) {
   const activeCasesCount = casesQuery.data?.filter((c) =>
     ACTIVE_SECURITY_CASE_STATUSES.includes(c.status),
   ).length
+  const extensionCount = casesQuery.data?.filter(
+    (c) => c.pendingPeriodRequest?.type === '연장',
+  ).length
+  const shortenCount = casesQuery.data?.filter(
+    (c) => c.pendingPeriodRequest?.type === '단축',
+  ).length
 
   return (
     <div className="flex gap-2 overflow-x-auto">
@@ -49,18 +54,12 @@ function SecurityCaseTabs({ active }: SecurityCaseTabsProps) {
       <Tab isActive={active === '배치요청'} to="/admin/requests">
         배치요청{requestsQuery.data ? ` ${requestsQuery.data.length}` : ''}
       </Tab>
-      <span
-        aria-disabled="true"
-        className={cn(TAB_BASE, 'cursor-not-allowed border border-border bg-card text-muted-foreground/50')}
-      >
-        <span className="text-trim">연장요청</span>
-      </span>
-      <span
-        aria-disabled="true"
-        className={cn(TAB_BASE, 'cursor-not-allowed border border-border bg-card text-muted-foreground/50')}
-      >
-        <span className="text-trim">단축요청</span>
-      </span>
+      <Tab isActive={active === '연장요청'} to="/admin/period-requests/extension">
+        연장요청{extensionCount != null ? ` ${extensionCount}` : ''}
+      </Tab>
+      <Tab isActive={active === '단축요청'} to="/admin/period-requests/shorten">
+        단축요청{shortenCount != null ? ` ${shortenCount}` : ''}
+      </Tab>
     </div>
   )
 }

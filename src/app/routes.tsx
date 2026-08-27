@@ -12,6 +12,7 @@ import SecurityCaseEditPage from '../features/police/pages/SecurityCaseEditPage'
 import PoliceSecurityCaseListPage from '../features/police/pages/SecurityCaseListPage'
 import PoliceSecurityCaseDetailPage from '../features/police/pages/SecurityCaseDetailPage'
 import RequestListPage from '../features/company/pages/RequestListPage'
+import PeriodRequestListPage from '../features/company/pages/PeriodRequestListPage'
 import WorkerListPage from '../features/company/pages/WorkerListPage'
 import SecurityCaseDetailPage from '../features/company/pages/SecurityCaseDetailPage'
 import SecurityCaseListPage from '../features/company/pages/SecurityCaseListPage'
@@ -110,6 +111,26 @@ export const routes: RouteObject[] = [
       <ProtectedRoute allow={COMPANY_ALL}>
         <CompanyAppShell>
           <SecurityCaseListPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/period-requests/extension',
+    element: (
+      <ProtectedRoute allow={COMPANY_ALL}>
+        <CompanyAppShell>
+          <PeriodRequestListPage type="연장" />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/period-requests/shorten',
+    element: (
+      <ProtectedRoute allow={COMPANY_ALL}>
+        <CompanyAppShell>
+          <PeriodRequestListPage type="단축" />
         </CompanyAppShell>
       </ProtectedRoute>
     ),

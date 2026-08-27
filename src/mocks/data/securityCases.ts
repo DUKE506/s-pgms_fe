@@ -388,6 +388,55 @@ export function requestPeriodChange(
   return record
 }
 
+// [본사] 연장요청/단축요청 승인: startDate/endDate만 바꾸면 상세 페이지 배치기간
+// 표시와 스케줄 일자가 어긋나므로(스케줄 일자는 최초 생성 후 추가/삭제 UI가 없음)
+// 여기서 workSchedule.days도 같이 늘리거나(연장) 잘라낸다(단축).
+export function approvePeriodRequest(caseId: string): SecurityCase | null {
+  const record = securityCases.find((c) => c.id === caseId)
+  const request = record?.pendingPeriodRequest
+  if (!record || record.status !== '경호중' || !request) return null
+
+  const { type, requestedEndDate } = request
+
+  if (record.workSchedule) {
+    if (type === '연장') {
+      const defaultWorkers = record.baseInfo?.defaultWorkers.filter((w) => w.isDefault) ?? []
+      const [startTime, endTime] = (record.baseInfo?.workHours ?? '09:00 ~ 18:00')
+        .split(' ~ ')
+        .map((s) => s.trim())
+      const newDays = generateScheduleDays(
+        caseId,
+        nextDate(toDateOnly(record.endDate)),
+        requestedEndDate,
+        startTime,
+        endTime,
+        defaultWorkers,
+      )
+      record.workSchedule.days = [...record.workSchedule.days, ...newDays]
+    } else {
+      record.workSchedule.days = record.workSchedule.days.filter(
+        (d) => d.date <= toDateOnly(requestedEndDate),
+      )
+    }
+  }
+
+  record.endDate = requestedEndDate
+  record.pendingPeriodRequest = undefined
+  persist()
+  return record
+}
+
+// [본사] 연장요청/단축요청 거부: 거부 사유는 데이터 모델/요구사항에 없어 대기 요청만
+// 해제한다(단순 확인 후 처리).
+export function rejectPeriodRequest(caseId: string): SecurityCase | null {
+  const record = securityCases.find((c) => c.id === caseId)
+  if (!record || record.status !== '경호중' || !record.pendingPeriodRequest) return null
+
+  record.pendingPeriodRequest = undefined
+  persist()
+  return record
+}
+
 // 화면 5: 경호완료 상태에서 파기확인서 업로드가 끝난 뒤에만 종결 처리할 수 있다
 // (project-overview.md 업무 워크플로우 6단계, 목업 s5-done 사이드 안내문구 기준).
 export function closeCase(
@@ -436,21 +485,20 @@ function nextDate(dateOnly: string): string {
   return toDateOnly(d.toISOString())
 }
 
-// 화면 7e: 배치기간+근무시간을 입력하면 일자별 섹션이 자동 생성되고, 각 일자에
-// 그룹 1이 만들어져 "대표근무자로 체크된" 기본 근무자만 입력한 시간으로 자동
-// 배정된다 (roster 전체가 아니라 isDefault만 — s7c 안내문구 기준). s7d → s7 전이.
-export function createInitialSchedule(
+// 배치기간 내 일자별로 그룹 1을 자동 생성 — "대표근무자로 체크된" 기본 근무자만
+// 입력한 시간으로 배정된다(roster 전체가 아니라 isDefault만, s7c 안내문구 기준).
+// createInitialSchedule(최초 생성)과 approvePeriodRequest(연장 승인 시 일자 추가)가 공유.
+function generateScheduleDays(
   caseId: string,
-  input: { startDate: string; endDate: string; startTime: string; endTime: string },
-): SecurityCase | null {
-  const record = securityCases.find((c) => c.id === caseId)
-  if (!record || !record.baseInfo) return null
-
-  const defaultWorkers = record.baseInfo.defaultWorkers.filter((w) => w.isDefault)
-
+  startDate: string,
+  endDate: string,
+  startTime: string,
+  endTime: string,
+  defaultWorkers: { workerId: string }[],
+) {
   const days = []
-  let cursor = toDateOnly(input.startDate)
-  const end = toDateOnly(input.endDate)
+  let cursor = toDateOnly(startDate)
+  const end = toDateOnly(endDate)
   while (cursor <= end) {
     days.push({
       date: cursor,
@@ -460,8 +508,8 @@ export function createInitialSchedule(
           note: '',
           assignments: defaultWorkers.map((w) => ({
             workerId: w.workerId,
-            startTime: input.startTime,
-            endTime: input.endTime,
+            startTime,
+            endTime,
             isOff: false,
           })),
         },
@@ -469,10 +517,29 @@ export function createInitialSchedule(
     })
     cursor = nextDate(cursor)
   }
+  return days
+}
+
+// 화면 7e: 배치기간+근무시간을 입력하면 일자별 섹션이 자동 생성된다. s7d → s7 전이.
+export function createInitialSchedule(
+  caseId: string,
+  input: { startDate: string; endDate: string; startTime: string; endTime: string },
+): SecurityCase | null {
+  const record = securityCases.find((c) => c.id === caseId)
+  if (!record || !record.baseInfo) return null
+
+  const defaultWorkers = record.baseInfo.defaultWorkers.filter((w) => w.isDefault)
 
   record.workSchedule = {
     preMeeting: null,
-    days,
+    days: generateScheduleDays(
+      caseId,
+      input.startDate,
+      input.endDate,
+      input.startTime,
+      input.endTime,
+      defaultWorkers,
+    ),
   }
   persist()
   return record

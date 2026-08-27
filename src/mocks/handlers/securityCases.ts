@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { companyAccounts, policeAccounts } from '../data/accounts'
 import {
+  approvePeriodRequest,
   assignManager,
   cancelAssignedCase,
   cancelPendingCase,
@@ -9,6 +10,7 @@ import {
   createSecurityCase,
   findSecurityCase,
   registerBaseInfo,
+  rejectPeriodRequest,
   requestPeriodChange,
   securityCases,
   setDestructionCertFile,
@@ -154,6 +156,32 @@ export const securityCaseHandlers = [
     const updated = requestPeriodChange(params.id as string, type, requestedEndDate)
     if (!updated) {
       return HttpResponse.json({ message: '요청할 수 없는 상태입니다' }, { status: 409 })
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  // [본사] 연장요청/단축요청 승인/거부 (본사 전용 — 승인 시 startDate/endDate와
+  // workSchedule.days를 함께 조정한다)
+  http.put('/api/security-cases/:id/period-request/approve', ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const updated = approvePeriodRequest(params.id as string)
+    if (!updated) {
+      return HttpResponse.json({ message: '승인할 수 없는 상태입니다' }, { status: 409 })
+    }
+    return HttpResponse.json(updated)
+  }),
+
+  http.put('/api/security-cases/:id/period-request/reject', ({ request, params }) => {
+    if (!companyAccountFromAuthHeader(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const updated = rejectPeriodRequest(params.id as string)
+    if (!updated) {
+      return HttpResponse.json({ message: '거부할 수 없는 상태입니다' }, { status: 409 })
     }
     return HttpResponse.json(updated)
   }),

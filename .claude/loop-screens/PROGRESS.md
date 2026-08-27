@@ -14,6 +14,15 @@
 
 Phase 1 완료. Phase 2~4는 이 표에 이어서 추가.
 
+## Phase 2 — 목록
+
+| # | 항목 | 목업 anchor | 상태 | 커밋 | 비고 |
+|---|---|---|---|---|---|
+| 1 | [본사] 본사 경호목록 | `s6d` | 완료 | (Phase 1에서 앞당겨 구현 — 아래 "Phase 2에서 순서를 앞당긴 항목" 표 참고) | |
+| 2 | [본사] 연장요청/단축요청 승인 | 없음(목업 미설계) | 완료 | (커밋 예정) | 배치요청 목록(s6b)과 동일한 형태로 재구성. 승인 시 `workSchedule.days`도 연장/절단 |
+
+Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
+
 ## Phase 3에서 순서를 앞당긴 항목
 
 | 항목 | 목업 anchor | 상태 | 비고 |
@@ -283,3 +292,42 @@ Phase 1 완료. Phase 2~4는 이 표에 이어서 추가.
   회사 feature 폴더 전반(다이얼로그 내부 등)의 다른 raw button까지 훑진
   않음, 필요시 후속 요청으로. build/lint/test(52개) 통과, 경호취소 트리거
   (36px)·기본정보 등록 버튼·등록 폼 진입까지 브라우저로 회귀 확인.
+- 2026-08-27: [본사] 연장요청/단축요청 승인 화면(Phase 2 마지막 항목) 구현 완료.
+  원본 목업에 없는 화면(anchor 없음)이라 논의 끝에 이미 있는 배치요청 목록
+  (`RequestListPage`, s6b)과 동일한 형태 — 목록 + 더보기 드롭다운(배정/취소 대신
+  승인/거부) — 로 만들기로 사용자와 합의. 착수 전 확인한 중요한 사실: 승인 시
+  `startDate`/`endDate`만 바꾸면 안 됨 — `workSchedule.days`는 최초 스케줄 생성
+  시점에 한 번만 만들어지고 이후 날짜 자체를 추가/삭제하는 UI가 없어서, 기간만
+  바꾸면 상세 페이지 배치기간 표시와 스케줄 목록이 어긋나는 상태가 됨(예전
+  s6d/s3 때 겪은 "화면/동기화 지점 누락"과 같은 종류). 그래서 이번 범위에 스케줄
+  일자 자동 조정(연장 시 추가, 단축 시 잘라내기)을 포함하기로 결정.
+
+  구현: `mocks/data/securityCases.ts`에 `approvePeriodRequest`/`rejectPeriodRequest`
+  신규(연장은 `createInitialSchedule`에서 추출한 `generateScheduleDays` 헬퍼로
+  기존 종료일 다음날부터 새 종료일까지 day 추가, 단축은 새 종료일 이후 day를
+  필터링해 제거), MSW 핸들러 2개, API 클라이언트 3개(`listPeriodRequests`는
+  전용 서버 필터 없이 전체 목록을 받아 클라이언트에서
+  `pendingPeriodRequest.type`로 필터). `SecurityCaseTabs`의 비활성 "연장요청"/
+  "단축요청" 탭을 실제 카운트 달린 링크로 전환. `PeriodRequestListPage`(연장/
+  단축 공용, `type` prop)와 `PeriodRequestActionDialog`(승인/거부 공용,
+  `CancelPendingCaseDialog` 패턴 재사용) 신규, 라우트
+  `/admin/period-requests/extension`·`/shorten` 추가(`COMPANY_ALL` 가드).
+  거부 사유는 데이터 모델/요구사항에 없어 단순 확인 다이얼로그로 처리.
+
+  테스트 작성 중 실제 버그 발견: `PeriodRequestActionDialog`의 `onSuccess`가
+  `['security-cases-all']`/`['pending-requests']`만 invalidate하고 페이지
+  자신의 쿼리 키(`['period-requests', type]`)는 빠뜨려서, 승인/거부 후에도
+  행이 목록에서 안 사라지는 문제 — 해당 키도 invalidate하도록 수정.
+  build/lint/test(16개 파일 60개, 신규 8개: 데이터 레이어 4개+페이지 4개) 통과.
+
+  브라우저(Playwright 드라이버)로 연장 승인·단축 거부 두 플로우 모두 end-to-end
+  검증 — 경찰이 요청 제출 → 본사 탭 카운트 반영 → 승인 시 배치기간+스케줄
+  일자(7일 추가) 실제 반영, 거부 시 배치기간/스케줄 불변 확인. 검증 스크립트
+  작성 중 겪은 문제(앱 버그 아님, 기록용): (1) `login-company` 헬퍼가 폼 제출을
+  기다리지 않고 바로 다음 커맨드로 넘어가는데, 그 다음 줄에서 곧바로 다른
+  경로로 `nav`하면 로그인 API 응답이 오기 전에 페이지가 이동해버려 세션이
+  붕 뜸 — 로그인 직후 도착 화면 텍스트를 `wait`으로 반드시 기다린 뒤 다음
+  단계로 넘어가야 함. (2) Playwright `text=` 로케이터가 다이얼로그 배경에
+  깔린 트리거 버튼("연장/단축")까지 함께 매칭해 "단축" 단독 텍스트 클릭이
+  모호해짐 — 다이얼로그 내부로 스코프를 좁힌 CSS 선택자(`[role=dialog]
+  button:has-text(...)`)로 해결. 콘솔 에러 없음.
