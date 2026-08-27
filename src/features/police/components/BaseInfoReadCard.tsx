@@ -39,8 +39,9 @@ function BaseInfoReadCard({ securityCase }: BaseInfoReadCardProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5.5">
       <div className="mb-4 text-sm font-bold text-foreground">기본정보</div>
-      <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         <Field label="대상자명" value={subject.nameInitial} />
+        <Field label="사건유형" value={securityCase.caseType} />
         <Field label="경호시작" value={formatDate(securityCase.startDate)} />
         <Field label="경호종료" value={formatDate(securityCase.endDate)} />
         <Field label="배치시간" value={baseInfo ? `매일 ${baseInfo.workHours}` : ''} />

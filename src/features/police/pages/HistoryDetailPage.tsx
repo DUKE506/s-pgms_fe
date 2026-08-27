@@ -5,6 +5,7 @@ import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCaseHistoryDetail } from '../api/history'
 import { listWorkers } from '../api/workers'
 import { computeCaseHistorySummary } from '../lib/historySummary'
+import type { MeasurePeriod } from '../types/securityCase'
 
 function formatDate(dateLike: string) {
   const d = new Date(dateLike)
@@ -16,6 +17,13 @@ function formatDate(dateLike: string) {
 
 function formatHours(hours: number) {
   return Number.isInteger(hours) ? `${hours}시간` : `${hours.toFixed(1)}시간`
+}
+
+function formatMeasure(items: string[], period: MeasurePeriod | null | undefined): string {
+  if (items.length === 0) return ''
+  const joined = items.join(', ')
+  if (!period?.startDate || !period.endDate) return joined
+  return `${joined} (${formatDate(period.startDate)} ~ ${formatDate(period.endDate)})`
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -32,6 +40,11 @@ function Field({ label, value }: { label: string; value: string }) {
 // 취소는 배정 단계에서 바로 전환돼 baseInfo/workSchedule이 없으므로 대상자·배치
 // 장소·경찰관정보(접수 시점부터 있는 데이터)만 표시하고, 경호시작/종료/총경호
 // 시간은 목록과 같은 규칙으로 "-" 처리, 근무자 배정 이력은 빈 상태 문구로 대체한다.
+// 레이아웃은 본사 이력 상세(features/company/pages/HistoryDetailPage)와 통일해
+// 기본정보를 좌측, 종결/취소 정보를 우측에 나란히 배치한다(2026-08-27, 사용자
+// 요청). 기본정보에는 사건유형(caseType)과 5개 조치(안전/긴급응급/잠정/긴급임시/
+// 임시조치)도 함께 표시 — 사건유형은 접수 시점부터 있는 데이터, 5개 조치는
+// baseInfo가 있는 종결 건만 실값이고 취소 건은 baseInfo 자체가 없어 "-".
 function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>()
   const caseQuery = useQuery({
@@ -62,6 +75,7 @@ function HistoryDetailPage() {
   const isCanceled = c.status === '취소'
   const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
   const { totalHours, workers: workerSummaries } = computeCaseHistorySummary(c.workSchedule)
+  const baseInfo = c.baseInfo
 
   return (
     <main className="flex flex-col gap-5 p-4 pb-10 sm:p-8">
@@ -72,41 +86,69 @@ function HistoryDetailPage() {
         <StatusBadge status={c.status} />
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-5.5">
-        <div className="mb-4 text-sm font-bold text-foreground">기본정보</div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
-          <Field label="대상자명" value={c.subject.nameInitial} />
-          <Field label="경호시작" value={isCanceled ? '' : formatDate(c.startDate)} />
-          <Field label="경호종료" value={isCanceled ? '' : formatDate(c.endDate)} />
-          <Field label="총경호시간" value={isCanceled ? '' : formatHours(totalHours)} />
-          <Field label="경찰관 정보" value={c.policeContact.victimOfficer} />
-        </div>
-      </div>
-
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
-        <div className="flex-1 rounded-xl border border-border bg-card p-5.5">
-          <div className="mb-4 text-sm font-bold text-foreground">근무자 배정 이력</div>
-          {workerSummaries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">배정된 근무자가 없습니다</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className="grid grid-cols-3 gap-2 border-b border-border/60 pb-2 text-[11px] font-semibold text-muted-foreground">
-                <span>근무자</span>
-                <span>근무일수</span>
-                <span>총근무시간</span>
-              </div>
-              {workerSummaries.map((w) => {
-                const worker = workers.find((worker) => worker.id === w.workerId)
-                return (
-                  <div key={w.workerId} className="grid grid-cols-3 gap-2 py-1.5 text-sm text-foreground">
-                    <span className="font-bold">{worker?.name ?? w.workerId}</span>
-                    <span>{w.workedDays}일</span>
-                    <span>{formatHours(w.totalHours)}</span>
-                  </div>
-                )
-              })}
+        <div className="flex min-w-0 flex-1 flex-col gap-5">
+          <div className="rounded-xl border border-border bg-card p-5.5">
+            <div className="mb-4 text-sm font-bold text-foreground">기본정보</div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <Field label="대상자명" value={c.subject.nameInitial} />
+              <Field label="사건유형" value={c.caseType} />
+              <Field label="경찰관 정보" value={c.policeContact.victimOfficer} />
+              <Field label="경호시작" value={isCanceled ? '' : formatDate(c.startDate)} />
+              <Field label="경호종료" value={isCanceled ? '' : formatDate(c.endDate)} />
+              <Field label="총경호시간" value={isCanceled ? '' : formatHours(totalHours)} />
             </div>
-          )}
+            <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:flex-wrap sm:justify-between">
+              <Field
+                label="안전조치"
+                value={formatMeasure(baseInfo?.safetyMeasures ?? [], baseInfo?.safetyMeasuresPeriod)}
+              />
+              <Field
+                label="긴급응급조치"
+                value={formatMeasure(baseInfo?.emergencyMeasures ?? [], baseInfo?.emergencyMeasuresPeriod)}
+              />
+              <Field
+                label="잠정조치"
+                value={formatMeasure(baseInfo?.provisionalMeasures ?? [], baseInfo?.provisionalMeasuresPeriod)}
+              />
+              <Field
+                label="긴급임시조치"
+                value={formatMeasure(
+                  baseInfo?.emergencyTempMeasures ?? [],
+                  baseInfo?.emergencyTempMeasuresPeriod,
+                )}
+              />
+              <Field
+                label="임시조치"
+                value={formatMeasure(baseInfo?.temporaryMeasures ?? [], baseInfo?.temporaryMeasuresPeriod)}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5.5">
+            <div className="mb-4 text-sm font-bold text-foreground">근무자 배정 이력</div>
+            {workerSummaries.length === 0 ? (
+              <p className="text-sm text-muted-foreground">배정된 근무자가 없습니다</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-3 gap-2 border-b border-border/60 pb-2 text-[11px] font-semibold text-muted-foreground">
+                  <span>근무자</span>
+                  <span>근무일수</span>
+                  <span>총근무시간</span>
+                </div>
+                {workerSummaries.map((w) => {
+                  const worker = workers.find((worker) => worker.id === w.workerId)
+                  return (
+                    <div key={w.workerId} className="grid grid-cols-3 gap-2 py-1.5 text-sm text-foreground">
+                      <span className="font-bold">{worker?.name ?? w.workerId}</span>
+                      <span>{w.workedDays}일</span>
+                      <span>{formatHours(w.totalHours)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="w-full rounded-xl border border-border bg-card p-6 xl:w-96 xl:shrink-0">

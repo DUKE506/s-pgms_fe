@@ -93,13 +93,20 @@ export const securityCaseHandlers = [
     return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
   }),
 
-  // 화면 1h/2h/8: 이력 조회 — 조직 계층에 따라 스코프와 대상 상태가 모두 다르다.
+  // 화면 1h/2h/8/12: 이력 조회 — 조직 계층에 따라 스코프와 대상 상태가 모두 다르다.
   // 본청/지역청은 Phase4 대시보드가 아직 없어 진행중 건을 확인할 다른 방법이
   // 없으므로 전체 상태를 다 보여주고(2026-08-27 사용자 결정), 경찰서는 이미
   // 경호목록(/security-cases) 화면이 있어 원래 설계대로 종결/취소만 유지한다.
-  // GET /security-cases/:id와 경로가 겹치므로(:id에 "history"가 매칭됨) 그
-  // 핸들러보다 먼저 등록해야 한다.
+  // 본사도 진행중 건은 /admin/security-cases에서 이미 볼 수 있어 종결/취소만
+  // 유지하되, 경찰서와 달리 스코프 제한 없이 전국 전체를 조회한다(Phase 3 항목2,
+  // 2026-08-27). GET /security-cases/:id와 경로가 겹치므로(:id에 "history"가
+  // 매칭됨) 그 핸들러보다 먼저 등록해야 한다.
   http.get('/api/security-cases/history', ({ request }) => {
+    if (companyAccountFromAuthHeader(request)) {
+      const list = securityCases.filter((c) => c.status === '종결' || c.status === '취소')
+      return HttpResponse.json(list)
+    }
+
     const policeAccount = accountFromAuthHeader(request)
     if (!policeAccount) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
@@ -117,8 +124,9 @@ export const securityCaseHandlers = [
   }),
 
   http.get('/api/security-cases/history/:id', ({ request, params }) => {
+    const companyAccount = companyAccountFromAuthHeader(request)
     const policeAccount = accountFromAuthHeader(request)
-    if (!policeAccount) {
+    if (!companyAccount && !policeAccount) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
     }
 
@@ -128,9 +136,10 @@ export const securityCaseHandlers = [
     }
 
     const allowed =
-      policeAccount.role === '본청' ||
-      (policeAccount.role === '지역청' && record.jurisdiction === policeAccount.jurisdiction) ||
-      (policeAccount.role === '경찰서' && record.policeStation === policeAccount.name)
+      Boolean(companyAccount) ||
+      policeAccount?.role === '본청' ||
+      (policeAccount?.role === '지역청' && record.jurisdiction === policeAccount.jurisdiction) ||
+      (policeAccount?.role === '경찰서' && record.policeStation === policeAccount.name)
     if (!allowed) {
       return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
     }

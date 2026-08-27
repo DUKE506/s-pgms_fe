@@ -73,11 +73,21 @@ function GroupCard({
 interface ScheduleSectionProps {
   securityCase: SecurityCase
   workers: Worker[]
-  onAddGroup: (date: string) => void
-  onEditGroup: (date: string, group: ScheduleGroup) => void
+  onAddGroup?: (date: string) => void
+  onEditGroup?: (date: string, group: ScheduleGroup) => void
+  // 이력 조회 상세(종결 건)에서 조회 전용으로 재사용할 때 그룹/사전미팅 추가·
+  // 수정·삭제 컨트롤을 전부 숨긴다(2026-08-27 결정, 본사는 근무 스케줄 자체는
+  // 정산 참고용으로 남겨둔다).
+  readOnly?: boolean
 }
 
-function ScheduleSection({ securityCase, workers, onAddGroup, onEditGroup }: ScheduleSectionProps) {
+function ScheduleSection({
+  securityCase,
+  workers,
+  onAddGroup,
+  onEditGroup,
+  readOnly,
+}: ScheduleSectionProps) {
   const schedule = securityCase.workSchedule!
   const [expandedDate, setExpandedDate] = useState<string | null>(schedule.days[0]?.date ?? null)
   const [preMeetingDialogOpen, setPreMeetingDialogOpen] = useState(false)
@@ -113,36 +123,37 @@ function ScheduleSection({ securityCase, workers, onAddGroup, onEditGroup }: Sch
       <div className="rounded-lg border border-border p-4">
         <div className="mb-1.5 flex items-center justify-between">
           <div className="text-sm font-bold text-foreground">사전미팅</div>
-          {schedule.preMeeting ? (
-            <div className="flex items-center gap-3 text-[11px] font-semibold">
+          {!readOnly &&
+            (schedule.preMeeting ? (
+              <div className="flex items-center gap-3 text-[11px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setPreMeetingDialogOpen(true)}
+                  className="text-primary hover:underline"
+                  aria-label="사전미팅 수정"
+                >
+                  수정
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deletePreMeetingMutation.mutate()}
+                  className="text-destructive hover:underline"
+                  aria-label="사전미팅 삭제"
+                >
+                  삭제
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
                 onClick={() => setPreMeetingDialogOpen(true)}
-                className="text-primary hover:underline"
-                aria-label="사전미팅 수정"
+                className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                aria-label="사전미팅 추가"
               >
-                수정
+                <Plus className="size-3.5" />
+                추가
               </button>
-              <button
-                type="button"
-                onClick={() => deletePreMeetingMutation.mutate()}
-                className="text-destructive hover:underline"
-                aria-label="사전미팅 삭제"
-              >
-                삭제
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setPreMeetingDialogOpen(true)}
-              className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-              aria-label="사전미팅 추가"
-            >
-              <Plus className="size-3.5" />
-              추가
-            </button>
-          )}
+            ))}
         </div>
         {schedule.preMeeting ? (
           <div className="flex flex-col gap-2.5">
@@ -182,25 +193,29 @@ function ScheduleSection({ securityCase, workers, onAddGroup, onEditGroup }: Sch
                       <ChevronDown className="size-3.5 text-muted-foreground" />
                       {formatDateWithWeekday(day.date)}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onAddGroup(day.date)}
-                      className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                    >
-                      <Plus className="size-3.5" />
-                      그룹 추가
-                    </button>
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => onAddGroup?.(day.date)}
+                        className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                      >
+                        <Plus className="size-3.5" />
+                        그룹 추가
+                      </button>
+                    )}
                   </div>
                   <div className="flex flex-col gap-2.5">
                     {day.groups.map((group, i) => (
                       <div key={group.id} className="group/schedule relative">
-                        <button
-                          type="button"
-                          onClick={() => onEditGroup(day.date, group)}
-                          className="absolute top-3.5 right-3.5 text-[11px] font-semibold text-primary hover:underline"
-                        >
-                          수정
-                        </button>
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => onEditGroup?.(day.date, group)}
+                            className="absolute top-3.5 right-3.5 text-[11px] font-semibold text-primary hover:underline"
+                          >
+                            수정
+                          </button>
+                        )}
                         <GroupCard group={group} label={`그룹 ${i + 1}`} workers={workers} />
                       </div>
                     ))}
@@ -221,14 +236,16 @@ function ScheduleSection({ securityCase, workers, onAddGroup, onEditGroup }: Sch
                       {day.groups.map((_, i) => `그룹 ${i + 1}`).join(' · ')}
                     </span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onAddGroup(day.date)}
-                    className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                  >
-                    <Plus className="size-3.5" />
-                    그룹 추가
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => onAddGroup?.(day.date)}
+                      className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    >
+                      <Plus className="size-3.5" />
+                      그룹 추가
+                    </button>
+                  )}
                 </div>
               )}
             </div>

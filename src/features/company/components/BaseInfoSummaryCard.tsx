@@ -37,10 +37,18 @@ function workerNames(baseInfo: CaseBaseInfo, workers: Worker[], onlyDefault: boo
 interface BaseInfoSummaryCardProps {
   securityCase: SecurityCase
   workers: Worker[]
-  onEdit: () => void
+  onEdit?: () => void
+  // 이력 조회 상세(종결 건)에서는 배치장소(주거지/직장)가 피해자 개인정보라
+  // 조직 계층에 넓게 노출되는 화면에는 부적절하다고 판단해 숨긴다(2026-08-27 결정).
+  hidePlacement?: boolean
 }
 
-function BaseInfoSummaryCard({ securityCase, workers, onEdit }: BaseInfoSummaryCardProps) {
+function BaseInfoSummaryCard({
+  securityCase,
+  workers,
+  onEdit,
+  hidePlacement,
+}: BaseInfoSummaryCardProps) {
   const baseInfo = securityCase.baseInfo!
 
   return (
@@ -49,17 +57,20 @@ function BaseInfoSummaryCard({ securityCase, workers, onEdit }: BaseInfoSummaryC
         <div className="text-sm font-bold text-foreground">
           기본정보 <span className="font-normal text-muted-foreground">(본부관리자 작성)</span>
         </div>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="rounded-md border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50"
-        >
-          수정
-        </button>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-md border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+          >
+            수정
+          </button>
+        )}
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Field label="경호대상자" value={securityCase.subject.nameInitial} />
+        <Field label="사건유형" value={securityCase.caseType} />
         <Field label="경호시작" value={formatDate(securityCase.startDate)} />
         <Field label="경호종료" value={formatDate(securityCase.endDate)} />
         <Field label="배치시간 (매일)" value={baseInfo.workHours} />
@@ -74,16 +85,18 @@ function BaseInfoSummaryCard({ securityCase, workers, onEdit }: BaseInfoSummaryC
         />
       </div>
 
-      <div className="mb-4 border-t border-border pt-4">
-        <div className="mb-2.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-          배치장소
+      {!hidePlacement && (
+        <div className="mb-4 border-t border-border pt-4">
+          <div className="mb-2.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+            배치장소
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <Field label="주거지" value={baseInfo.placeResidence} />
+            <Field label="직장" value={baseInfo.placeWorkplace} />
+            <Field label="기타" value={baseInfo.placeEtc1 || baseInfo.placeEtc2} />
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Field label="주거지" value={baseInfo.placeResidence} />
-          <Field label="직장" value={baseInfo.placeWorkplace} />
-          <Field label="기타" value={baseInfo.placeEtc1 || baseInfo.placeEtc2} />
-        </div>
-      </div>
+      )}
 
       <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:justify-between">
         <Field

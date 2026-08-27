@@ -18,6 +18,8 @@ import PeriodRequestListPage from '../features/company/pages/PeriodRequestListPa
 import WorkerListPage from '../features/company/pages/WorkerListPage'
 import SecurityCaseDetailPage from '../features/company/pages/SecurityCaseDetailPage'
 import SecurityCaseListPage from '../features/company/pages/SecurityCaseListPage'
+import CompanyHistoryListPage from '../features/company/pages/HistoryListPage'
+import CompanyHistoryDetailPage from '../features/company/pages/HistoryDetailPage'
 
 const POLICE_DASHBOARD: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_HISTORY: Role[] = ['본청', '지역청', '경찰서']
@@ -179,5 +181,24 @@ export const routes: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  { path: '/admin/history', element: companyScreen(COMPANY_ALL, '이력 조회', ['12']) },
+  {
+    path: '/admin/history',
+    element: (
+      <ProtectedRoute allow={COMPANY_ALL}>
+        <CompanyAppShell>
+          <CompanyHistoryListPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/history/:id',
+    element: (
+      <ProtectedRoute allow={COMPANY_ALL}>
+        <CompanyAppShell>
+          <CompanyHistoryDetailPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
 ]
