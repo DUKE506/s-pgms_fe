@@ -21,12 +21,14 @@ function StatusBadge({ status, className }: StatusBadgeProps) {
     <span
       className={cn(
         // 11px: 목업 실측값(docs/PGMS_UI_mock.dc.html 리스트 행 상태뱃지 기준, 2026-08-22)
-        'inline-flex items-center rounded-md px-3 py-1 text-[11px] font-semibold text-white',
+        // h-6: text-trim이 line-height의 leading을 걷어내면서 기존 py-1 기반
+        // 높이(약 23.7px)가 같이 줄어드는 걸 막기 위해 고정 높이로 전환 (2026-08-27)
+        'inline-flex h-6 items-center rounded-md px-3 text-[11px] font-semibold text-white',
         STATUS_COLOR[status],
         className,
       )}
     >
-      {status}
+      <span className="text-trim">{status}</span>
     </span>
   )
 }

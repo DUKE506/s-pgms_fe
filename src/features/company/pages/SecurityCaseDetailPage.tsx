@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams } from 'react-router'
 import { FileText, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCase } from '../api/securityCaseDetail'
@@ -85,13 +86,9 @@ function SecurityCaseDetailPage() {
               <StatusBadge status={securityCase.status} />
             </div>
             {securityCase.status === '배정' && (
-              <button
-                type="button"
-                onClick={() => setCancelOpen(true)}
-                className="rounded-lg border border-destructive/30 bg-destructive/10 px-4.5 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/20"
-              >
+              <Button type="button" variant="destructive" onClick={() => setCancelOpen(true)}>
                 경호취소
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -113,14 +110,10 @@ function SecurityCaseDetailPage() {
               배치요구서를 확인한 후 기본정보를 등록하면 경호계획서·근무 스케줄·파기확인서
               섹션이 나타납니다.
             </p>
-            <button
-              type="button"
-              onClick={() => setEditingBaseInfo(true)}
-              className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
-            >
+            <Button type="button" onClick={() => setEditingBaseInfo(true)} className="mt-1.5">
               <Plus className="size-3.5" />
               기본정보 등록
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -140,14 +133,10 @@ function SecurityCaseDetailPage() {
                   배치기간과 근무시간을 입력하면 기본정보에 지정된 기본 근무자가 해당 기간에
                   자동으로 배정됩니다.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setScheduleInitOpen(true)}
-                  className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
-                >
+                <Button type="button" onClick={() => setScheduleInitOpen(true)} className="mt-1.5">
                   <Plus className="size-3.5" />
                   스케줄 정보 입력
-                </button>
+                </Button>
               </div>
             ) : (
               <>

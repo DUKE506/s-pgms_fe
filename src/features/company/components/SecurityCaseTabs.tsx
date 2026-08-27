@@ -21,11 +21,15 @@ interface SecurityCaseTabsProps {
 
 function Tab({ children, isActive, to }: { children: ReactNode; isActive: boolean; to: string }) {
   if (isActive) {
-    return <span className={cn(TAB_BASE, 'bg-primary text-primary-foreground')}>{children}</span>
+    return (
+      <span className={cn(TAB_BASE, 'bg-primary text-primary-foreground')}>
+        <span className="text-trim">{children}</span>
+      </span>
+    )
   }
   return (
     <Link to={to} className={cn(TAB_BASE, 'border border-border bg-card text-foreground hover:bg-muted')}>
-      {children}
+      <span className="text-trim">{children}</span>
     </Link>
   )
 }
@@ -49,13 +53,13 @@ function SecurityCaseTabs({ active }: SecurityCaseTabsProps) {
         aria-disabled="true"
         className={cn(TAB_BASE, 'cursor-not-allowed border border-border bg-card text-muted-foreground/50')}
       >
-        연장요청
+        <span className="text-trim">연장요청</span>
       </span>
       <span
         aria-disabled="true"
         className={cn(TAB_BASE, 'cursor-not-allowed border border-border bg-card text-muted-foreground/50')}
       >
-        단축요청
+        <span className="text-trim">단축요청</span>
       </span>
     </div>
   )

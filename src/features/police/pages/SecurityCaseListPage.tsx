@@ -152,7 +152,7 @@ function SecurityCaseListPage() {
                 : 'border border-border bg-card text-foreground hover:bg-muted',
             )}
           >
-            전체 {cases.length}
+            <span className="text-trim">전체 {cases.length}</span>
           </button>
           {VISIBLE_STATUSES.map((status) => (
             <button
@@ -166,7 +166,9 @@ function SecurityCaseListPage() {
                   : 'border border-border bg-card text-foreground hover:bg-muted',
               )}
             >
-              {status} {countByStatus(status)}
+              <span className="text-trim">
+                {status} {countByStatus(status)}
+              </span>
             </button>
           ))}
         </div>

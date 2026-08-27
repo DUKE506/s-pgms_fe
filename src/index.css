@@ -6,6 +6,18 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
+  Pretendard 폰트의 ascent/descent가 em-box 중심에 비대칭이라, 세로 중앙정렬된
+  텍스트가 라인박스 안에서 살짝 위로 치우쳐 보이는 문제 보정 (버튼/테이블
+  헤더/상태뱃지/탭에서 실측 -0.25~-0.8px, 2026-08-27). text-box-trim은
+  텍스트를 직접 담은 요소에만 효과가 있고 flex 컨테이너 자체에는 안 먹으므로,
+  텍스트만 감싸는 별도 엘리먼트에 적용해야 한다.
+*/
+@utility text-trim {
+  text-box-trim: trim-both;
+  text-box-edge: cap alphabetic;
+}
+
+/*
   아래 색상/폰트/radius 값은 docs/PGMS_UI_mock.dc.html 목업에서 실측한 값이다.
   neutral 계열은 Tailwind 기본 slate 팔레트와 정확히 일치해서 그대로 사용했고,
   상태 배지 6색은 docs/project-overview.md의 "상태 정의" 표를 그대로 반영했다

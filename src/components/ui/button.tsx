@@ -50,6 +50,7 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -64,8 +65,39 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {asChild ? children : wrapTextChildren(children)}
+    </Comp>
   )
+}
+
+// 연속된 문자열/숫자 children(예: `{tab} 요청`처럼 JSX 표현식과 리터럴이 나뉘어
+// 여러 child가 되는 경우)을 하나의 text-trim span으로 묶어야 그 사이 공백이
+// flex item 경계에 먹히지 않는다. 아이콘 등 엘리먼트 children은 그대로 둔다
+// (asChild일 땐 Slot이 children을 단일 엘리먼트로 기대하므로 이 처리를 건너뜀).
+function wrapTextChildren(children: React.ReactNode) {
+  const result: React.ReactNode[] = []
+  let textRun: React.ReactNode[] = []
+  const flush = () => {
+    if (textRun.length > 0) {
+      result.push(
+        <span className="text-trim" key={`text-${result.length}`}>
+          {textRun}
+        </span>
+      )
+      textRun = []
+    }
+  }
+  React.Children.forEach(children, (child) => {
+    if (typeof child === "string" || typeof child === "number") {
+      textRun.push(child)
+    } else {
+      flush()
+      result.push(child)
+    }
+  })
+  flush()
+  return result
 }
 
 export { Button, buttonVariants }
