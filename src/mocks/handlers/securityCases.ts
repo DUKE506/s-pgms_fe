@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import { companyAccounts, policeAccounts } from '../data/accounts'
+import { companyAccounts } from '../data/accounts'
+import { allPoliceLoginAccounts, guestAccounts, pruneTerminalCaseAssignments } from '../data/guests'
 import {
   approvePeriodRequest,
   assignManager,
@@ -32,7 +33,16 @@ function accountFromAuthHeader(request: Request) {
   const auth = request.headers.get('Authorization') ?? ''
   const token = auth.replace('Bearer ', '')
   const accountId = token.split('.')[1]
-  return policeAccounts.find((a) => a.id === accountId)
+  return allPoliceLoginAccounts().find((a) => a.id === accountId)
+}
+
+// 게스트 계정은 발급 시 선택된 경호건만 조회 가능(화면 9/10, 2026-08-27).
+// pruneTerminalCaseAssignments는 이 기능이 생기기 전에 이미 종결/취소된 건에
+// 할당돼 있던(또는 localStorage에 남은 과거 테스트) 케이스를 매 조회마다
+// 자가 치유한다.
+function guestCaseIds(accountId: string): string[] {
+  pruneTerminalCaseAssignments(securityCases)
+  return guestAccounts.find((g) => g.id === accountId)?.caseIds ?? []
 }
 
 function companyAccountFromAuthHeader(request: Request) {
@@ -81,12 +91,13 @@ export const securityCaseHandlers = [
     if (policeAccount) {
       // 경찰서 계정은 자기 경찰서 소속 건만 조회 — 계정명이 곧 policeStation 값과
       // 일치하도록 mock 데이터가 구성돼 있다(mocks/data/accounts.ts). 게스트 계정은
-      // 아직 화면 9/10(게스트 계정 발급/특정 건 할당)이 미구현이라 할당된 건이
-      // 없으므로 빈 목록을 반환한다.
+      // 발급 시 선택된 경호건만 조회 가능(화면 9/10, 2026-08-27).
       const list =
         policeAccount.role === '경찰서'
           ? securityCases.filter((c) => c.policeStation === policeAccount.name)
-          : []
+          : policeAccount.role === '게스트'
+            ? securityCases.filter((c) => guestCaseIds(policeAccount.id).includes(c.id))
+            : []
       return HttpResponse.json(list)
     }
 
@@ -258,7 +269,8 @@ export const securityCaseHandlers = [
   }),
 
   http.get('/api/security-cases/:id', ({ request, params }) => {
-    if (!companyAccountFromAuthHeader(request) && !accountFromAuthHeader(request)) {
+    const policeAccount = accountFromAuthHeader(request)
+    if (!companyAccountFromAuthHeader(request) && !policeAccount) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
     }
 
@@ -266,6 +278,11 @@ export const securityCaseHandlers = [
     if (!record) {
       return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
     }
+
+    if (policeAccount?.role === '게스트' && !guestCaseIds(policeAccount.id).includes(record.id)) {
+      return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
+    }
+
     return HttpResponse.json(record)
   }),
 

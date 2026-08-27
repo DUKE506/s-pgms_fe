@@ -7,6 +7,7 @@ import type {
   SecurityCaseCreateInput,
 } from '../../features/police/types/securityCase'
 import { loadPersisted, savePersisted } from './persist'
+import { removeCaseFromAllGuestAccounts } from './guests'
 
 const STORAGE_KEY = 's-pgms:security-cases'
 
@@ -501,6 +502,7 @@ export function cancelAssignedCase(caseId: string, reason: string): SecurityCase
   record.status = '취소'
   record.cancelReason = reason
   record.canceledAt = new Date().toISOString()
+  removeCaseFromAllGuestAccounts(record.id)
   persist()
   return record
 }
@@ -597,6 +599,7 @@ export function closeCase(
     record.closureReasonDetail = closureReasonDetail
   }
   record.closedAt = new Date().toISOString()
+  removeCaseFromAllGuestAccounts(record.id)
   persist()
   return record
 }

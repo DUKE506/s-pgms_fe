@@ -60,8 +60,10 @@ EOF
 | `quit` | 브라우저 닫고 서버 정지 |
 
 테스트 계정은 `src/mocks/data/accounts.ts`에 있다 (비밀번호는 전부
-`password123`): 경찰 — `hq`/`gyeonggi`/`gangnam`/`gangnamguest1`;
-본사 — `sysadmin`/`opadmin`/`hqmanager1`.
+`password123`): 경찰 — `hq`/`gyeonggi`/`gangnam`; 본사 —
+`sysadmin`/`opadmin`/`hqmanager1`. 게스트 계정(`src/mocks/data/guests.ts`,
+예: `gangnamguest1`)은 별도 체계 — 비밀번호가 아이디와 동일하다(예:
+`gangnamguest1` 로그인 시 비밀번호는 `GangnamGuest1`).
 
 ## 실행 (사람 경로)
 

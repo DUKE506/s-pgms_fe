@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import { companyAccounts, policeAccounts } from '../data/accounts'
+import { companyAccounts } from '../data/accounts'
+import { allPoliceLoginAccounts } from '../data/guests'
 import { createWorker, workers } from '../data/workers'
 import type { WorkerCreateInput } from '../../features/company/api/workers'
 
@@ -14,7 +15,7 @@ function policeAccountFromAuthHeader(request: Request) {
   const auth = request.headers.get('Authorization') ?? ''
   const token = auth.replace('Bearer ', '')
   const accountId = token.split('.')[1]
-  return policeAccounts.find((a) => a.id === accountId)
+  return allPoliceLoginAccounts().find((a) => a.id === accountId)
 }
 
 export const workerHandlers = [

@@ -184,10 +184,14 @@ function SecurityCaseListPage() {
               aria-label="관리번호 검색"
             />
           </div>
-          <Button onClick={() => navigate('/security-cases/new')} className="shrink-0">
-            <Plus className="size-3.5" />
-            신규 접수
-          </Button>
+          {/* 신규접수는 경찰서 전용 라우트(/security-cases/new) — 게스트는 조회
+              전용이라 버튼 자체를 숨긴다(화면 9/10, 2026-08-27). */}
+          {user?.role !== '게스트' && (
+            <Button onClick={() => navigate('/security-cases/new')} className="shrink-0">
+              <Plus className="size-3.5" />
+              신규 접수
+            </Button>
+          )}
         </div>
       </div>
 

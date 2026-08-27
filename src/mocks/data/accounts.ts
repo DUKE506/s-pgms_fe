@@ -21,7 +21,9 @@ export const policeAccounts: Account[] = [
     jurisdiction: '경기남부지방경찰청',
   },
   { id: 'gangnam', password: 'password123', name: '강남경찰서', role: '경찰서' },
-  { id: 'gangnamguest1', password: 'password123', name: 'GangnamGuest1', role: '게스트' },
+  // 게스트 계정은 여기 고정 seed가 아니라 mocks/data/guests.ts에서 동적으로
+  // 발급/삭제된다 — 로그인 시에는 그쪽의 guestLoginAccounts()와 합쳐서 조회한다
+  // (화면 9/10, 2026-08-27).
 ]
 
 export const companyAccounts: Account[] = [

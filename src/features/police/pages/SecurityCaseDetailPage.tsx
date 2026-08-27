@@ -92,8 +92,10 @@ function SecurityCaseDetailPage() {
   const role = useAuthStore((state) => state.user?.role)
   // 이력 조회(Phase 3-1)에서 본청/지역청이 진행중 건을 클릭하면 이 화면으로
   // 오는데, 두 role은 조회 전용이라 접수취소/경호취소/연장·단축/종결 등 액션을
-  // 전부 숨긴다(2026-08-27 결정) — 경찰서/게스트 화면 동작은 그대로 유지.
-  const isReadOnlyViewer = role === '본청' || role === '지역청'
+  // 전부 숨긴다(2026-08-27 결정). 게스트도 "할당된 경호건만 조회 가능한 축소
+  // 권한"(project-overview.md)이라 같은 방식으로 조회 전용 처리한다(화면 9/10,
+  // 2026-08-27) — 경찰서 화면 동작만 그대로 유지.
+  const isReadOnlyViewer = role === '본청' || role === '지역청' || role === '게스트'
   const caseQuery = useQuery({
     queryKey: ['security-case', id],
     queryFn: () => getSecurityCase(id!),
