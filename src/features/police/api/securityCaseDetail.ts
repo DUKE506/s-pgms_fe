@@ -1,5 +1,5 @@
 import { apiFetch } from '../../auth/api/client'
-import type { SecurityCase } from '../types/securityCase'
+import type { ClosureReason, SecurityCase } from '../types/securityCase'
 
 async function unwrap(res: Response, errorMessage: string): Promise<SecurityCase> {
   if (!res.ok) {
@@ -43,7 +43,15 @@ export async function requestPeriodChange(
   return unwrap(res, '연장/단축 요청에 실패했습니다')
 }
 
-export async function closeCase(id: string): Promise<SecurityCase> {
-  const res = await apiFetch(`/security-cases/${id}/close`, { method: 'PUT' })
+export async function closeCase(
+  id: string,
+  closureReason: ClosureReason,
+  closureReasonDetail?: string,
+): Promise<SecurityCase> {
+  const res = await apiFetch(`/security-cases/${id}/close`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ closureReason, closureReasonDetail }),
+  })
   return unwrap(res, '종결 처리에 실패했습니다')
 }

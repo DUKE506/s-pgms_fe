@@ -108,9 +108,35 @@ describe('PoliceSecurityCaseDetailPage', () => {
     fireEvent.click(closeButton)
 
     const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('combobox', { name: '종결 사유' }))
+    fireEvent.click(await screen.findByRole('option', { name: '경호기간 만료' }))
     fireEvent.click(within(dialog).getByRole('button', { name: '종결' }))
 
     await waitFor(() => expect(record.status).toBe('종결'))
+    expect(record.closureReason).toBe('경호기간 만료')
+  })
+
+  it('종결 사유를 선택하지 않으면 종결이 진행되지 않는다', async () => {
+    loginAsStation()
+    const base = findCase('26-04-강남경찰서')
+    const record = {
+      ...base,
+      id: 'case-test-closure-validation',
+      receiptNumber: '26-06-강남경찰서',
+      securityCode: 'ST998',
+      status: '경호완료' as const,
+    }
+    securityCases.push(record)
+    renderAt(record.id)
+
+    await screen.findByText('기본정보')
+    fireEvent.click(firstButton('종결'))
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: '종결' }))
+
+    expect(await within(dialog).findByText('종결 사유를 선택해주세요')).toBeInTheDocument()
+    expect(record.status).toBe('경호완료')
   })
 
   it('경호완료 상태여도 파기확인서가 없으면 종결 버튼이 비활성 상태다', async () => {

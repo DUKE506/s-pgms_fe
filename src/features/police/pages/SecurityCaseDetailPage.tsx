@@ -17,11 +17,14 @@ import CancelAssignedCaseDialog from '../components/CancelAssignedCaseDialog'
 import CloseCaseDialog from '../components/CloseCaseDialog'
 import type { SecurityCase } from '../types/securityCase'
 
-// 활성 액션(빨간 배경)과 대기/비활성 배지가 섞여 있어 톤을 두 가지로 통일한다:
-// 실행 가능한 파괴적 액션은 solid red, 대기 중이거나 아직 불가능한 상태는
-// bg-secondary(테마의 --secondary, --border와 같은 톤) — bg-muted는 이 테마에서
-// --background와 같은 색이라 배경이 사실상 안 보였음(2026-08-25 발견/수정).
+// 파괴적 액션 톤은 위계에 따라 셋으로 나눈다: 종결(워크플로우 전체의 최종
+// 지점, 되돌릴 수 없음)만 solid red로 가장 무겁게, 접수취소/경호취소(중간에
+// 이탈하는 액션)는 빨간 테두리+옅은 배경으로 한 단계 낮게, 대기 중이거나 아직
+// 불가능한 상태는 bg-secondary(테마의 --secondary, --border와 같은 톤)로 표시한다
+// — bg-muted는 이 테마에서 --background와 같은 색이라 배경이 사실상 안 보였음
+// (2026-08-25 발견/수정). 종결만 solid로 남기기로 한 건 2026-08-27 사용자 결정.
 const ACTIVE_DESTRUCTIVE = 'bg-destructive text-white hover:bg-destructive/90'
+const LIGHT_DESTRUCTIVE = 'border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20'
 const INERT_BADGE = 'border border-border bg-secondary text-muted-foreground'
 
 interface ActionButtonsProps {
@@ -39,7 +42,7 @@ function ActionButtons({ securityCase, fullWidth, onCancel, onPeriodRequest, onC
   return (
     <>
       {(securityCase.status === '접수' || securityCase.status === '배정') && (
-        <button type="button" onClick={onCancel} className={cn(base, ACTIVE_DESTRUCTIVE)}>
+        <button type="button" onClick={onCancel} className={cn(base, LIGHT_DESTRUCTIVE)}>
           {securityCase.status === '접수' ? '접수취소' : '경호취소'}
         </button>
       )}

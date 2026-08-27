@@ -1,6 +1,7 @@
 import type {
   CaseAttachments,
   CaseBaseInfo,
+  ClosureReason,
   ScheduleGroup,
   SecurityCase,
   SecurityCaseCreateInput,
@@ -389,7 +390,11 @@ export function requestPeriodChange(
 
 // 화면 5: 경호완료 상태에서 파기확인서 업로드가 끝난 뒤에만 종결 처리할 수 있다
 // (project-overview.md 업무 워크플로우 6단계, 목업 s5-done 사이드 안내문구 기준).
-export function closeCase(caseId: string): SecurityCase | null {
+export function closeCase(
+  caseId: string,
+  closureReason: ClosureReason,
+  closureReasonDetail?: string,
+): SecurityCase | null {
   const record = securityCases.find((c) => c.id === caseId)
   if (
     !record ||
@@ -400,6 +405,10 @@ export function closeCase(caseId: string): SecurityCase | null {
   }
 
   record.status = '종결'
+  record.closureReason = closureReason
+  if (closureReason === '기타' && closureReasonDetail) {
+    record.closureReasonDetail = closureReasonDetail
+  }
   persist()
   return record
 }

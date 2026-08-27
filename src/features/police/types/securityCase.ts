@@ -1,4 +1,13 @@
 export type CaseType = '스토킹' | '가정폭력' | '교제폭력' | '협박' | '기타' | '사건미접수'
+
+// 종결 사유: 경찰 쪽에서 아직 확정 목록을 안 줘서 통상적으로 쓰이는 항목으로 임시
+// 구성(2026-08-27). 추후 실제 목록으로 교체될 수 있음.
+export type ClosureReason =
+  | '경호기간 만료'
+  | '피해자 요청에 의한 종결'
+  | '피의자 구속'
+  | '피해자 소재불명·연락두절'
+  | '기타'
 export type SecurityCaseStatus = '접수' | '배정' | '경호중' | '경호완료' | '종결' | '취소'
 
 // 본사 경호목록(s6d)에는 배정 이후~진행 중인 건만 보인다 — 종결/취소는 이력 조회
@@ -134,6 +143,9 @@ export interface SecurityCase {
   // DB 삭제라 이 필드가 필요 없음)
   cancelReason?: string
   canceledAt?: string
+  // 종결 시에만 채워짐(경호완료 → 종결 전환, ClosureReason 참고)
+  closureReason?: ClosureReason
+  closureReasonDetail?: string
   // 경찰서가 경호중 상태에서 연장/단축을 요청하면 즉시 반영되지 않고 여기 대기한다
   // — 본사(운영관리자/본부관리자) 승인 화면(후속 항목)에서 승인해야 실제 startDate/
   // endDate·근무스케줄에 반영된다(2026-08-25 결정). 대기 중엔 재요청 불가.

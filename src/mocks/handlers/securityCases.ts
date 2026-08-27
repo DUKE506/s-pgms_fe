@@ -20,6 +20,7 @@ import {
 } from '../data/securityCases'
 import type {
   CaseBaseInfo,
+  ClosureReason,
   ScheduleGroup,
   SecurityCaseCreateInput,
   WorkSchedule,
@@ -158,12 +159,16 @@ export const securityCaseHandlers = [
   }),
 
   // 화면 5: 경호완료 → 종결 전환 (경찰 전용, 파기확인서 업로드 후에만 가능)
-  http.put('/api/security-cases/:id/close', ({ request, params }) => {
+  http.put('/api/security-cases/:id/close', async ({ request, params }) => {
     if (!accountFromAuthHeader(request)) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
     }
 
-    const updated = closeCase(params.id as string)
+    const { closureReason, closureReasonDetail } = (await request.json()) as {
+      closureReason: ClosureReason
+      closureReasonDetail?: string
+    }
+    const updated = closeCase(params.id as string, closureReason, closureReasonDetail)
     if (!updated) {
       return HttpResponse.json({ message: '종결할 수 없는 상태입니다' }, { status: 409 })
     }

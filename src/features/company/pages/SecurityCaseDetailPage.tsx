@@ -88,7 +88,7 @@ function SecurityCaseDetailPage() {
               <button
                 type="button"
                 onClick={() => setCancelOpen(true)}
-                className="rounded-lg bg-destructive px-4.5 py-2.5 text-sm font-semibold text-white hover:bg-destructive/90"
+                className="rounded-lg border border-destructive/30 bg-destructive/10 px-4.5 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/20"
               >
                 경호취소
               </button>
