@@ -4,11 +4,22 @@ export interface Account extends AuthUser {
   password: string
   branch?: string
   assignedCount?: number
+  // 지역청 계정의 관할 지방청 — 표시용 계정명(예: "경기지역청")과 실제
+  // SecurityCase.jurisdiction 값(예: "경기남부지방경찰청")이 달라서 스코프 필터링에
+  // 계정명을 그대로 쓸 수 없다(경찰서 계정은 계정명===policeStation이라 문제없음).
+  // 이력 조회(Phase 3-1)에서 지역청 스코프 매칭에 사용(2026-08-27).
+  jurisdiction?: string
 }
 
 export const policeAccounts: Account[] = [
   { id: 'hq', password: 'password123', name: '본청 관리자', role: '본청' },
-  { id: 'gyeonggi', password: 'password123', name: '경기지역청', role: '지역청' },
+  {
+    id: 'gyeonggi',
+    password: 'password123',
+    name: '경기지역청',
+    role: '지역청',
+    jurisdiction: '경기남부지방경찰청',
+  },
   { id: 'gangnam', password: 'password123', name: '강남경찰서', role: '경찰서' },
   { id: 'gangnamguest1', password: 'password123', name: 'GangnamGuest1', role: '게스트' },
 ]

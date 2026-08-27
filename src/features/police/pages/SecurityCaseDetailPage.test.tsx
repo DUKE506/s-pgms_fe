@@ -32,6 +32,15 @@ function loginAsStation() {
   })
 }
 
+function loginAsHq() {
+  const account = policeAccounts.find((a) => a.role === '본청')!
+  useAuthStore.setState({
+    user: { id: account.id, name: account.name, role: account.role },
+    accessToken: `access.${account.id}.test`,
+    refreshToken: `refresh.${account.id}.test`,
+  })
+}
+
 function findCase(receiptNumber: string) {
   return securityCases.find((c) => c.receiptNumber === receiptNumber)!
 }
@@ -156,5 +165,15 @@ describe('PoliceSecurityCaseDetailPage', () => {
 
     await screen.findByText('기본정보')
     expect(firstButton('종결')).toBeDisabled()
+  })
+
+  it('본청은 이 화면에 조회 전용으로 들어와 액션 버튼과 배치요구서 수정 링크가 없다', async () => {
+    loginAsHq()
+    const record = findCase('26-01-강남경찰서')
+    renderAt(record.id)
+
+    await screen.findByText('기본정보')
+    expect(screen.queryByRole('button', { name: '경호취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument()
   })
 })

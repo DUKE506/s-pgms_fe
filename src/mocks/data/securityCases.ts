@@ -164,6 +164,53 @@ function withDemoDetail(record: SecurityCase, opts: { destructionCert: boolean }
   return { ...record, baseInfo, workSchedule: { preMeeting: null, days }, attachments }
 }
 
+// 이력 조회(Phase 3-1) 검증용 — 종결/취소 건이 기존 seed에 하나도 없어서 별도로
+// 만든다. withDemoDetail로 근무 스케줄을 채워야 이력 상세의 "근무자 배정 이력"
+// (근무일수·총근무시간, workSchedule 실 배정을 합산해서 계산)이 빈 값이 아니게 나온다.
+function seedClosedCase(input: {
+  id: string
+  policeStation: string
+  receiptNumber: string
+  requestedAt: string
+  startDate: string
+  endDate: string
+  nameInitial: string
+  assignee: string
+  securityCode: string
+  closureReason: ClosureReason
+  closedAt: string
+}): SecurityCase {
+  const record = withDemoDetail(
+    seedActiveCase({ ...input, status: '경호완료' }),
+    { destructionCert: true },
+  )
+  return { ...record, status: '종결', closureReason: input.closureReason, closedAt: input.closedAt }
+}
+
+// 취소는 배정 상태에서 바로 전환되므로(기본정보/스케줄 미등록) withDemoDetail을
+// 쓰지 않는다 — 목업(s1h/s2h)도 취소 건은 경호시작/종료/총경호시간을 "-"로 표기.
+function seedCanceledCase(input: {
+  id: string
+  policeStation: string
+  receiptNumber: string
+  requestedAt: string
+  startDate: string
+  endDate: string
+  nameInitial: string
+  assignee: string
+  securityCode: string
+  cancelReason: string
+  canceledAt: string
+}): SecurityCase {
+  const record = seedActiveCase({ ...input, status: '배정' })
+  return {
+    ...record,
+    status: '취소',
+    cancelReason: input.cancelReason,
+    canceledAt: input.canceledAt,
+  }
+}
+
 const SEED_CASES: SecurityCase[] = [
   seedPendingCase({
     id: 'case-seed-1',
@@ -247,6 +294,97 @@ const SEED_CASES: SecurityCase[] = [
     }),
     { destructionCert: true },
   ),
+  seedClosedCase({
+    id: 'case-hist-1',
+    policeStation: '강남경찰서',
+    receiptNumber: '25-11-강남경찰서',
+    requestedAt: '2025-10-20T00:00:00.000Z',
+    startDate: '2025-11-01',
+    endDate: '2025-11-14',
+    nameInitial: '박○○',
+    assignee: '김민수',
+    securityCode: 'ST110',
+    closureReason: '경호기간 만료',
+    closedAt: '2025-11-15',
+  }),
+  seedClosedCase({
+    id: 'case-hist-2',
+    policeStation: '강남경찰서',
+    receiptNumber: '25-09-강남경찰서',
+    requestedAt: '2025-08-20T00:00:00.000Z',
+    startDate: '2025-09-03',
+    endDate: '2025-09-17',
+    nameInitial: '이○○',
+    assignee: '이영희',
+    securityCode: 'ST111',
+    closureReason: '피해자 요청에 의한 종결',
+    closedAt: '2025-09-18',
+  }),
+  seedCanceledCase({
+    id: 'case-hist-3',
+    policeStation: '강남경찰서',
+    receiptNumber: '25-08-강남경찰서',
+    requestedAt: '2025-08-05T00:00:00.000Z',
+    startDate: '2025-08-10',
+    endDate: '2025-08-24',
+    nameInitial: '최○○',
+    assignee: '박준혁',
+    securityCode: 'ST112',
+    cancelReason: '피해자 소재불명으로 신변보호 실익 없음',
+    canceledAt: '2025-08-20',
+  }),
+  seedClosedCase({
+    id: 'case-hist-4',
+    policeStation: '서초경찰서',
+    receiptNumber: '25-10-서초경찰서',
+    requestedAt: '2025-09-22T00:00:00.000Z',
+    startDate: '2025-10-06',
+    endDate: '2025-10-20',
+    nameInitial: '정○○',
+    assignee: '김민수',
+    securityCode: 'ST113',
+    closureReason: '피의자 구속',
+    closedAt: '2025-10-21',
+  }),
+  seedClosedCase({
+    id: 'case-hist-5',
+    policeStation: '분당경찰서',
+    receiptNumber: '25-07-분당경찰서',
+    requestedAt: '2025-06-18T00:00:00.000Z',
+    startDate: '2025-07-02',
+    endDate: '2025-07-16',
+    nameInitial: '한○○',
+    assignee: '이영희',
+    securityCode: 'ST114',
+    closureReason: '경호기간 만료',
+    closedAt: '2025-07-17',
+  }),
+  seedCanceledCase({
+    id: 'case-hist-6',
+    policeStation: '분당경찰서',
+    receiptNumber: '25-06-분당경찰서',
+    requestedAt: '2025-06-01T00:00:00.000Z',
+    startDate: '2025-06-05',
+    endDate: '2025-06-19',
+    nameInitial: '오○○',
+    assignee: '박준혁',
+    securityCode: 'ST115',
+    cancelReason: '피해자 요청으로 조기 종료',
+    canceledAt: '2025-06-15',
+  }),
+  seedClosedCase({
+    id: 'case-hist-7',
+    policeStation: '부산진경찰서',
+    receiptNumber: '25-05-부산진경찰서',
+    requestedAt: '2025-04-28T00:00:00.000Z',
+    startDate: '2025-05-12',
+    endDate: '2025-05-26',
+    nameInitial: '유○○',
+    assignee: '이영희',
+    securityCode: 'ST116',
+    closureReason: '경호기간 만료',
+    closedAt: '2025-05-27',
+  }),
 ]
 
 export const securityCases: SecurityCase[] = loadPersisted(STORAGE_KEY, SEED_CASES)
@@ -458,6 +596,7 @@ export function closeCase(
   if (closureReason === '기타' && closureReasonDetail) {
     record.closureReasonDetail = closureReasonDetail
   }
+  record.closedAt = new Date().toISOString()
   persist()
   return record
 }

@@ -93,6 +93,51 @@ export const securityCaseHandlers = [
     return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
   }),
 
+  // 화면 1h/2h/8: 이력 조회 — 조직 계층에 따라 스코프와 대상 상태가 모두 다르다.
+  // 본청/지역청은 Phase4 대시보드가 아직 없어 진행중 건을 확인할 다른 방법이
+  // 없으므로 전체 상태를 다 보여주고(2026-08-27 사용자 결정), 경찰서는 이미
+  // 경호목록(/security-cases) 화면이 있어 원래 설계대로 종결/취소만 유지한다.
+  // GET /security-cases/:id와 경로가 겹치므로(:id에 "history"가 매칭됨) 그
+  // 핸들러보다 먼저 등록해야 한다.
+  http.get('/api/security-cases/history', ({ request }) => {
+    const policeAccount = accountFromAuthHeader(request)
+    if (!policeAccount) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const list = securityCases.filter((c) => {
+      if (policeAccount.role === '본청') return true
+      if (policeAccount.role === '지역청') return c.jurisdiction === policeAccount.jurisdiction
+      if (policeAccount.role === '경찰서') {
+        return c.policeStation === policeAccount.name && (c.status === '종결' || c.status === '취소')
+      }
+      return false
+    })
+    return HttpResponse.json(list)
+  }),
+
+  http.get('/api/security-cases/history/:id', ({ request, params }) => {
+    const policeAccount = accountFromAuthHeader(request)
+    if (!policeAccount) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const record = findSecurityCase(params.id as string)
+    if (!record || (record.status !== '종결' && record.status !== '취소')) {
+      return HttpResponse.json({ message: '이력을 찾을 수 없습니다' }, { status: 404 })
+    }
+
+    const allowed =
+      policeAccount.role === '본청' ||
+      (policeAccount.role === '지역청' && record.jurisdiction === policeAccount.jurisdiction) ||
+      (policeAccount.role === '경찰서' && record.policeStation === policeAccount.name)
+    if (!allowed) {
+      return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
+    }
+
+    return HttpResponse.json(record)
+  }),
+
   http.post('/api/security-cases/:id/assign', async ({ request, params }) => {
     const account = companyAccountFromAuthHeader(request)
     if (!account) {

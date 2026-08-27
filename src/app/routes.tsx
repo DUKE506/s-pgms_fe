@@ -11,6 +11,8 @@ import SecurityCaseNewPage from '../features/police/pages/SecurityCaseNewPage'
 import SecurityCaseEditPage from '../features/police/pages/SecurityCaseEditPage'
 import PoliceSecurityCaseListPage from '../features/police/pages/SecurityCaseListPage'
 import PoliceSecurityCaseDetailPage from '../features/police/pages/SecurityCaseDetailPage'
+import HistoryListPage from '../features/police/pages/HistoryListPage'
+import HistoryDetailPage from '../features/police/pages/HistoryDetailPage'
 import RequestListPage from '../features/company/pages/RequestListPage'
 import PeriodRequestListPage from '../features/company/pages/PeriodRequestListPage'
 import WorkerListPage from '../features/company/pages/WorkerListPage'
@@ -21,6 +23,10 @@ const POLICE_DASHBOARD: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_HISTORY: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_STATION_AND_GUEST: Role[] = ['경찰서', '게스트']
 const POLICE_STATION_ONLY: Role[] = ['경찰서']
+// 본청/지역청은 이력 조회(Phase 3-1)에서 진행중 건을 클릭하면 이 상세 화면으로
+// 온다 — 조회 전용이라 SecurityCaseDetailPage 쪽에서 role에 따라 액션 버튼을
+// 숨긴다(2026-08-27 결정).
+const POLICE_DETAIL_VIEWERS: Role[] = ['경찰서', '게스트', '본청', '지역청']
 const COMPANY_ALL: Role[] = ['시스템관리자', '운영관리자', '본부관리자']
 // 본부관리자는 "본인이 배정받은 경호건"만 조회/처리 가능 — 배치요청 목록/담당자
 // 배정은 그 위 권한(시스템관리자/운영관리자)만 접근 (project-overview.md 계정 권한 체계)
@@ -49,8 +55,26 @@ function companyScreen(allow: Role[], label: string, screenIds: string[]): React
 export const routes: RouteObject[] = [
   { path: '/', element: <PoliceLoginPage /> },
   { path: '/dashboard', element: policeScreen(POLICE_DASHBOARD, '현황', ['1', '2']) },
-  { path: '/history', element: policeScreen(POLICE_HISTORY, '이력 조회 목록', ['1h', '2h', '8']) },
-  { path: '/history/:id', element: policeScreen(POLICE_HISTORY, '이력 상세', ['1h', '2h', '8h']) },
+  {
+    path: '/history',
+    element: (
+      <ProtectedRoute allow={POLICE_HISTORY}>
+        <PoliceAppShell>
+          <HistoryListPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/history/:id',
+    element: (
+      <ProtectedRoute allow={POLICE_HISTORY}>
+        <PoliceAppShell>
+          <HistoryDetailPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
   {
     path: '/security-cases',
     element: (
@@ -74,7 +98,7 @@ export const routes: RouteObject[] = [
   {
     path: '/security-cases/:id',
     element: (
-      <ProtectedRoute allow={POLICE_STATION_AND_GUEST}>
+      <ProtectedRoute allow={POLICE_DETAIL_VIEWERS}>
         <PoliceAppShell>
           <PoliceSecurityCaseDetailPage />
         </PoliceAppShell>

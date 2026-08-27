@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
+import { useAuthStore } from '../../auth/store/authStore'
 import { getSecurityCase } from '../api/securityCaseDetail'
 import { listWorkers } from '../api/workers'
 import StatusStepper from '../components/StatusStepper'
@@ -88,6 +89,11 @@ function ActionButtons({ securityCase, fullWidth, onCancel, onPeriodRequest, onC
 
 function SecurityCaseDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const role = useAuthStore((state) => state.user?.role)
+  // 이력 조회(Phase 3-1)에서 본청/지역청이 진행중 건을 클릭하면 이 화면으로
+  // 오는데, 두 role은 조회 전용이라 접수취소/경호취소/연장·단축/종결 등 액션을
+  // 전부 숨긴다(2026-08-27 결정) — 경찰서/게스트 화면 동작은 그대로 유지.
+  const isReadOnlyViewer = role === '본청' || role === '지역청'
   const caseQuery = useQuery({
     queryKey: ['security-case', id],
     queryFn: () => getSecurityCase(id!),
@@ -140,9 +146,11 @@ function SecurityCaseDetailPage() {
 
         {/* 목업(s5)은 이 액션 버튼들을 모바일에서 헤더가 아니라 스크롤 맨 아래
             전체폭 버튼으로 배치한다(s5m) — 데스크톱만 헤더에 유지 */}
-        <div className="hidden flex-wrap items-center gap-2.5 xl:flex">
-          <ActionButtons {...actionProps} />
-        </div>
+        {!isReadOnlyViewer && (
+          <div className="hidden flex-wrap items-center gap-2.5 xl:flex">
+            <ActionButtons {...actionProps} />
+          </div>
+        )}
       </div>
 
       <StatusStepper status={securityCase.status} />
@@ -150,16 +158,18 @@ function SecurityCaseDetailPage() {
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
         <div className="flex flex-1 flex-col gap-5">
           <BaseInfoReadCard securityCase={securityCase} />
-          <DocumentsCard securityCase={securityCase} />
+          <DocumentsCard securityCase={securityCase} readOnly={isReadOnlyViewer} />
           {securityCase.baseInfo && <ConsentDocsCard securityCase={securityCase} workers={workers} />}
         </div>
 
         <WorkerAssignmentPanel securityCase={securityCase} workers={workers} />
       </div>
 
-      <div className="flex flex-col gap-2.5 xl:hidden">
-        <ActionButtons {...actionProps} fullWidth />
-      </div>
+      {!isReadOnlyViewer && (
+        <div className="flex flex-col gap-2.5 xl:hidden">
+          <ActionButtons {...actionProps} fullWidth />
+        </div>
+      )}
 
       <CancelPendingCaseDialog
         securityCase={securityCase}

@@ -27,22 +27,25 @@ function DocRow({ title, subtitle, action, pending }: DocRowProps) {
           <div className="text-[11px] text-muted-foreground">{subtitle}</div>
         </div>
       </div>
-      {action ? (
+      {action && (
         <button type="button" onClick={action.onClick} className="text-xs font-semibold text-blue-600">
           {action.label}
         </button>
-      ) : (
-        <span className="text-xs font-semibold text-muted-foreground">대기중</span>
       )}
+      {!action && pending && <span className="text-xs font-semibold text-muted-foreground">대기중</span>}
     </div>
   )
 }
 
 interface DocumentsCardProps {
   securityCase: SecurityCase
+  // 이력 조회(Phase 3-1)에서 본청/지역청이 진행중 건을 조회 목적으로 이 화면에
+  // 들어올 때는 조회 전용이라 배치요구서 수정 링크를 숨긴다 — 그 라우트 자체가
+  // 경찰서 전용 가드라 눌러도 리다이렉트만 될 뿐이다(2026-08-27 결정).
+  readOnly?: boolean
 }
 
-function DocumentsCard({ securityCase }: DocumentsCardProps) {
+function DocumentsCard({ securityCase, readOnly }: DocumentsCardProps) {
   const navigate = useNavigate()
   const isPending = securityCase.status === '접수'
   const securityPlanFileName = securityCase.attachments?.securityPlanFileName
@@ -55,7 +58,11 @@ function DocumentsCard({ securityCase }: DocumentsCardProps) {
         <DocRow
           title="배치요구서"
           subtitle="Web Form"
-          action={{ label: '수정', onClick: () => navigate(`/security-cases/${securityCase.id}/edit`) }}
+          action={
+            readOnly
+              ? undefined
+              : { label: '수정', onClick: () => navigate(`/security-cases/${securityCase.id}/edit`) }
+          }
         />
 
         {!isPending &&
