@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import { companyAccounts } from '../data/accounts'
+import { companyAccounts, type Account } from '../data/accounts'
 import { allPoliceLoginAccounts, guestAccounts, pruneTerminalCaseAssignments } from '../data/guests'
 import {
   approvePeriodRequest,
@@ -52,6 +52,16 @@ function companyAccountFromAuthHeader(request: Request) {
   return companyAccounts.find((a) => a.id === accountId)
 }
 
+// 본부관리자는 "본인이 배정받은 경호건"만 조회/처리 가능 — 시스템관리자/운영관리자는
+// 최상위 권한이라 전체 그대로 반환한다(project-overview.md 계정 권한 체계, 2026-08-28
+// 통합 테스트 중 발견돼 스코프 추가).
+function scopeForCompanyAccount(
+  account: Account,
+  cases: typeof securityCases,
+): typeof securityCases {
+  return account.role === '본부관리자' ? cases.filter((c) => c.assignee === account.name) : cases
+}
+
 export const securityCaseHandlers = [
   http.post('/api/security-cases', async ({ request }) => {
     const account = accountFromAuthHeader(request)
@@ -83,7 +93,8 @@ export const securityCaseHandlers = [
     const companyAccount = companyAccountFromAuthHeader(request)
     if (companyAccount) {
       const status = new URL(request.url).searchParams.get('status')
-      const list = status ? securityCases.filter((c) => c.status === status) : securityCases
+      const scoped = scopeForCompanyAccount(companyAccount, securityCases)
+      const list = status ? scoped.filter((c) => c.status === status) : scoped
       return HttpResponse.json(list)
     }
 
@@ -113,8 +124,10 @@ export const securityCaseHandlers = [
   // 2026-08-27). GET /security-cases/:id와 경로가 겹치므로(:id에 "history"가
   // 매칭됨) 그 핸들러보다 먼저 등록해야 한다.
   http.get('/api/security-cases/history', ({ request }) => {
-    if (companyAccountFromAuthHeader(request)) {
-      const list = securityCases.filter((c) => c.status === '종결' || c.status === '취소')
+    const companyAccount = companyAccountFromAuthHeader(request)
+    if (companyAccount) {
+      const scoped = scopeForCompanyAccount(companyAccount, securityCases)
+      const list = scoped.filter((c) => c.status === '종결' || c.status === '취소')
       return HttpResponse.json(list)
     }
 
@@ -147,7 +160,8 @@ export const securityCaseHandlers = [
     }
 
     const allowed =
-      Boolean(companyAccount) ||
+      (Boolean(companyAccount) &&
+        (companyAccount!.role !== '본부관리자' || record.assignee === companyAccount!.name)) ||
       policeAccount?.role === '본청' ||
       (policeAccount?.role === '지역청' && record.jurisdiction === policeAccount.jurisdiction) ||
       (policeAccount?.role === '경찰서' && record.policeStation === policeAccount.name)
@@ -228,8 +242,17 @@ export const securityCaseHandlers = [
   // [본사] 연장요청/단축요청 승인/거부 (본사 전용 — 승인 시 startDate/endDate와
   // workSchedule.days를 함께 조정한다)
   http.put('/api/security-cases/:id/period-request/approve', ({ request, params }) => {
-    if (!companyAccountFromAuthHeader(request)) {
+    const companyAccount = companyAccountFromAuthHeader(request)
+    if (!companyAccount) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const record = findSecurityCase(params.id as string)
+    if (!record) {
+      return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
+    }
+    if (companyAccount.role === '본부관리자' && record.assignee !== companyAccount.name) {
+      return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
     }
 
     const updated = approvePeriodRequest(params.id as string)
@@ -240,8 +263,17 @@ export const securityCaseHandlers = [
   }),
 
   http.put('/api/security-cases/:id/period-request/reject', ({ request, params }) => {
-    if (!companyAccountFromAuthHeader(request)) {
+    const companyAccount = companyAccountFromAuthHeader(request)
+    if (!companyAccount) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+
+    const record = findSecurityCase(params.id as string)
+    if (!record) {
+      return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
+    }
+    if (companyAccount.role === '본부관리자' && record.assignee !== companyAccount.name) {
+      return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
     }
 
     const updated = rejectPeriodRequest(params.id as string)
@@ -269,8 +301,9 @@ export const securityCaseHandlers = [
   }),
 
   http.get('/api/security-cases/:id', ({ request, params }) => {
+    const companyAccount = companyAccountFromAuthHeader(request)
     const policeAccount = accountFromAuthHeader(request)
-    if (!companyAccountFromAuthHeader(request) && !policeAccount) {
+    if (!companyAccount && !policeAccount) {
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
     }
 
@@ -280,6 +313,10 @@ export const securityCaseHandlers = [
     }
 
     if (policeAccount?.role === '게스트' && !guestCaseIds(policeAccount.id).includes(record.id)) {
+      return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
+    }
+
+    if (companyAccount?.role === '본부관리자' && record.assignee !== companyAccount.name) {
       return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
     }
 

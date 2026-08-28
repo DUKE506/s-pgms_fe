@@ -35,6 +35,15 @@ function loginAsAdmin() {
   })
 }
 
+function loginAs(accountId: string) {
+  const account = companyAccounts.find((a) => a.id === accountId)!
+  useAuthStore.setState({
+    user: { id: account.id, name: account.name, role: account.role },
+    accessToken: `access.${account.id}.test`,
+    refreshToken: `refresh.${account.id}.test`,
+  })
+}
+
 // 접수 상태 케이스를 하나 배정해서(경호코드 발급) 상세 화면 테스트용 대상으로 삼는다.
 function assignedCaseId(): string {
   const record = securityCases.find((c) => c.status === '접수')!
@@ -126,5 +135,21 @@ describe('SecurityCaseDetailPage', () => {
       const saved = securityCases.find((c) => c.id === caseId)!
       expect(saved.workSchedule!.days[0].groups[0].assignments[0].startTime).toBe('10:00')
     })
+  })
+
+  it('본부관리자는 본인이 담당하는 건은 상세를 조회할 수 있다', async () => {
+    // case-seed-6은 김민수(hqmanager1) 담당으로 seed돼 있다.
+    loginAs('hqmanager1')
+    renderPage('case-seed-6')
+
+    expect(await screen.findByText('기본정보가 등록되지 않았습니다')).toBeInTheDocument()
+  })
+
+  it('담당자가 아닌 본부관리자는 상세 조회가 거부된다', async () => {
+    // case-seed-6 담당자는 김민수 — 이영희(hqmanager2)는 담당자가 아니다.
+    loginAs('hqmanager2')
+    renderPage('case-seed-6')
+
+    expect(await screen.findByText('경호건을 불러오지 못했습니다')).toBeInTheDocument()
   })
 })

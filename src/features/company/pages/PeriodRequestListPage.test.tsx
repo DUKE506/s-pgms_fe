@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import PeriodRequestListPage from './PeriodRequestListPage'
+import { approvePeriodRequest } from '../api/requests'
 import { companyAccounts } from '../../../mocks/data/accounts'
 import { securityCases } from '../../../mocks/data/securityCases'
 import { useAuthStore } from '../../auth/store/authStore'
@@ -27,6 +28,16 @@ function renderPage(type: '연장' | '단축') {
 
 function loginAsAdmin() {
   const account = companyAccounts.find((a) => a.id === 'opadmin')!
+  useAuthStore.setState({
+    user: { id: account.id, name: account.name, role: account.role },
+    accessToken: `access.${account.id}.test`,
+    refreshToken: `refresh.${account.id}.test`,
+  })
+  return account
+}
+
+function loginAs(accountId: string) {
+  const account = companyAccounts.find((a) => a.id === accountId)!
   useAuthStore.setState({
     user: { id: account.id, name: account.name, role: account.role },
     accessToken: `access.${account.id}.test`,
@@ -109,5 +120,33 @@ describe('PeriodRequestListPage', () => {
     const updated = securityCases.find((c) => c.id === CASE_ID)!
     expect(updated.pendingPeriodRequest).toBeUndefined()
     expect(updated.endDate).toBe(ORIGINAL_END_DATE)
+  })
+
+  it('본부관리자는 본인이 담당하는 건만 목록에 표시된다', async () => {
+    // case-seed-7 담당자는 이영희(hqmanager2)
+    setPendingRequest('연장', '2026-01-24')
+    loginAs('hqmanager2')
+    renderPage('연장')
+
+    await screen.findAllByText('26-03-강남경찰서')
+    expect(withinTable().getByText('26-03-강남경찰서')).toBeInTheDocument()
+  })
+
+  it('담당자가 아닌 본부관리자에게는 목록에 표시되지 않는다', async () => {
+    setPendingRequest('연장', '2026-01-24')
+    loginAs('hqmanager1') // 김민수 — case-seed-7 담당자 아님
+    renderPage('연장')
+
+    await waitFor(() => expect(screen.getByText('연장요청이 없습니다')).toBeInTheDocument())
+    expect(screen.queryByText('26-03-강남경찰서')).not.toBeInTheDocument()
+  })
+
+  it('담당자가 아닌 본부관리자는 승인 API를 직접 호출해도 거부된다', async () => {
+    setPendingRequest('연장', '2026-01-24')
+    loginAs('hqmanager1') // 김민수 — case-seed-7 담당자 아님
+
+    await expect(approvePeriodRequest(CASE_ID)).rejects.toThrow('승인에 실패했습니다')
+    const updated = securityCases.find((c) => c.id === CASE_ID)!
+    expect(updated.pendingPeriodRequest).toBeDefined()
   })
 })

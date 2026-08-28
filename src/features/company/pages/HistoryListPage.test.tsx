@@ -31,6 +31,15 @@ function loginAsAdmin() {
   })
 }
 
+function loginAs(accountId: string) {
+  const account = companyAccounts.find((a) => a.id === accountId)!
+  useAuthStore.setState({
+    user: { id: account.id, name: account.name, role: account.role },
+    accessToken: `access.${account.id}.test`,
+    refreshToken: `refresh.${account.id}.test`,
+  })
+}
+
 function withinTable() {
   return within(screen.getByRole('table'))
 }
@@ -87,5 +96,18 @@ describe('HistoryListPage (본사)', () => {
     fireEvent.click(withinTable().getByText('25-11-강남경찰서 · ST110'))
 
     expect(await screen.findByText('이력 상세 도착')).toBeInTheDocument()
+  })
+
+  it('본부관리자는 본인이 담당했던 종결/취소 건만 조회한다', async () => {
+    // case-hist-1(ST110)·case-hist-4(ST113)는 김민수 담당, 나머지 이력 seed는
+    // 이영희/박준혁 담당이다.
+    loginAs('hqmanager1') // 김민수
+    renderPage()
+
+    await screen.findAllByText('25-11-강남경찰서 · ST110')
+    expect(withinTable().getByText('25-11-강남경찰서 · ST110')).toBeInTheDocument()
+    expect(withinTable().getByText('25-10-서초경찰서 · ST113')).toBeInTheDocument()
+    expect(screen.queryByText('25-09-강남경찰서 · ST111')).not.toBeInTheDocument()
+    expect(screen.queryByText('25-08-강남경찰서 · ST112')).not.toBeInTheDocument()
   })
 })

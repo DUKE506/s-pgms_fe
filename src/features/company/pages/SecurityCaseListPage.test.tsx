@@ -32,6 +32,15 @@ function loginAsAdmin() {
   })
 }
 
+function loginAs(accountId: string) {
+  const account = companyAccounts.find((a) => a.id === accountId)!
+  useAuthStore.setState({
+    user: { id: account.id, name: account.name, role: account.role },
+    accessToken: `access.${account.id}.test`,
+    refreshToken: `refresh.${account.id}.test`,
+  })
+}
+
 function withinTable() {
   return within(screen.getByRole('table'))
 }
@@ -95,5 +104,17 @@ describe('SecurityCaseListPage', () => {
     fireEvent.click(withinTable().getByText(`26-02-종로경찰서 · ${record.securityCode}`))
 
     expect(await screen.findByText('상세 도착')).toBeInTheDocument()
+  })
+
+  it('본부관리자는 본인이 배정받은 경호건만 목록에 표시된다', async () => {
+    // case-seed-6(ST101)은 김민수, case-seed-7(ST102)은 이영희, case-seed-8(ST103)은
+    // 박준혁 담당으로 seed돼 있다 — 다른 테스트가 건드리지 않는 고정 배정 건들이다.
+    loginAs('hqmanager1') // 김민수
+    renderPage()
+
+    await screen.findAllByText('26-01-강남경찰서 · ST101')
+    expect(withinTable().getByText('26-01-강남경찰서 · ST101')).toBeInTheDocument()
+    expect(screen.queryByText('26-03-강남경찰서 · ST102')).not.toBeInTheDocument()
+    expect(screen.queryByText('26-04-강남경찰서 · ST103')).not.toBeInTheDocument()
   })
 })
