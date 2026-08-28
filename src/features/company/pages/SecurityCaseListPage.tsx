@@ -207,11 +207,15 @@ function SecurityCaseListPage() {
 
           <div className="flex flex-col gap-2.5 xl:hidden">
             {filteredCases.map((c) => (
-              <button
+              <div
                 key={c.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate(`/admin/security-cases/${c.id}`)}
-                className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') navigate(`/admin/security-cases/${c.id}`)
+                }}
+                className="flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-foreground">
@@ -227,7 +231,7 @@ function SecurityCaseListPage() {
                     {formatDate(c.startDate)} ~ {formatDate(c.endDate)}
                   </span>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </>

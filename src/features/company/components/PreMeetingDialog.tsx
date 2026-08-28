@@ -3,8 +3,8 @@ import { Plus, X } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import DateField from '@/shared/components/DateField'
 import {
   Select,
   SelectContent,
@@ -88,12 +88,7 @@ function PreMeetingDialog({ securityCase, workers, open, onOpenChange }: PreMeet
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="pre-meeting-date">날짜</Label>
-          <Input
-            id="pre-meeting-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <DateField id="pre-meeting-date" placeholder="날짜 선택" value={date} onChange={setDate} />
         </div>
 
         <div className="flex flex-col gap-3.5">

@@ -20,6 +20,12 @@ function renderPage(caseId: string) {
   )
 }
 
+// 경호취소 버튼은 데스크톱 헤더/모바일 하단 두 곳에 동시에 렌더링되므로(반응형 토글, 둘 다
+// jsdom엔 잡힘) 첫 번째(데스크톱 헤더)만 골라 쓴다.
+function firstButton(name: string) {
+  return screen.getAllByRole('button', { name })[0]
+}
+
 function loginAsAdmin() {
   const account = companyAccounts.find((a) => a.id === 'opadmin')!
   useAuthStore.setState({
@@ -46,7 +52,7 @@ describe('SecurityCaseDetailPage', () => {
     renderPage(assignedCaseId())
 
     expect(await screen.findByText('기본정보가 등록되지 않았습니다')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '경호취소' })).toBeEnabled()
+    expect(firstButton('경호취소')).toBeEnabled()
   })
 
   it('경호취소는 사유 입력이 필수이고, 입력하면 상태가 취소로 바뀐다', async () => {
@@ -55,7 +61,7 @@ describe('SecurityCaseDetailPage', () => {
     renderPage(caseId)
     await screen.findByText('기본정보가 등록되지 않았습니다')
 
-    fireEvent.click(screen.getByRole('button', { name: '경호취소' }))
+    fireEvent.click(firstButton('경호취소'))
     const dialog = await screen.findByRole('dialog')
 
     fireEvent.click(within(dialog).getByRole('button', { name: '경호취소' }))

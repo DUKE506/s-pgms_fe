@@ -31,6 +31,16 @@ function byLabel(text: string) {
   return screen.getByLabelText(text, { exact: false })
 }
 
+// DateField는 캘린더 팝오버라 native input처럼 fireEvent.change로 값을 못
+// 채운다 — 트리거를 열고 날짜 버튼(접근성 이름에 연도가 포함된 것만, 이전/다음
+// 달 버튼과 구분하기 위해)을 클릭한다. 실제 날짜 값은 테스트 어서션 대상이
+// 아니라 임의의 두 날짜만 고르면 된다.
+async function pickDate(labelText: string, dayIndex: number) {
+  fireEvent.click(byLabel(labelText))
+  const dayButtons = await screen.findAllByRole('button', { name: /\d{4}/ })
+  fireEvent.click(dayButtons[dayIndex])
+}
+
 async function fillRequiredFields() {
   fireEvent.change(byLabel('성명 (성만 표기)'), { target: { value: '홍○○' } })
   fireEvent.click(byLabel('성별'))
@@ -45,8 +55,8 @@ async function fillRequiredFields() {
   fireEvent.change(byLabel('사건개요'), {
     target: { value: '지속적인 접근 시도가 확인되어 신변보호 조치가 필요함.' },
   })
-  fireEvent.change(byLabel('시작일'), { target: { value: '2026-02-01' } })
-  fireEvent.change(byLabel('종료일'), { target: { value: '2026-02-15' } })
+  await pickDate('시작일', 10)
+  await pickDate('종료일', 20)
   fireEvent.change(byLabel('주거지'), {
     target: { value: '서울 강남구 테헤란로 123' },
   })

@@ -28,7 +28,7 @@ function CancelAssignedCaseDialog({ securityCase, open, onOpenChange }: CancelAs
     mutationFn: () => cancelAssignedCase(securityCase.id, reason.trim()),
     onSuccess: () => {
       showToast('경호가 취소되었습니다', 'success')
-      navigate('/security-cases')
+      navigate('/security-cases', { replace: true })
     },
     onError: () => showToast('경호취소에 실패했습니다', 'error'),
   })

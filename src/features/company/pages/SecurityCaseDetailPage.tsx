@@ -85,10 +85,14 @@ function SecurityCaseDetailPage() {
               <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
               <StatusBadge status={securityCase.status} />
             </div>
+            {/* 경찰 상세(SecurityCaseDetailPage)와 동일하게 데스크톱은 헤더, 모바일은
+                스크롤 맨 아래 전체폭 버튼으로 배치 */}
             {securityCase.status === '배정' && (
-              <Button type="button" variant="destructive" onClick={() => setCancelOpen(true)}>
-                경호취소
-              </Button>
+              <div className="hidden xl:flex">
+                <Button type="button" variant="destructive" onClick={() => setCancelOpen(true)}>
+                  경호취소
+                </Button>
+              </div>
             )}
           </div>
         )}
@@ -152,6 +156,19 @@ function SecurityCaseDetailPage() {
           </>
         )}
       </div>
+
+      {!editingBaseInfo && securityCase.status === '배정' && (
+        <div className="flex flex-col gap-2.5 xl:hidden">
+          <Button
+            type="button"
+            variant="destructive"
+            className="w-full"
+            onClick={() => setCancelOpen(true)}
+          >
+            경호취소
+          </Button>
+        </div>
+      )}
 
       <ScheduleInitDialog
         securityCase={securityCase}

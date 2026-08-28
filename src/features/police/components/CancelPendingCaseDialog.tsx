@@ -22,7 +22,7 @@ function CancelPendingCaseDialog({ securityCase, open, onOpenChange }: CancelPen
     mutationFn: () => cancelPendingCase(securityCase.id),
     onSuccess: () => {
       showToast('접수가 취소되었습니다', 'success')
-      navigate('/security-cases')
+      navigate('/security-cases', { replace: true })
     },
     onError: () => showToast('접수취소에 실패했습니다', 'error'),
   })

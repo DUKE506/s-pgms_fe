@@ -78,7 +78,7 @@ function HistoryDetailPage() {
   const baseInfo = c.baseInfo
 
   return (
-    <main className="flex flex-col gap-5 p-4 pb-10 sm:p-8">
+    <main className="flex flex-col gap-5 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
       <p className="text-xs text-muted-foreground">{c.policeStation} / 이력 조회</p>
 
       <div className="flex flex-wrap items-center gap-3.5">

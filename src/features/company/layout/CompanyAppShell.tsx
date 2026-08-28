@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { ClipboardList, History, LayoutDashboard, Users } from 'lucide-react'
 import Sidebar, { type SidebarNavItem } from '@/shared/components/Sidebar'
+import MobileHeader from '@/shared/components/MobileHeader'
 import { useAuthStore } from '@/features/auth/store/authStore'
 
 const NAV_ITEMS: SidebarNavItem[] = [
@@ -26,7 +27,10 @@ function CompanyAppShell({ children }: CompanyAppShellProps) {
   return (
     <div className="flex min-h-screen">
       <Sidebar items={NAV_ITEMS} logoLabel="PGMS" userLabel="본사" onLogout={handleLogout} />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        <MobileHeader userLabel="본사" onLogout={handleLogout} />
+        {children}
+      </div>
     </div>
   )
 }

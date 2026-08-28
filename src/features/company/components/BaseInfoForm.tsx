@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import DateField from '@/shared/components/DateField'
 import {
   Select,
   SelectContent,
@@ -180,18 +181,20 @@ function MeasurePeriodFields({
     <div className="flex flex-col gap-4 sm:flex-row">
       <div className="flex flex-1 flex-col gap-1.5">
         <Label>적용 시작일</Label>
-        <Input
-          type="date"
+        <DateField
+          placeholder="적용 시작일 선택"
           value={period.startDate}
-          onChange={(e) => onChange({ ...period, startDate: e.target.value })}
+          onChange={(value) => onChange({ ...period, startDate: value })}
+          maxDate={period.endDate}
         />
       </div>
       <div className="flex flex-1 flex-col gap-1.5">
         <Label>적용 종료일</Label>
-        <Input
-          type="date"
+        <DateField
+          placeholder="적용 종료일 선택"
           value={period.endDate}
-          onChange={(e) => onChange({ ...period, endDate: e.target.value })}
+          onChange={(value) => onChange({ ...period, endDate: value })}
+          minDate={period.startDate}
         />
       </div>
     </div>
@@ -340,15 +343,17 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
       </FormSection>
 
       <FormSection title="3. 배치시간">
-        <div className="flex flex-col gap-1.5">
-          <Label>기본 경호 근무 시간</Label>
-          <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="flex flex-1 flex-col gap-1.5">
+            <Label>시작시간</Label>
             <HourMinuteSelect
               value={workHoursStart}
               onChange={(next) => update('workHours', `${next} ~ ${workHoursEnd}`)}
               ariaLabel="시작시간"
             />
-            <span className="text-sm text-muted-foreground">~</span>
+          </div>
+          <div className="flex flex-1 flex-col gap-1.5">
+            <Label>종료시간</Label>
             <HourMinuteSelect
               value={workHoursEnd}
               onChange={(next) => update('workHours', `${workHoursStart} ~ ${next}`)}

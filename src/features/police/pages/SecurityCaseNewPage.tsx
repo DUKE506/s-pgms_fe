@@ -35,7 +35,7 @@ function SecurityCaseNewPage() {
       requester: form.requester,
     })
     showToast('배치요구서가 접수되었습니다', 'success')
-    navigate('/security-cases')
+    navigate('/security-cases', { replace: true })
   }
 
   return (

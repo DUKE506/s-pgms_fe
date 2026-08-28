@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import DateField from '@/shared/components/DateField'
 import { cn } from '@/lib/utils'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { CaseType } from '../types/securityCase'
@@ -321,21 +322,23 @@ function SecurityCaseForm({
         <FormSection title="4. 배치기간">
           <div className="flex flex-col gap-4 sm:flex-row">
             <Field id="start-date" label="시작일" required>
-              <Input
+              <DateField
                 id="start-date"
-                type="date"
+                placeholder="시작일 선택"
                 value={form.startDate}
-                onChange={(e) => update('startDate', e.target.value)}
+                onChange={(value) => update('startDate', value)}
+                maxDate={form.endDate}
                 aria-invalid={invalid('startDate')}
                 disabled={disablePeriod}
               />
             </Field>
             <Field id="end-date" label="종료일" required>
-              <Input
+              <DateField
                 id="end-date"
-                type="date"
+                placeholder="종료일 선택"
                 value={form.endDate}
-                onChange={(e) => update('endDate', e.target.value)}
+                onChange={(value) => update('endDate', value)}
+                minDate={form.startDate}
                 aria-invalid={invalid('endDate')}
                 disabled={disablePeriod}
               />

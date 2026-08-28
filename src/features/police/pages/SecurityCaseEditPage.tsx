@@ -90,7 +90,7 @@ function SecurityCaseEditPage() {
       requester: form.requester,
     })
     showToast('배치요구서가 수정되었습니다', 'success')
-    navigate(`/security-cases/${securityCase.id}`)
+    navigate(`/security-cases/${securityCase.id}`, { replace: true })
   }
 
   return (

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { ChevronRight, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Input } from '@/components/ui/input'
+import DateField from '@/shared/components/DateField'
 import {
   Select,
   SelectContent,
@@ -95,19 +96,21 @@ function HistoryListPage() {
         </Select>
 
         <div className="flex items-center gap-2">
-          <Input
-            type="date"
+          <DateField
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="bg-card"
+            onChange={setDateFrom}
+            placeholder="기간 시작"
+            maxDate={dateTo}
+            className="w-40 bg-card"
             aria-label="기간 시작"
           />
           <span className="text-sm text-muted-foreground">~</span>
-          <Input
-            type="date"
+          <DateField
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="bg-card"
+            onChange={setDateTo}
+            placeholder="기간 종료"
+            minDate={dateFrom}
+            className="w-40 bg-card"
             aria-label="기간 종료"
           />
         </div>
@@ -235,10 +238,14 @@ function HistoryCard({ record: c, onClick }: RowProps) {
   const { totalHours } = computeCaseHistorySummary(c.workSchedule)
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onClick()
+      }}
+      className="flex cursor-pointer flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left"
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-bold text-foreground">
@@ -257,7 +264,7 @@ function HistoryCard({ record: c, onClick }: RowProps) {
           <span>{formatHours(totalHours)}</span>
         </div>
       )}
-    </button>
+    </div>
   )
 }
 

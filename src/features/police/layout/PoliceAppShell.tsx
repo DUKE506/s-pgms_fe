@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { ClipboardList, History, LayoutDashboard, UserSearch } from 'lucide-react'
 import Sidebar, { type SidebarNavItem } from '@/shared/components/Sidebar'
+import MobileHeader from '@/shared/components/MobileHeader'
 import { useAuthStore, type Role } from '@/features/auth/store/authStore'
 
 const NAV_BY_ROLE: Partial<Record<Role, SidebarNavItem[]>> = {
@@ -48,7 +49,10 @@ function PoliceAppShell({ children }: PoliceAppShellProps) {
   return (
     <div className="flex min-h-screen">
       <Sidebar items={items} logoLabel="PGMS" userLabel={userLabel} onLogout={handleLogout} />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        <MobileHeader userLabel={userLabel} onLogout={handleLogout} />
+        {children}
+      </div>
     </div>
   )
 }
