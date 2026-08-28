@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
+import HourMinuteSelect from './HourMinuteSelect'
 import { upsertScheduleGroup } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { Worker } from '../api/workers'
@@ -154,17 +155,19 @@ function ScheduleGroupDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <div className="flex items-center gap-2">
-                <Input
+              <div className="flex flex-wrap items-center gap-2">
+                <HourMinuteSelect
                   value={assignment.startTime}
                   disabled={assignment.isOff}
-                  onChange={(e) => updateAssignment(index, { startTime: e.target.value })}
+                  onChange={(v) => updateAssignment(index, { startTime: v })}
+                  ariaLabel={`근무자 ${index + 1} 시작시간`}
                 />
                 <span className="text-sm text-muted-foreground">~</span>
-                <Input
+                <HourMinuteSelect
                   value={assignment.endTime}
                   disabled={assignment.isOff}
-                  onChange={(e) => updateAssignment(index, { endTime: e.target.value })}
+                  onChange={(v) => updateAssignment(index, { endTime: v })}
+                  ariaLabel={`근무자 ${index + 1} 종료시간`}
                 />
               </div>
             </div>

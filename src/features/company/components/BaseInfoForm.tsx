@@ -34,18 +34,11 @@ const PROVISIONAL_MEASURES = ['1호', '2호', '3호', '3-2호', '4호', '신청�
 const EMERGENCY_TEMP_MEASURES = ['1호', '2호', '3호']
 const TEMPORARY_MEASURES = ['1호', '2호', '3호', '5호', '신청예정']
 
-function splitContact(value: string): { name: string; phone: string } {
-  const parts = value.split(' / ').map((p) => p.trim())
-  return { name: parts[0] ?? '', phone: parts[2] ?? '' }
-}
-
 interface FormState {
   workHours: string
   workers: CaseWorkerAssignment[]
-  investigatorName: string
-  investigatorPhone: string
-  victimOfficerName: string
-  victimOfficerPhone: string
+  investigator: string
+  victimOfficer: string
   placeResidence: string
   placeWorkplace: string
   placeEtc1: string
@@ -77,15 +70,11 @@ function buildInitialState(securityCase: SecurityCase): FormState {
       temporaryMeasuresPeriod: baseInfo.temporaryMeasuresPeriod ?? EMPTY_PERIOD,
     }
   }
-  const investigator = splitContact(securityCase.policeContact.investigator)
-  const victimOfficer = splitContact(securityCase.policeContact.victimOfficer)
   return {
     workHours: '09:00 ~ 18:00',
     workers: [],
-    investigatorName: investigator.name,
-    investigatorPhone: investigator.phone,
-    victimOfficerName: victimOfficer.name,
-    victimOfficerPhone: victimOfficer.phone,
+    investigator: securityCase.policeContact.investigator,
+    victimOfficer: securityCase.policeContact.victimOfficer,
     placeResidence: securityCase.location.residence,
     placeWorkplace: securityCase.location.workplace,
     placeEtc1: securityCase.location.etc1,
@@ -254,10 +243,8 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
       const input: CaseBaseInfo = {
         workHours: form.workHours,
         defaultWorkers: form.workers,
-        investigatorName: form.investigatorName,
-        investigatorPhone: form.investigatorPhone,
-        victimOfficerName: form.victimOfficerName,
-        victimOfficerPhone: form.victimOfficerPhone,
+        investigator: form.investigator,
+        victimOfficer: form.victimOfficer,
         placeResidence: form.placeResidence,
         placeWorkplace: form.placeWorkplace,
         placeEtc1: form.placeEtc1,
@@ -434,17 +421,11 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
         </p>
         <div className="flex flex-col gap-1.5">
           <Label>수사관</Label>
-          <div className="flex gap-2.5">
-            <Input placeholder="이름" value={form.investigatorName} disabled />
-            <Input placeholder="연락처" value={form.investigatorPhone} disabled />
-          </div>
+          <Input value={form.investigator} disabled />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>피전 (담당 경찰관)</Label>
-          <div className="flex gap-2.5">
-            <Input value={form.victimOfficerName} disabled />
-            <Input value={form.victimOfficerPhone} disabled />
-          </div>
+          <Input value={form.victimOfficer} disabled />
         </div>
       </FormSection>
 
@@ -551,15 +532,20 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
         )}
       </FormSection>
 
-      <div className="flex justify-end gap-2.5">
-        <Button type="button" variant="secondary" onClick={onCancel} className="px-6">
+      <div className="flex gap-2.5 xl:justify-end">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onCancel}
+          className="flex-1 px-6 xl:flex-none"
+        >
           취소
         </Button>
         <Button
           type="button"
           disabled={mutation.isPending}
           onClick={() => mutation.mutate()}
-          className="px-6"
+          className="flex-1 px-6 xl:flex-none"
         >
           등록
         </Button>

@@ -52,10 +52,8 @@ export interface MeasurePeriod {
 export interface CaseBaseInfo {
   workHours: string // "09:00 ~ 18:00" 기본 경호 근무시간, 배치요구서 값에서 수정 가능
   defaultWorkers: CaseWorkerAssignment[]
-  investigatorName: string
-  investigatorPhone: string
-  victimOfficerName: string
-  victimOfficerPhone: string
+  investigator: string
+  victimOfficer: string
   placeResidence: string
   placeWorkplace: string
   placeEtc1: string

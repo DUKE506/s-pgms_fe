@@ -118,8 +118,8 @@ describe('SecurityCaseDetailPage', () => {
     fireEvent.click(editButtons[editButtons.length - 1])
     await screen.findByText('그룹 추가/수정')
 
-    const startInputs = screen.getAllByDisplayValue('09:00')
-    fireEvent.change(startInputs[0], { target: { value: '10:00' } })
+    fireEvent.click(screen.getByLabelText('근무자 1 시작시간 시'))
+    fireEvent.click(await screen.findByRole('option', { name: '10시' }))
     fireEvent.click(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => {

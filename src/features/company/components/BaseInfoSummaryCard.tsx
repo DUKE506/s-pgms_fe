@@ -75,14 +75,7 @@ function BaseInfoSummaryCard({
         <Field label="경호종료" value={formatDate(securityCase.endDate)} />
         <Field label="배치시간 (매일)" value={baseInfo.workHours} />
         <Field label="기본 근무자" value={workerNames(baseInfo, workers, true)} />
-        <Field
-          label="피전 (담당 경찰관)"
-          value={
-            baseInfo.victimOfficerName
-              ? `${baseInfo.victimOfficerName} / ${baseInfo.victimOfficerPhone}`
-              : '-'
-          }
-        />
+        <Field label="피전 (담당 경찰관)" value={baseInfo.victimOfficer || '-'} />
       </div>
 
       {!hidePlacement && (

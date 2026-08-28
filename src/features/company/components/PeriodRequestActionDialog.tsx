@@ -64,12 +64,22 @@ function PeriodRequestActionDialog({
 
             <p className="text-sm text-foreground">
               {request.type} 요청을 {confirmLabel}하시겠습니까?
-              <br />
-              현재 배치기간: {formatDate(targetCase.startDate)} ~ {formatDate(targetCase.endDate)}
-              <br />
-              요청 배치기간: {formatDate(targetCase.startDate)} ~{' '}
-              {formatDate(request.requestedEndDate)}
             </p>
+
+            <div className="flex flex-col gap-1.5 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">현재 배치기간</span>
+                <span className="text-foreground">
+                  {formatDate(targetCase.startDate)} ~ {formatDate(targetCase.endDate)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">요청 배치기간</span>
+                <span className="font-semibold text-foreground">
+                  {formatDate(targetCase.startDate)} ~ {formatDate(request.requestedEndDate)}
+                </span>
+              </div>
+            </div>
 
             <div className="flex justify-end gap-2.5">
               <Button

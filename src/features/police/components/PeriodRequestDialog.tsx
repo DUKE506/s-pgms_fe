@@ -123,11 +123,12 @@ function PeriodRequestDialog({ securityCase, open, onOpenChange }: PeriodRequest
               </span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-muted/60 p-3.5 text-sm">
-              <span className="text-muted-foreground">연장 후 경호기간 (7일 단위 연장)</span>
+              <span className="text-muted-foreground">연장 후 경호기간</span>
               <span className="font-semibold text-blue-600">
                 {formatDate(securityCase.startDate)} ~ {formatDate(extendedEndDate)}
               </span>
             </div>
+            <p className="text-[11px] text-muted-foreground">7일 단위로 연장됩니다.</p>
           </>
         ) : (
           <>

@@ -117,10 +117,8 @@ function withDemoDetail(record: SecurityCase, opts: { destructionCert: boolean }
   const baseInfo: CaseBaseInfo = {
     workHours: '09:00 ~ 18:00',
     defaultWorkers,
-    investigatorName: '김수사',
-    investigatorPhone: '010-0000-0001',
-    victimOfficerName: '홍길동',
-    victimOfficerPhone: '010-9876-5432',
+    investigator: record.policeContact.investigator,
+    victimOfficer: record.policeContact.victimOfficer,
     placeResidence: record.location.residence,
     placeWorkplace: record.location.workplace,
     placeEtc1: '',
