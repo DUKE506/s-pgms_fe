@@ -37,7 +37,12 @@ function PoliceLoginPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="police-id">아이디</Label>
-              <Input id="police-id" value={id} onChange={(e) => setId(e.target.value)} />
+              <Input
+                id="police-id"
+                placeholder="아이디를 입력하세요"
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+              />
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -45,6 +50,7 @@ function PoliceLoginPage() {
               <Input
                 id="police-password"
                 type="password"
+                placeholder="비밀번호를 입력하세요"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
