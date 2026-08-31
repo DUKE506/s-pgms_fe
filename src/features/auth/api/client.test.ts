@@ -13,7 +13,9 @@ describe('apiFetch', () => {
 
   it('refreshes the access token and retries once after a 401', async () => {
     const account = policeAccounts[0]
-    const session = await policeLogin(account.id, account.password)
+    const result = await policeLogin(account.id, account.password)
+    if ('mustChangePassword' in result) throw new Error('unexpected mustChangePassword response')
+    const session = result
     useAuthStore.getState().setSession(session)
 
     let calls = 0

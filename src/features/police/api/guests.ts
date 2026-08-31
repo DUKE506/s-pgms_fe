@@ -6,6 +6,10 @@ export interface GuestAccount {
   policeStation: string
   caseIds: string[]
   issuedAt: string
+  // 로그인 비밀번호 — 발급 시점엔 아이디와 동일(mocks/data/guests.ts), 최초
+  // 로그인 강제 변경(후속 항목) 완료 후에는 사용자가 설정한 값으로 바뀐다.
+  password?: string
+  mustChangePassword?: boolean
 }
 
 // 화면 9: 소속 경찰서의 게스트 계정만 서버(mock)에서 필터링되어 내려온다.

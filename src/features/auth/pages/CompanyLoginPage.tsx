@@ -1,30 +1,49 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { companyLogin } from '../api/auth'
+import { companyChangeInitialPassword, companyLogin } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
 import { getDefaultRouteForRole } from '../lib/defaultRoute'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import ForceChangePasswordDialog from '../components/ForceChangePasswordDialog'
+import { useToastStore } from '@/shared/hooks/useToastStore'
 
 function CompanyLoginPage() {
   const [id, setId] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [forceChangeTarget, setForceChangeTarget] = useState<{
+    id: string
+    oldPassword: string
+  } | null>(null)
   const setSession = useAuthStore((state) => state.setSession)
+  const showToast = useToastStore((state) => state.show)
   const navigate = useNavigate()
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
     try {
-      const session = await companyLogin(id, password)
-      setSession(session)
-      navigate(getDefaultRouteForRole(session.user.role))
+      const result = await companyLogin(id, password)
+      if ('mustChangePassword' in result) {
+        setForceChangeTarget({ id: result.id, oldPassword: password })
+        return
+      }
+      setSession(result)
+      navigate(getDefaultRouteForRole(result.user.role))
     } catch {
       setError('아이디 또는 비밀번호가 올바르지 않습니다')
     }
+  }
+
+  async function handleForceChangePassword(newPassword: string) {
+    if (!forceChangeTarget) return
+    await companyChangeInitialPassword(forceChangeTarget.id, forceChangeTarget.oldPassword, newPassword)
+    setForceChangeTarget(null)
+    setPassword('')
+    showToast('비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인해주세요', 'success')
   }
 
   return (
@@ -68,6 +87,12 @@ function CompanyLoginPage() {
           </form>
         </CardContent>
       </Card>
+
+      <ForceChangePasswordDialog
+        open={forceChangeTarget != null}
+        id={forceChangeTarget?.id ?? ''}
+        onSubmit={handleForceChangePassword}
+      />
     </main>
   )
 }

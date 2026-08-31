@@ -12,6 +12,12 @@ export interface Account extends AuthUser {
   jurisdiction?: string
   // 관리자 계정 관리(Phase 3.6 항목2)의 정보수정 대상 필드 — 본사 계정에만 사용.
   phone?: string
+  // 최초 로그인 강제 비밀번호 변경 플로우(후속 항목) — 실제 백엔드의 users
+  // 테이블 "최초 로그인" 컬럼을 미리 대응한 필드(2026-08-31 결정). 문자열
+  // 비교(비밀번호===아이디) 대신 이 플래그만 보고 판단한다. 게스트 발급/
+  // 관리자 비밀번호 초기화 시점에 true로 세팅, 변경 완료 시 false로 해제.
+  // 기존 시드 계정은 이미 사용 중인 것으로 간주해 세팅하지 않는다(undefined=false).
+  mustChangePassword?: boolean
 }
 
 export const policeAccounts: Account[] = [
@@ -103,12 +109,24 @@ export function updateCompanyAccountInfo(
   return record
 }
 
-// 초기화 시 아이디와 동일한 값으로 재설정 — 게스트 계정 발급 때와 같은 방식
-// (2026-08-31 결정, "다음 로그인 시 변경" 강제 플로우는 별도 후속 항목으로 분리).
+// 초기화 시 아이디와 동일한 값으로 재설정 — 게스트 계정 발급 때와 같은 방식.
+// mustChangePassword를 true로 세팅해 다음 로그인 때 강제 변경 모달이 뜨게 한다.
 export function resetCompanyAccountPassword(id: string): Account | null {
   const record = companyAccounts.find((a) => a.id === id)
   if (!record) return null
   record.password = record.id
+  record.mustChangePassword = true
+  savePersisted(COMPANY_ACCOUNTS_STORAGE_KEY, companyAccounts)
+  return record
+}
+
+// 최초 로그인 강제 변경 모달에서 실제 비밀번호를 교체 — 성공하면
+// mustChangePassword를 해제해 다음 로그인부터는 정상 로그인된다.
+export function changeCompanyAccountPassword(id: string, newPassword: string): Account | null {
+  const record = companyAccounts.find((a) => a.id === id)
+  if (!record) return null
+  record.password = newPassword
+  record.mustChangePassword = false
   savePersisted(COMPANY_ACCOUNTS_STORAGE_KEY, companyAccounts)
   return record
 }

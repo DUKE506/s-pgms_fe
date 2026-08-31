@@ -97,8 +97,22 @@ export function createGuestAccount(policeStation: string, caseIds: string[]): Gu
     policeStation,
     caseIds,
     issuedAt: new Date().toISOString().slice(0, 10),
+    password: name,
+    // 최초 로그인 강제 변경 플로우(후속 항목) — 발급 시점엔 항상 true.
+    mustChangePassword: true,
   }
   guestAccounts.push(record)
+  savePersisted(STORAGE_KEY, guestAccounts)
+  return record
+}
+
+// 최초 로그인 강제 변경 모달에서 실제 비밀번호를 교체 — 성공하면
+// mustChangePassword를 해제해 다음 로그인부터는 정상 로그인된다.
+export function changeGuestAccountPassword(id: string, newPassword: string): GuestAccount | null {
+  const record = guestAccounts.find((g) => g.id === id)
+  if (!record) return null
+  record.password = newPassword
+  record.mustChangePassword = false
   savePersisted(STORAGE_KEY, guestAccounts)
   return record
 }
@@ -162,16 +176,15 @@ export function pruneTerminalCaseAssignments(
 
 // 게스트도 경찰 로그인 화면에서 로그인해야 하므로(project-overview.md 화면10 설명)
 // 로그인/토큰 조회 시 policeAccounts와 합쳐서 찾을 수 있어야 한다. 초기
-// 비밀번호는 아이디와 동일하게 발급하고 최초 로그인 시 변경하는 흐름을
-// 실제로 가져갈 예정이라(2026-08-27 결정, 최초 로그인 강제 변경 화면은
-// 아직 목업/로드맵에 없어 이번 범위에는 포함하지 않음), mock도 비밀번호를
-// 고정값이 아니라 발급 시점의 아이디(name)로 맞춘다.
+// 비밀번호는 아이디와 동일하게 발급된다 — `g.password`가 없는(이 필드가 생기기
+// 전의) 과거 seed 데이터는 기존 동작대로 이름을 그대로 비밀번호로 대체한다.
 export function guestLoginAccounts(): Account[] {
   return guestAccounts.map((g) => ({
     id: g.id,
-    password: g.name,
+    password: g.password ?? g.name,
     name: g.name,
     role: '게스트',
+    mustChangePassword: g.mustChangePassword,
   }))
 }
 
