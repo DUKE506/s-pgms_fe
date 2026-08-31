@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/features/auth/store/authStore'
 import { listPendingRequests, listSecurityCases } from '../api/requests'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
 
@@ -34,8 +35,16 @@ function Tab({ children, isActive, to }: { children: ReactNode; isActive: boolea
 }
 
 function SecurityCaseTabs({ active }: SecurityCaseTabsProps) {
+  // 배치요청은 시스템관리자/운영관리자만 접근 가능(라우트 가드의 COMPANY_ADMIN과 동일
+  // 기준) — 본부관리자에게는 탭 자체를 숨긴다(2026-08-31).
+  const role = useAuthStore((state) => state.user?.role)
+  const canSeeRequests = role !== '본부관리자'
   const casesQuery = useQuery({ queryKey: ['security-cases-all'], queryFn: listSecurityCases })
-  const requestsQuery = useQuery({ queryKey: ['pending-requests'], queryFn: listPendingRequests })
+  const requestsQuery = useQuery({
+    queryKey: ['pending-requests'],
+    queryFn: listPendingRequests,
+    enabled: canSeeRequests,
+  })
   const activeCasesCount = casesQuery.data?.filter((c) =>
     ACTIVE_SECURITY_CASE_STATUSES.includes(c.status),
   ).length
@@ -51,9 +60,11 @@ function SecurityCaseTabs({ active }: SecurityCaseTabsProps) {
       <Tab isActive={active === '경호목록'} to="/admin/security-cases">
         경호목록{activeCasesCount != null ? ` ${activeCasesCount}` : ''}
       </Tab>
-      <Tab isActive={active === '배치요청'} to="/admin/requests">
-        배치요청{requestsQuery.data ? ` ${requestsQuery.data.length}` : ''}
-      </Tab>
+      {canSeeRequests && (
+        <Tab isActive={active === '배치요청'} to="/admin/requests">
+          배치요청{requestsQuery.data ? ` ${requestsQuery.data.length}` : ''}
+        </Tab>
+      )}
       <Tab isActive={active === '연장요청'} to="/admin/period-requests/extension">
         연장요청{extensionCount != null ? ` ${extensionCount}` : ''}
       </Tab>
