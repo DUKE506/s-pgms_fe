@@ -52,6 +52,15 @@ Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
 
 **발견된 후속 항목(백로그)**: [공통] 프로필 화면(비밀번호 변경) — roadmap.md Phase 3.5 표 참고, 미구현
 
+## Phase 3.6 — 담당자 참조 리팩터 + 관리자 계정 관리
+
+| # | 항목 | 상태 | 커밋 | 비고 |
+|---|---|---|---|---|
+| 1 | [내부] assignee(이름) → assigneeId(계정 id) 리팩터 | 완료 | (커밋 전) | 인사이동으로 담당자 이름이 바뀌어도 스코프 필터링/목록 표시가 깨지지 않도록 전환 — 아래 iteration 로그 참고 |
+| 2 | [본사] 관리자 계정 관리 (신규) | 대기 | | roadmap.md Phase 3.6 표 참고, 착수 전 논의 완료(메뉴명/권한 매트릭스/패턴 확정), 구현 미착수 |
+
+**발견된 후속 항목(백로그)**: [본사] 비밀번호 초기화 후 최초 로그인 강제 변경 플로우 — roadmap.md Phase 3.6 표 참고, 미구현
+
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
@@ -611,3 +620,52 @@ Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
   **아직 미검토**: 이번 작업은 사용자가 결과를 직접 확인하기 전 상태 —
   스코프 기준(assignee 이름 매칭)과 403 처리 범위가 실제 의도와 맞는지 검토
   필요. 나머지 계정(본청/지역청/게스트, 시스템관리자)은 여전히 미확인.
+- 2026-08-31: 위 미검토 항목 사용자 검토 완료, 후속으로 두 가지 발견/결정.
+  (1) [본사] 경호관리 상단 탭에 본부관리자에게도 "배치요청"이 노출되고 있었음
+  — 배치요청은 시스템관리자/운영관리자 전용(라우트 가드는 이미 `COMPANY_ADMIN`
+  으로 제한돼 있었으나 `SecurityCaseTabs`가 역할과 무관하게 탭을 항상 렌더링).
+  `useAuthStore`로 role을 읽어 본부관리자면 탭 자체를 숨기도록 수정(커밋
+  `6e64ac7`). (2) 시스템관리자/운영관리자가 하위 본부관리자 계정을 관리하는
+  화면이 아예 없다는 게 확인돼 논의 끝에 신규 화면으로 계획(로드맵 Phase 3.6
+  "관리자 계정 관리" 항목, 메뉴명/스코프/액션/권한 매트릭스까지 확정, 아래
+  참고).
+
+  설계 논의 중 더 근본적인 문제 발견 — `SecurityCase.assignee`가 담당자 id가
+  아니라 **이름 문자열**을 스냅샷 저장하는 구조였음(배정 시점
+  `assignManager(caseId, managerName)`으로 저장). 본부관리자는 "본부당 계정
+  1개 고정, 인사이동 시 담당자만 교체" 운영 방침이라 계정의 이름이 바뀔 수
+  있는데, 이름 문자열로 스코프 필터링/컬럼 표시를 하고 있으면 인사이동
+  즉시 스코프가 깨짐(새 담당자가 기존 배정 건을 못 보게 되거나, 목록의
+  담당자/본부 컬럼이 매칭 실패로 "-" 표시). 실제 백엔드 연결 시에도 FK
+  참조 방식일 거라는 사용자 판단으로 `assigneeId`(계정 id) 참조로 먼저
+  리팩터하기로 결정 — 로드맵 Phase 3.6 항목1로 별도 기록 후 착수(아래 항목
+  참고).
+- 2026-08-31: Phase 3.6 항목1(assignee → assigneeId 리팩터) 완료. 확인해보니
+  API 계약(`POST /security-cases/:id/assign`)은 원래도 `{ managerId }`로
+  주고받고 있었고, MSW 핸들러가 그 id로 계정을 찾은 직후 `assignManager(caseId,
+  manager.name)`으로 **이름으로 변환해서 저장하는 지점 한 곳**만 있었음 —
+  그 변환을 없애고 id를 끝까지 들고 가는 정도로 범위가 생각보다 작았음.
+
+  변경: `SecurityCase.assignee?: string` → `assigneeId?: string`(타입 +
+  `SecurityCaseCreateInput` Omit 유니온), `mocks/data/securityCases.ts`의
+  `assignManager()`+seed 데이터(김민수/이영희/박준혁 → hqmanager1/2/3),
+  `mocks/handlers/securityCases.ts`의 `scopeForCompanyAccount()` + 상세/
+  승인/거부 3곳의 403 체크 + assign 핸들러(`manager.name` → `manager.id`),
+  `SecurityCaseListPage.tsx`의 담당자/본부 컬럼·필터(`branchByManagerName`
+  이름 매핑 → `managersById` id 매핑으로 교체, 필터 드롭다운도 케이스에서
+  뽑은 이름 대신 매니저 id를 값으로 사용). 테스트 6개 파일의 `assignManager(...)`
+  호출/단언을 이름→id로 갱신(hqmanager1~4).
+
+  build/lint/test(90개) 통과. Playwright 드라이버로 end-to-end 검증 — 배치요청
+  목록에서 실제 UI로 담당자 배정(더보기 → 배정 → 박준혁 선택 → 배정하기)
+  성공, 경호목록 담당자/본부 컬럼이 새 `assigneeId` 기반 조회로 정상 표시
+  ("박준혁"/"서부본부"), hqmanager1/hqmanager3 로그인 시 본인 담당 건만
+  스코프되는 것도 재확인. 검증 중 겪은 실수(앱 버그 아님, 기록용): 드라이버로
+  로그인 직후 곧바로 `nav`하면 로그인 응답 전에 페이지가 이동해 이전 계정
+  세션이 남아있는 것처럼 보이는 현상 재발 — 로그인 후 도착 화면 텍스트를
+  `wait`으로 반드시 기다려야 함(2026-08-27에도 같은 교훈 기록됨). 또한
+  `SecurityCaseTabs`의 아이콘 전용 "더보기" 버튼은 `aria-label`만 있고 visible
+  text가 없어 드라이버의 `click-text`(text= 로케이터)로는 못 찾음 —
+  `click button[aria-label="더보기"] >> nth=0`처럼 속성 선택자로 클릭해야 함.
+
+  Phase 3.6 항목2(관리자 계정 관리 화면)는 아직 미착수.
