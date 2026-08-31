@@ -58,9 +58,9 @@ Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
 |---|---|---|---|---|
 | 1 | [내부] assignee(이름) → assigneeId(계정 id) 리팩터 | 완료 | `190c43d` | 인사이동으로 담당자 이름이 바뀌어도 스코프 필터링/목록 표시가 깨지지 않도록 전환 — 아래 iteration 로그 참고 |
 | 2 | [본사] 관리자 계정 관리 (신규) | 완료 | `d13de2c` | 목록+모달 패턴, 권한 매트릭스 2차 재확정(정보수정=항상 본인만) 반영 — 아래 iteration 로그 참고 |
+| 3 | [본사/경찰] 최초 로그인 강제 비밀번호 변경 플로우 | 완료 | `f07b797` | `mustChangePassword` boolean 플래그 기반, 경찰(게스트)·본사(관리자) 로그인 양쪽 적용 — 아래 iteration 로그 참고 |
 
 **발견된 후속 항목(백로그)**:
-- [본사] 비밀번호 초기화 후 최초 로그인 강제 변경 플로우 — roadmap.md Phase 3.6 표 참고, 미구현
 - [본사] 경호 상세 화면에서 담당자(본부관리자) 변경 기능 — roadmap.md Phase 3.6 후속 항목 참고, 미구현
 
 ## 최근 iteration 로그
@@ -722,3 +722,45 @@ Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
   문제 없음을 확인 — 8/28 발견된 본부관리자 스코프 미비(위 iteration 로그
   참고, 커밋 `0fd9c78`)에 대한 "사용자 검토 필요" 플래그도 이걸로 해소.
   1차 통과로 완료 처리, roadmap.md 체크.
+- 2026-08-31: Phase 3.6 후속 백로그([본사] 비밀번호 초기화 후 최초 로그인
+  강제 변경 플로우) 구현 완료. 착수 전 논의에서 설계 방향이 두 번 바뀜 —
+  처음엔 "비밀번호===아이디" 문자열 비교로 감지하는 안을 제시했으나,
+  사용자가 "실제 백엔드 연결 시 users 테이블에 최초 로그인 관련 boolean
+  컬럼이 있을 것"이라고 확인해줘서 `Account`에 `mustChangePassword?:
+  boolean` 플래그를 추가하는 방식으로 전환(assigneeId 리팩터 때와 같은
+  이유 — 실제 DB 스키마를 미리 흉내냄). 적용 범위는 게스트 계정(경찰
+  로그인)과 관리자 계정(본사 로그인) 둘 다로 확정.
+
+  구현: `mocks/data/accounts.ts`의 `resetCompanyAccountPassword()`가
+  `mustChangePassword: true`도 같이 세팅, `changeCompanyAccountPassword()`
+  신규(비밀번호 교체 + 플래그 해제). `features/police/api/guests.ts`의
+  `GuestAccount`에 `password`/`mustChangePassword` 필드 추가 — 기존엔
+  게스트 로그인 비밀번호가 `guestLoginAccounts()`에서 매번 `g.name`으로
+  파생 계산됐는데, 최초 변경 이후엔 사용자가 정한 값을 실제로 저장해야
+  해서 저장형으로 전환(과거 seed 데이터엔 `password` 필드가 없어
+  `g.password ?? g.name` 폴백 유지). `mocks/data/guests.ts`에
+  `changeGuestAccountPassword()` 신규.
+
+  `mocks/handlers/auth.ts`의 `loginHandler`가 인증 성공 후
+  `account.mustChangePassword`를 확인해 참이면 토큰 없이
+  `{mustChangePassword: true, id}`만 응답. 신규
+  `changeInitialPasswordHandler`(일반 "비밀번호 변경" API가 아니라
+  `mustChangePassword`가 실제로 true인 계정에만 허용) →
+  `/api/auth/police/change-initial-password`·
+  `/api/auth/company/change-initial-password` 2개 등록, 게스트는
+  `changeGuestAccountPassword`, 관리자는 `changeCompanyAccountPassword`
+  연결.
+
+  프론트: 공용 `ForceChangePasswordDialog`(닫기 버튼 없음, ESC/바깥클릭
+  차단 — 변경 완료 전엔 못 닫음) 신규, 새 비밀번호가 아이디와 같으면
+  거부하는 검증 포함. `PoliceLoginPage`/`CompanyLoginPage` 둘 다 로그인
+  응답에 `mustChangePassword`가 있으면 이 모달을 띄우고, 변경 성공 시
+  세션을 발급하지 않고 로그인 폼으로 돌아가 토스트로 재로그인을 안내
+  (기존 시드 계정은 플래그 미설정이라 영향 없음).
+
+  build/lint/test(25개 파일 114개, 신규 9개) 통과. Playwright 드라이버로
+  양쪽 전체 플로우 end-to-end 검증 — 경찰: 게스트 계정 신규 발급 →
+  발급된 아이디/초기비밀번호로 로그인 → 강제 변경 모달 → 새 비밀번호
+  설정 → 재로그인 요구 확인 → 새 비밀번호로 재로그인 성공(경호목록 진입).
+  본사: 관리자 계정 관리에서 비밀번호 초기화 → 같은 플로우로 재로그인
+  성공(본사 전체 대시보드 진입). 콘솔 에러 없음.
