@@ -53,7 +53,7 @@ describe('SecurityCaseListPage', () => {
   it('접수 상태 건은 제외하고 배정 이후 건만 목록에 표시한다', async () => {
     loginAsAdmin()
     const record = securityCases.find((c) => c.receiptNumber === '26-02-강남경찰서')!
-    assignManager(record.id, '김민수')
+    assignManager(record.id, 'hqmanager1')
     renderPage()
 
     await screen.findAllByText(`26-02-강남경찰서 · ${record.securityCode}`)
@@ -67,7 +67,7 @@ describe('SecurityCaseListPage', () => {
   it('배정된 건은 관리번호(접수번호 · 경호코드)와 담당자·본부가 함께 표시된다', async () => {
     loginAsAdmin()
     const record = securityCases.find((c) => c.receiptNumber === '26-02-서초경찰서')!
-    assignManager(record.id, '김민수')
+    assignManager(record.id, 'hqmanager1')
     renderPage()
 
     await screen.findAllByText(`26-02-서초경찰서 · ${record.securityCode}`)
@@ -82,7 +82,7 @@ describe('SecurityCaseListPage', () => {
     // 다른 테스트에서 이미 배정 상태로 바뀔 수 있는 건들과 안 겹치게 부산진경찰서
     // 건으로 검증한다 (모듈 싱글톤 securityCases 공유).
     const record = securityCases.find((c) => c.receiptNumber === '26-02-부산진경찰서')!
-    assignManager(record.id, '서지훈')
+    assignManager(record.id, 'hqmanager4')
     renderPage()
     await screen.findAllByText(`26-02-부산진경찰서 · ${record.securityCode}`)
 
@@ -97,7 +97,7 @@ describe('SecurityCaseListPage', () => {
     // 종로경찰서 건은 다른 테스트에서 손대지 않아 여기서 직접 배정한다 — 접수
     // 상태 건은 더 이상 목록에 뜨지 않으므로 클릭 대상이 되려면 배정이 필요하다.
     const record = securityCases.find((c) => c.receiptNumber === '26-02-종로경찰서')!
-    assignManager(record.id, '이영희')
+    assignManager(record.id, 'hqmanager2')
     renderPage()
     await screen.findAllByText(`26-02-종로경찰서 · ${record.securityCode}`)
 

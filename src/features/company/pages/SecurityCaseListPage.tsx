@@ -51,21 +51,21 @@ function SecurityCaseListPage() {
     ACTIVE_SECURITY_CASE_STATUSES.includes(c.status),
   )
   const managers = managersQuery.data ?? []
-  const branchByManagerName = new Map(managers.map((m) => [m.name, m.branch ?? '-']))
+  const managersById = new Map(managers.map((m) => [m.id, m]))
 
   const jurisdictions = [ALL, ...Array.from(new Set(cases.map((c) => c.jurisdiction)))]
   const stationsInScope =
     jurisdictionFilter === ALL ? cases : cases.filter((c) => c.jurisdiction === jurisdictionFilter)
   const stations = [ALL, ...Array.from(new Set(stationsInScope.map((c) => c.policeStation)))]
-  const assignees = [
+  const assigneeIds = [
     ALL,
-    ...Array.from(new Set(cases.map((c) => c.assignee).filter((v): v is string => Boolean(v)))),
+    ...Array.from(new Set(cases.map((c) => c.assigneeId).filter((v): v is string => Boolean(v)))),
   ]
 
   const filteredCases = cases.filter((c) => {
     if (jurisdictionFilter !== ALL && c.jurisdiction !== jurisdictionFilter) return false
     if (stationFilter !== ALL && c.policeStation !== stationFilter) return false
-    if (assigneeFilter !== ALL && c.assignee !== assigneeFilter) return false
+    if (assigneeFilter !== ALL && c.assigneeId !== assigneeFilter) return false
     if (statusFilter !== ALL && c.status !== statusFilter) return false
     if (search.trim()) {
       const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
@@ -118,9 +118,9 @@ function SecurityCaseListPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {assignees.map((a) => (
-              <SelectItem key={a} value={a}>
-                {a === ALL ? '담당자 전체' : a}
+            {assigneeIds.map((id) => (
+              <SelectItem key={id} value={id}>
+                {id === ALL ? '담당자 전체' : (managersById.get(id)?.name ?? id)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -187,8 +187,8 @@ function SecurityCaseListPage() {
                   >
                     <TableCell>{formatManagementNumber(c.receiptNumber, c.securityCode)}</TableCell>
                     <TableCell>{c.policeStation}</TableCell>
-                    <TableCell>{c.assignee ?? '-'}</TableCell>
-                    <TableCell>{c.assignee ? (branchByManagerName.get(c.assignee) ?? '-') : '-'}</TableCell>
+                    <TableCell>{c.assigneeId ? (managersById.get(c.assigneeId)?.name ?? '-') : '-'}</TableCell>
+                    <TableCell>{c.assigneeId ? (managersById.get(c.assigneeId)?.branch ?? '-') : '-'}</TableCell>
                     <TableCell>
                       <StatusBadge status={c.status} />
                     </TableCell>
@@ -225,7 +225,7 @@ function SecurityCaseListPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-foreground/80">
-                    {c.policeStation} · {c.assignee ?? '담당자 미배정'}
+                    {c.policeStation} · {c.assigneeId ? (managersById.get(c.assigneeId)?.name ?? '-') : '담당자 미배정'}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {formatDate(c.startDate)} ~ {formatDate(c.endDate)}

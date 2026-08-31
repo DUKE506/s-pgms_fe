@@ -132,7 +132,10 @@ export interface SecurityCase {
   policeContact: SecurityCasePoliceContact
   requester: string
   createdAt: string
-  assignee?: string
+  // 담당 본부관리자 계정 id(companyAccounts 참조) — 이름 문자열이 아니라 id로
+  // 저장해야 인사이동으로 담당자 이름이 바뀌어도 스코프 필터링/표시가 안 깨진다
+  // (2026-08-31 리팩터, 예전엔 이름 문자열 스냅샷이었음)
+  assigneeId?: string
   securityCode?: string
   baseInfo?: CaseBaseInfo
   workSchedule?: WorkSchedule
@@ -163,6 +166,6 @@ export type SecurityCaseCreateInput = Omit<
   | 'policeStation'
   | 'jurisdiction'
   | 'createdAt'
-  | 'assignee'
+  | 'assigneeId'
   | 'securityCode'
 >

@@ -70,7 +70,7 @@ function seedPendingCase(input: {
 // 경찰서 경호목록(s3) 화면 검증용 — 접수 상태만 있던 기존 seed로는 배정/경호중/
 // 경호완료 상태의 행이 하나도 없어 강남경찰서 소속으로 각 상태를 하나씩 보강한다
 // (2026-08-25 결정). seedPendingCase는 항상 접수 상태만 만들기 때문에 배정 이후
-// 상태를 표현하려면 status/assignee/securityCode를 직접 덮어써야 한다.
+// 상태를 표현하려면 status/assigneeId/securityCode를 직접 덮어써야 한다.
 function seedActiveCase(input: {
   id: string
   policeStation: string
@@ -80,14 +80,14 @@ function seedActiveCase(input: {
   endDate: string
   nameInitial: string
   status: '배정' | '경호중' | '경호완료'
-  assignee: string
+  assigneeId: string
   securityCode: string
 }): SecurityCase {
   const base = seedPendingCase(input)
   return {
     ...base,
     status: input.status,
-    assignee: input.assignee,
+    assigneeId: input.assigneeId,
     securityCode: input.securityCode,
     subject: { ...base.subject, nameInitial: input.nameInitial },
   }
@@ -174,7 +174,7 @@ function seedClosedCase(input: {
   startDate: string
   endDate: string
   nameInitial: string
-  assignee: string
+  assigneeId: string
   securityCode: string
   closureReason: ClosureReason
   closedAt: string
@@ -196,7 +196,7 @@ function seedCanceledCase(input: {
   startDate: string
   endDate: string
   nameInitial: string
-  assignee: string
+  assigneeId: string
   securityCode: string
   cancelReason: string
   canceledAt: string
@@ -260,7 +260,7 @@ const SEED_CASES: SecurityCase[] = [
     endDate: '2026-02-15',
     nameInitial: '윤○○',
     status: '배정',
-    assignee: '김민수',
+    assigneeId: 'hqmanager1',
     securityCode: 'ST101',
   }),
   withDemoDetail(
@@ -273,7 +273,7 @@ const SEED_CASES: SecurityCase[] = [
       endDate: '2026-01-19',
       nameInitial: '홍○○',
       status: '경호중',
-      assignee: '이영희',
+      assigneeId: 'hqmanager2',
       securityCode: 'ST102',
     }),
     { destructionCert: false },
@@ -288,7 +288,7 @@ const SEED_CASES: SecurityCase[] = [
       endDate: '2026-02-01',
       nameInitial: '강○○',
       status: '경호완료',
-      assignee: '박준혁',
+      assigneeId: 'hqmanager3',
       securityCode: 'ST103',
     }),
     { destructionCert: true },
@@ -301,7 +301,7 @@ const SEED_CASES: SecurityCase[] = [
     startDate: '2025-11-01',
     endDate: '2025-11-14',
     nameInitial: '박○○',
-    assignee: '김민수',
+    assigneeId: 'hqmanager1',
     securityCode: 'ST110',
     closureReason: '경호기간 만료',
     closedAt: '2025-11-15',
@@ -314,7 +314,7 @@ const SEED_CASES: SecurityCase[] = [
     startDate: '2025-09-03',
     endDate: '2025-09-17',
     nameInitial: '이○○',
-    assignee: '이영희',
+    assigneeId: 'hqmanager2',
     securityCode: 'ST111',
     closureReason: '피해자 요청에 의한 종결',
     closedAt: '2025-09-18',
@@ -327,7 +327,7 @@ const SEED_CASES: SecurityCase[] = [
     startDate: '2025-08-10',
     endDate: '2025-08-24',
     nameInitial: '최○○',
-    assignee: '박준혁',
+    assigneeId: 'hqmanager3',
     securityCode: 'ST112',
     cancelReason: '피해자 소재불명으로 신변보호 실익 없음',
     canceledAt: '2025-08-20',
@@ -340,7 +340,7 @@ const SEED_CASES: SecurityCase[] = [
     startDate: '2025-10-06',
     endDate: '2025-10-20',
     nameInitial: '정○○',
-    assignee: '김민수',
+    assigneeId: 'hqmanager1',
     securityCode: 'ST113',
     closureReason: '피의자 구속',
     closedAt: '2025-10-21',
@@ -353,7 +353,7 @@ const SEED_CASES: SecurityCase[] = [
     startDate: '2025-07-02',
     endDate: '2025-07-16',
     nameInitial: '한○○',
-    assignee: '이영희',
+    assigneeId: 'hqmanager2',
     securityCode: 'ST114',
     closureReason: '경호기간 만료',
     closedAt: '2025-07-17',
@@ -366,7 +366,7 @@ const SEED_CASES: SecurityCase[] = [
     startDate: '2025-06-05',
     endDate: '2025-06-19',
     nameInitial: '오○○',
-    assignee: '박준혁',
+    assigneeId: 'hqmanager3',
     securityCode: 'ST115',
     cancelReason: '피해자 요청으로 조기 종료',
     canceledAt: '2025-06-15',
@@ -379,7 +379,7 @@ const SEED_CASES: SecurityCase[] = [
     startDate: '2025-05-12',
     endDate: '2025-05-26',
     nameInitial: '유○○',
-    assignee: '이영희',
+    assigneeId: 'hqmanager2',
     securityCode: 'ST116',
     closureReason: '경호기간 만료',
     closedAt: '2025-05-27',
@@ -470,12 +470,12 @@ export function updateSecurityCase(
 }
 
 // 담당자 배정: 접수 → 배정 상태 전환 + 경호코드 발급 (project-overview.md 업무 워크플로우 3단계)
-export function assignManager(caseId: string, managerName: string): SecurityCase | null {
+export function assignManager(caseId: string, managerId: string): SecurityCase | null {
   const record = securityCases.find((c) => c.id === caseId)
   if (!record || record.status !== '접수') return null
 
   record.status = '배정'
-  record.assignee = managerName
+  record.assigneeId = managerId
   record.securityCode = issueSecurityCode()
   persist()
   return record

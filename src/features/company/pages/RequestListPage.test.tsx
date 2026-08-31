@@ -85,7 +85,7 @@ describe('RequestListPage', () => {
 
     const assigned = securityCases.find((c) => c.receiptNumber === '26-02-강남경찰서')!
     expect(assigned.status).toBe('배정')
-    expect(assigned.assignee).toBe('김민수')
+    expect(assigned.assigneeId).toBe('hqmanager1')
     expect(assigned.securityCode).toMatch(/^ST\d{3}$/)
   })
 

@@ -59,7 +59,7 @@ function scopeForCompanyAccount(
   account: Account,
   cases: typeof securityCases,
 ): typeof securityCases {
-  return account.role === '본부관리자' ? cases.filter((c) => c.assignee === account.name) : cases
+  return account.role === '본부관리자' ? cases.filter((c) => c.assigneeId === account.id) : cases
 }
 
 export const securityCaseHandlers = [
@@ -161,7 +161,7 @@ export const securityCaseHandlers = [
 
     const allowed =
       (Boolean(companyAccount) &&
-        (companyAccount!.role !== '본부관리자' || record.assignee === companyAccount!.name)) ||
+        (companyAccount!.role !== '본부관리자' || record.assigneeId === companyAccount!.id)) ||
       policeAccount?.role === '본청' ||
       (policeAccount?.role === '지역청' && record.jurisdiction === policeAccount.jurisdiction) ||
       (policeAccount?.role === '경찰서' && record.policeStation === policeAccount.name)
@@ -184,7 +184,7 @@ export const securityCaseHandlers = [
       return HttpResponse.json({ message: '담당자를 찾을 수 없습니다' }, { status: 400 })
     }
 
-    const updated = assignManager(params.id as string, manager.name)
+    const updated = assignManager(params.id as string, manager.id)
     if (!updated) {
       return HttpResponse.json({ message: '배정할 수 없는 상태입니다' }, { status: 409 })
     }
@@ -251,7 +251,7 @@ export const securityCaseHandlers = [
     if (!record) {
       return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
     }
-    if (companyAccount.role === '본부관리자' && record.assignee !== companyAccount.name) {
+    if (companyAccount.role === '본부관리자' && record.assigneeId !== companyAccount.id) {
       return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
     }
 
@@ -272,7 +272,7 @@ export const securityCaseHandlers = [
     if (!record) {
       return HttpResponse.json({ message: '경호건을 찾을 수 없습니다' }, { status: 404 })
     }
-    if (companyAccount.role === '본부관리자' && record.assignee !== companyAccount.name) {
+    if (companyAccount.role === '본부관리자' && record.assigneeId !== companyAccount.id) {
       return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
     }
 
@@ -316,7 +316,7 @@ export const securityCaseHandlers = [
       return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
     }
 
-    if (companyAccount?.role === '본부관리자' && record.assignee !== companyAccount.name) {
+    if (companyAccount?.role === '본부관리자' && record.assigneeId !== companyAccount.id) {
       return HttpResponse.json({ message: '권한이 없습니다' }, { status: 403 })
     }
 

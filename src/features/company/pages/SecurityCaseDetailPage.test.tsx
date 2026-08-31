@@ -47,7 +47,7 @@ function loginAs(accountId: string) {
 // 접수 상태 케이스를 하나 배정해서(경호코드 발급) 상세 화면 테스트용 대상으로 삼는다.
 function assignedCaseId(): string {
   const record = securityCases.find((c) => c.status === '접수')!
-  assignManager(record.id, '김민수')
+  assignManager(record.id, 'hqmanager1')
   return record.id
 }
 
