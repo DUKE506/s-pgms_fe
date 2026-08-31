@@ -21,6 +21,7 @@ import SecurityCaseListPage from '../features/company/pages/SecurityCaseListPage
 import CompanyHistoryListPage from '../features/company/pages/HistoryListPage'
 import CompanyHistoryDetailPage from '../features/company/pages/HistoryDetailPage'
 import GuestListPage from '../features/police/pages/GuestListPage'
+import ManagerAccountListPage from '../features/company/pages/ManagerAccountListPage'
 
 const POLICE_DASHBOARD: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_HISTORY: Role[] = ['본청', '지역청', '경찰서']
@@ -207,6 +208,19 @@ export const routes: RouteObject[] = [
       <ProtectedRoute allow={COMPANY_ALL}>
         <CompanyAppShell>
           <CompanyHistoryDetailPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  // 관리자 계정 관리(Phase 3.6 항목2) — 본부관리자도 전체 목록을 조회할 수
+  // 있어야 한다고 재확정(2026-08-31)돼 COMPANY_ALL 가드로 변경. 역할별 실제
+  // 수정/초기화 권한은 화면 내부(mocks/handlers/companyAccounts.ts)에서 판정.
+  {
+    path: '/admin/managers',
+    element: (
+      <ProtectedRoute allow={COMPANY_ALL}>
+        <CompanyAppShell>
+          <ManagerAccountListPage />
         </CompanyAppShell>
       </ProtectedRoute>
     ),

@@ -3,6 +3,7 @@ import { securityCaseHandlers } from './securityCases'
 import { managerHandlers } from './managers'
 import { workerHandlers } from './workers'
 import { guestHandlers } from './guests'
+import { companyAccountHandlers } from './companyAccounts'
 
 export const handlers = [
   ...authHandlers,
@@ -10,4 +11,5 @@ export const handlers = [
   ...managerHandlers,
   ...workerHandlers,
   ...guestHandlers,
+  ...companyAccountHandlers,
 ]
