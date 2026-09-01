@@ -285,6 +285,17 @@
         }
       }
     },
+    "/api/v1/Login/W/GetMyProfile": {
+      "get": {
+        "tags": ["Login"],
+        "summary": "내 프로필 조회 =============== [확인완료]",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/Login/W/GetGroupTree": {
       "get": {
         "tags": ["Login"],
@@ -777,7 +788,7 @@
     "/api/v1/Group/Stec/W/AddGroup": {
       "post": {
         "tags": ["StecGroup"],
-        "summary": "관리그룹 등록",
+        "summary": "관리그룹 등록 ============= [확인 완료]",
         "description": "레벨은 부모 그룹으로부터 자동 산출된다. parentGroupSeq 가 없으면 본청(1)으로 등록된다. 경찰 계정은 조직 노드별 1개 공유이므로 그룹과 함께 만들어진다 (설계문서 1.1).",
         "requestBody": {
           "content": {
@@ -813,7 +824,7 @@
     "/api/v1/Group/Stec/W/GetGroupTree": {
       "get": {
         "tags": ["StecGroup"],
-        "summary": "관리그룹 트리 조회",
+        "summary": "관리그룹 트리 조회 ============= [확인 완료]",
         "description": "에스텍은 조직 계층 전체를 본다 (GRP-002). 그룹 등록 시 parentGroupSeq 선택에 사용한다.",
         "responses": {
           "200": {

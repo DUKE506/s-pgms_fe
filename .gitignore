@@ -15,6 +15,7 @@ dist-ssr
 # Claude Code (personal/local-only overrides)
 .claude/settings.local.json
 .claude/skills/run-s-pgms/shots/
+.claude/loop-backend/test-accounts.local.md
 
 # Editor directories and files
 .vscode/*

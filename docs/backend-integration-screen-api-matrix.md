@@ -121,6 +121,7 @@
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
 | 로그인 | `policeLogin` | `POST Login/W/Login` | ⚠️ 실제 API는 경찰/본사 로그인이 **엔드포인트 하나**로 통합 — mock은 `/auth/police/login`·`/auth/company/login` 2개로 분리 |
+| 내 프로필 조회 | (없음, mock은 로그인 응답에 role/조직 포함) | `GET Login/W/GetMyProfile` | 2026-09-01 스웨거에 신규 추가됨. `Login` 응답에 role/조직 정보가 없다면 로그인 직후 이 API로 채우는 구조일 가능성 — 응답 샘플 확보 후 로그인 응답과 역할 분담 확인 필요 |
 | 최초 로그인 강제 변경 | `policeChangeInitialPassword` | `POST Login/W/ChangePassword` | |
 | 로그아웃 | (없음, 로컬 상태만 지움) | `POST Login/W/Logout` | mock 미구현(반대 방향 공백) |
 
@@ -147,6 +148,7 @@
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
 | 로그인 | `policeLogin` | `POST Login/W/Login` | 게스트도 최초 로그인 시 강제 변경 대상(`mustChangePassword`≈`PW_CHANGED_YN`) |
+| 내 프로필 조회 | (없음) | `GET Login/W/GetMyProfile` | 1번 표(경찰서 피전 로그인) 참고 |
 
 ---
 
@@ -235,6 +237,7 @@
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
 | 로그인 | `companyLogin` | `POST Login/W/Login` | ⚠️ 경찰 로그인과 동일 엔드포인트 통합 이슈(1번 표 참고) |
+| 내 프로필 조회 | (없음) | `GET Login/W/GetMyProfile` | 1번 표(경찰서 피전 로그인) 참고 |
 | 최초 로그인 강제 변경 | `companyChangeInitialPassword` | `POST Login/W/ChangePassword` | |
 
 ---
@@ -288,6 +291,7 @@
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
 | 로그인 | `policeLogin` | `POST Login/W/Login` | |
+| 내 프로필 조회 | (없음) | `GET Login/W/GetMyProfile` | 1번 표(경찰서 피전 로그인) 참고 |
 
 ---
 

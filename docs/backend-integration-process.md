@@ -53,4 +53,5 @@
 | `backend-integration-issues.md` | 백엔드/기획에 설계 변경을 요청할 사항 | 발견되는 대로 추가, 논의 후 상태 갱신 |
 | `backend-integration-exclusions.md` | 실제 연동 작업 중 제외한 필드/기능 로그 (원칙 1) | 연동 작업 중 수시로 |
 | `backend-integration-blockers.md` | 실제 연동 작업 중 만난 블로커 로그 (원칙 2) | 연동 작업 중 블로커 발생 시 |
+| `backend-integration-responses/` | 스웨거에 없는 실제 응답 샘플 저장(엔드포인트 1개당 파일 1개) | 화면 착수 전, 그 화면이 쓰는 API 중 샘플 없는 게 있을 때 |
 | 이 문서 | 위 문서들을 언제 어떻게 쓰는지에 대한 규칙 | 프로세스 자체가 바뀔 때만 |

@@ -43,6 +43,12 @@ API의 결과를 실제로 확인할 수 있다 — 예: 접수 작성(생성)�
 
 `LOOP_INSTRUCTIONS.md` 참고. 진행 상태는 `PROGRESS.md`에 기록.
 
+## 실제 백엔드 테스트 계정
+
+역할별 로그인 계정은 `.claude/loop-backend/test-accounts.local.md`에 있다(git 미커밋,
+사용자로부터 직접 전달받은 것 — 2026-09-01). 실제 백엔드 대상으로 로그인/스웨거 테스트할
+때 사용.
+
 ## 정지 조건 (반드시 멈추고 사용자에게 물어볼 것)
 
 `docs/backend-integration-process.md`의 3원칙을 이 loop에 그대로 적용한다:
