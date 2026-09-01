@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 import { policeAccounts } from '../../../mocks/data/accounts'
 import { apiFetch } from './client'
-import { policeLogin } from './auth'
+import { login } from './auth'
 import { useAuthStore } from '../store/authStore'
 
 describe('apiFetch', () => {
@@ -13,7 +13,7 @@ describe('apiFetch', () => {
 
   it('refreshes the access token and retries once after a 401', async () => {
     const account = policeAccounts[0]
-    const result = await policeLogin(account.id, account.password)
+    const result = await login(account.id, account.password)
     if ('mustChangePassword' in result) throw new Error('unexpected mustChangePassword response')
     const session = result
     useAuthStore.getState().setSession(session)

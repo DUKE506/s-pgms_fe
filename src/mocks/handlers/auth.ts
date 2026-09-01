@@ -2,6 +2,32 @@ import { http, HttpResponse } from 'msw'
 import { changeCompanyAccountPassword, companyAccounts, type Account } from '../data/accounts'
 import { allPoliceLoginAccounts, changeGuestAccountPassword } from '../data/guests'
 
+// ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — 로그인
+// 화면은 이미 실제 백엔드(/api/v1/Login/W/*)로 연동 완료됐다(docs/
+// backend-integration-responses/Login-*.md). 브라우저 dev 모드에서는 이
+// 경로가 MSW 미등록 상태로 남아 vite 프록시를 통해 실제 백엔드로 나가야
+// 하므로, 여기서 핸들러를 등록하면 안 된다. 실제 응답 envelope 구조
+// ({message,data,code})와 상태코드(성공 200 / 자격증명 오류 400 / 최초
+// 로그인 428)를 최대한 그대로 흉내내 vitest가 오프라인으로 돌아가게 한다.
+
+// 실제 BASIC_CODE 매핑(Login-GetMyProfile.md 실측) — 프론트 Role → codeSeq
+// 역방향. 테스트 픽스처 전용이라 features/auth/lib/roleMapping.ts의 정방향
+// 매핑과 별개로 둔다(그쪽이 바뀌어도 이 테스트 더블이 실제 응답 모양을
+// 계속 정확히 흉내내는지는 각자 검증해야 함).
+const CODE_SEQ_BY_ROLE: Record<Account['role'], number> = {
+  시스템관리자: 1,
+  운영관리자: 2,
+  본부관리자: 3,
+  본청: 4,
+  지역청: 5,
+  경찰서: 6,
+  게스트: 7,
+}
+
+function envelope<T>(data: T, code = 200) {
+  return HttpResponse.json({ message: 'ok', data, code })
+}
+
 function issueTokens(id: string) {
   const nonce = Math.random().toString(36).slice(2, 8)
   return { accessToken: `access.${id}.${nonce}`, refreshToken: `refresh.${id}.${nonce}` }
@@ -11,92 +37,89 @@ function parseAccountId(token: string) {
   return token.split('.')[1]
 }
 
-function toAuthUser(account: Account) {
-  return { id: account.id, name: account.name, role: account.role }
+function allAccounts(): Account[] {
+  return [...allPoliceLoginAccounts(), ...companyAccounts]
 }
 
-function loginHandler(path: string, getAccounts: () => Account[]) {
-  return http.post(path, async ({ request }) => {
-    const { id, password } = (await request.json()) as { id: string; password: string }
-    // 아이디는 대소문자 구분 없이 매칭한다 — 게스트 계정(화면 9/10)의 로그인
-    // 아이디는 "GangnamGuest7"처럼 표시용 대소문자 그대로 발급되는데, 저장된
-    // 계정 id는 토큰/URL에 쓰기 위해 소문자로 정규화돼 있다(mocks/data/guests.ts).
-    // 대소문자를 그대로 강제하면 화면에 보이는 아이디를 그대로 입력해도
-    // 로그인이 실패한다(2026-08-27 발견).
-    const account = getAccounts().find(
-      (a) => a.id.toLowerCase() === id.toLowerCase() && a.password === password,
+function findByBearer(request: Request): Account | undefined {
+  const header = request.headers.get('authorization') ?? ''
+  const token = header.replace(/^Bearer /, '')
+  const id = parseAccountId(token)
+  return allAccounts().find((a) => a.id === id)
+}
+
+export const authHandlers = [
+  http.post('/api/v1/Login/W/Login', async ({ request }) => {
+    const { loginId, loginPw } = (await request.json()) as { loginId: string; loginPw: string }
+    // 아이디 대소문자 무관 매칭 — 게스트 발급 아이디 표시값과 저장값 대소문자가
+    // 다른 것과 같은 이유(mocks/handlers/auth.ts 기존 구현 참고).
+    const account = allAccounts().find(
+      (a) => a.id.toLowerCase() === loginId.toLowerCase() && a.password === loginPw,
     )
 
     if (!account) {
       return HttpResponse.json(
-        { message: '아이디 또는 비밀번호가 올바르지 않습니다' },
+        { message: '아이디 또는 비밀번호가 올바르지 않습니다.', data: null, code: 400 },
+        { status: 400 },
+      )
+    }
+    if (account.mustChangePassword) {
+      return HttpResponse.json(
+        { message: '비밀번호 변경이 필요합니다.', data: null, code: 428 },
+        { status: 428 },
+      )
+    }
+
+    return envelope(issueTokens(account.id))
+  }),
+
+  http.get('/api/v1/Login/W/GetMyProfile', ({ request }) => {
+    const account = findByBearer(request)
+    if (!account) {
+      return HttpResponse.json(
+        { success: false, errorCode: 'session_expired', message: 'Session has been terminated.' },
         { status: 401 },
       )
     }
 
-    // 최초 로그인 강제 비밀번호 변경(게스트 발급/관리자 비밀번호 초기화 직후) —
-    // 세션을 발급하지 않고 변경이 필요하다는 것만 알린다. 실제 백엔드의
-    // "최초 로그인" 컬럼을 흉내낸 플래그로 판단(mocks/data/accounts.ts 참고).
-    if (account.mustChangePassword) {
-      return HttpResponse.json({ mustChangePassword: true, id: account.id })
-    }
+    return envelope({
+      userSeq: 0,
+      userName: account.name,
+      codeSeq: CODE_SEQ_BY_ROLE[account.role],
+      codeName: account.role,
+      groupSeq: null,
+      groupName: null,
+    })
+  }),
 
-    return HttpResponse.json({ user: toAuthUser(account), ...issueTokens(account.id) })
-  })
-}
-
-// 최초 로그인 강제 변경 모달 전용 — 일반적인 "비밀번호 변경" API가 아니라
-// mustChangePassword가 true인 계정에만 허용된다. 성공해도 세션을 발급하지
-// 않고 재로그인을 요구한다(2026-08-31 결정).
-function changeInitialPasswordHandler(
-  path: string,
-  getAccounts: () => Account[],
-  applyChange: (id: string, newPassword: string) => { id: string } | null,
-) {
-  return http.post(path, async ({ request }) => {
-    const { id, oldPassword, newPassword } = (await request.json()) as {
-      id: string
-      oldPassword: string
-      newPassword: string
-    }
-    const account = getAccounts().find(
-      (a) => a.id.toLowerCase() === id.toLowerCase() && a.password === oldPassword,
-    )
+  http.post('/api/v1/Login/W/ChangePassword', async ({ request }) => {
+    const { loginId, loginPw } = (await request.json()) as { loginId: string; loginPw: string }
+    const account = allAccounts().find((a) => a.id.toLowerCase() === loginId.toLowerCase())
     if (!account || !account.mustChangePassword) {
-      return HttpResponse.json({ message: '변경할 수 없는 요청입니다' }, { status: 400 })
+      return HttpResponse.json({ message: '잘못된 요청입니다.', data: false, code: 400 }, { status: 400 })
     }
 
-    const updated = applyChange(account.id, newPassword)
-    if (!updated) {
-      return HttpResponse.json({ message: '계정을 찾을 수 없습니다' }, { status: 404 })
+    if (account.role === '게스트') {
+      changeGuestAccountPassword(account.id, loginPw)
+    } else {
+      changeCompanyAccountPassword(account.id, loginPw)
     }
-    return new HttpResponse(null, { status: 204 })
-  })
-}
+    return envelope(true)
+  }),
 
-export const authHandlers = [
-  loginHandler('/api/auth/police/login', allPoliceLoginAccounts),
-  loginHandler('/api/auth/company/login', () => companyAccounts),
-  changeInitialPasswordHandler(
-    '/api/auth/police/change-initial-password',
-    allPoliceLoginAccounts,
-    changeGuestAccountPassword,
-  ),
-  changeInitialPasswordHandler(
-    '/api/auth/company/change-initial-password',
-    () => companyAccounts,
-    changeCompanyAccountPassword,
-  ),
-
-  http.post('/api/auth/refresh', async ({ request }) => {
-    const { refreshToken } = (await request.json()) as { refreshToken: string }
-    const accountId = parseAccountId(refreshToken)
-    const account = [...allPoliceLoginAccounts(), ...companyAccounts].find((a) => a.id === accountId)
+  http.post('/api/v1/Login/W/RefreshToken', async ({ request }) => {
+    const { refreshToken } = (await request.json()) as { accessToken: string; refreshToken: string }
+    const account = allAccounts().find((a) => a.id === parseAccountId(refreshToken))
 
     if (!account) {
-      return HttpResponse.json({ message: '세션이 만료되었습니다' }, { status: 401 })
+      return HttpResponse.json(
+        { success: false, errorCode: 'session_expired', message: 'Session has been terminated.' },
+        { status: 401 },
+      )
     }
 
-    return HttpResponse.json(issueTokens(account.id))
+    return envelope(issueTokens(account.id))
   }),
+
+  http.post('/api/v1/Login/W/Logout', () => envelope(true)),
 ]

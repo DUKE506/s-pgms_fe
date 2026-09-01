@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { policeChangeInitialPassword, policeLogin } from '../api/auth'
+import { changeInitialPassword, login } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
 import { getDefaultRouteForRole } from '../lib/defaultRoute'
 import { Button } from '@/components/ui/button'
@@ -14,10 +14,7 @@ function PoliceLoginPage() {
   const [id, setId] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [forceChangeTarget, setForceChangeTarget] = useState<{
-    id: string
-    oldPassword: string
-  } | null>(null)
+  const [forceChangeTargetId, setForceChangeTargetId] = useState<string | null>(null)
   const setSession = useAuthStore((state) => state.setSession)
   const showToast = useToastStore((state) => state.show)
   const navigate = useNavigate()
@@ -26,9 +23,9 @@ function PoliceLoginPage() {
     event.preventDefault()
     setError(null)
     try {
-      const result = await policeLogin(id, password)
+      const result = await login(id, password)
       if ('mustChangePassword' in result) {
-        setForceChangeTarget({ id: result.id, oldPassword: password })
+        setForceChangeTargetId(result.id)
         return
       }
       setSession(result)
@@ -39,9 +36,9 @@ function PoliceLoginPage() {
   }
 
   async function handleForceChangePassword(newPassword: string) {
-    if (!forceChangeTarget) return
-    await policeChangeInitialPassword(forceChangeTarget.id, forceChangeTarget.oldPassword, newPassword)
-    setForceChangeTarget(null)
+    if (!forceChangeTargetId) return
+    await changeInitialPassword(forceChangeTargetId, newPassword)
+    setForceChangeTargetId(null)
     setPassword('')
     showToast('비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인해주세요', 'success')
   }
@@ -89,8 +86,8 @@ function PoliceLoginPage() {
       </Card>
 
       <ForceChangePasswordDialog
-        open={forceChangeTarget != null}
-        id={forceChangeTarget?.id ?? ''}
+        open={forceChangeTargetId != null}
+        id={forceChangeTargetId ?? ''}
         onSubmit={handleForceChangePassword}
       />
     </main>

@@ -4,6 +4,7 @@ import { ClipboardList, History, LayoutDashboard, UserSearch } from 'lucide-reac
 import Sidebar, { type SidebarNavItem } from '@/shared/components/Sidebar'
 import MobileHeader from '@/shared/components/MobileHeader'
 import { useAuthStore, type Role } from '@/features/auth/store/authStore'
+import { logout } from '@/features/auth/api/auth'
 
 const NAV_BY_ROLE: Partial<Record<Role, SidebarNavItem[]>> = {
   본청: [
@@ -41,7 +42,8 @@ function PoliceAppShell({ children }: PoliceAppShellProps) {
   const items = (user && NAV_BY_ROLE[user.role]) ?? []
   const userLabel = (user && ROLE_LABEL[user.role]) ?? ''
 
-  function handleLogout() {
+  async function handleLogout() {
+    await logout()
     useAuthStore.getState().logout()
     navigate('/')
   }

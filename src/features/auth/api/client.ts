@@ -1,13 +1,19 @@
 import { useAuthStore } from '../store/authStore'
+import { unwrapEnvelope } from '@/shared/api/envelope'
+
+interface RefreshedTokens {
+  accessToken: string
+  refreshToken: string
+}
 
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = useAuthStore.getState().refreshToken
-  if (!refreshToken) return null
+  const { accessToken, refreshToken } = useAuthStore.getState()
+  if (!accessToken || !refreshToken) return null
 
-  const res = await fetch('/api/auth/refresh', {
+  const res = await fetch('/api/v1/Login/W/RefreshToken', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
+    body: JSON.stringify({ accessToken, refreshToken }),
   })
 
   if (!res.ok) {
@@ -15,7 +21,7 @@ async function refreshAccessToken(): Promise<string | null> {
     return null
   }
 
-  const data = (await res.json()) as { accessToken: string; refreshToken: string }
+  const data = await unwrapEnvelope<RefreshedTokens>(res)
   useAuthStore.setState({ accessToken: data.accessToken, refreshToken: data.refreshToken })
   return data.accessToken
 }

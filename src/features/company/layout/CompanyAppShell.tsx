@@ -4,6 +4,7 @@ import { ClipboardList, History, LayoutDashboard, UserCog, Users } from 'lucide-
 import Sidebar, { type SidebarNavItem } from '@/shared/components/Sidebar'
 import MobileHeader from '@/shared/components/MobileHeader'
 import { useAuthStore } from '@/features/auth/store/authStore'
+import { logout } from '@/features/auth/api/auth'
 
 // 관리자 계정 관리(Phase 3.6 항목2)는 본부관리자도 전체 목록을 조회할 수
 // 있어야 한다고 재확정(2026-08-31)돼 역할 구분 없이 전체 본사 계정에
@@ -23,7 +24,8 @@ interface CompanyAppShellProps {
 function CompanyAppShell({ children }: CompanyAppShellProps) {
   const navigate = useNavigate()
 
-  function handleLogout() {
+  async function handleLogout() {
+    await logout()
     useAuthStore.getState().logout()
     navigate('/admin')
   }
