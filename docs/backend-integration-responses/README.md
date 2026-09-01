@@ -41,5 +41,8 @@ PROGRESS.md` 순서대로 **그 iteration에 필요한 API가 생길 때마다**
 ## 사용 시점
 
 `.claude/loop-backend/LOOP_INSTRUCTIONS.md` 2단계(사전 점검)에서, 그 화면이 쓰는 API마다
-여기 파일이 있는지 확인한다. 없으면 사용자에게 스웨거에서 테스트해서 저장해달라고
-요청한 뒤 구현을 시작한다.
+여기 파일이 있는지 확인한다. 없으면 `.env.local`의 `API_PROXY_TARGET`과
+`.claude/loop-backend/test-accounts.local.md`의 테스트 계정으로 **직접 curl로 호출해서
+확보하고 저장한 뒤** 구현을 시작한다(2026-09-01부터 — 이전엔 사용자에게 스웨거 UI에서
+테스트해달라고 요청했음). 비밀번호를 실제로 바꾸거나 계정을 새로 만드는 것처럼 되돌리기
+어려운 호출은 먼저 사용자에게 확인받는다(`LOOP_INSTRUCTIONS.md` 2단계 참고).
