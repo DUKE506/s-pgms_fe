@@ -12,8 +12,8 @@
 | # | 역할 | 화면 | 상태 | 커밋 | 비고 |
 |---|---|---|---|---|---|
 | 1 | 공통 | 로그인 | 완료 | `008383a` | 경찰/본사 실제로는 같은 엔드포인트 — 유일하게 역할보다 먼저 |
-| 2 | [경찰서] 피전 | 경찰서 경호목록 | 대기 | | `GetDeployList` 스코프 확인 필요(analysis.md 4-6) |
-| 3 | [경찰서] 피전 | 접수/배치요구서 작성 | 대기 | | 2번 목록에서 결과 확인 |
+| 2 | [경찰서] 피전 | 경찰서 경호목록 | 완료 | `2679751` | 스코프는 서버가 403으로 강제(analysis.md 4-6 해소). **배정 이후 상태 표시 미검증 → 3번 직후 + 12·16번 이후 목록 재검증** |
+| 3 | [경찰서] 피전 | 접수/배치요구서 작성 | 대기 | | 2번 목록에서 결과 확인 — 작성 직후 2번 목록에 새 접수가 뜨는지도 함께 확인 |
 | 4 | [경찰서] 피전 | 경호 상세 | 대기 | | 접수 단계만 우선 검증, 배정 이후 상태는 12번 이후 재검증 |
 | 5 | [경찰서] 피전 | 배치요구서 수정 | 대기 | | |
 | 6 | [경찰서] 피전 | 게스트 계정 관리 | 대기 | | 아이디 미리보기 이슈(issues.md #3) |
@@ -34,6 +34,39 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-01: 2번([경찰서] 피전 · 경찰서 경호목록) 연동 완료(구현 커밋 `2679751`).
+  `listSecurityCases`를 `GET Deploy/Police/W/GetDeployList`로 교체.
+
+  주요 발견/결정: (1) `groupSeq`가 필수 파라미터 — 토큰 소속으로 자동 추론 안 하고
+  없으면 400. 로그인 시 `GetMyProfile.groupSeq`를 세션에 실어야 해서 `AuthUser`에
+  `groupSeq?`/`groupName?`(optional) 추가, `login()`이 채우도록 함(로그인 iteration의
+  exclusions 항목 해소). (2) 스코프 우려(analysis.md 4-6 / issues 스코프) 해소 —
+  동래 토큰으로 타 `groupSeq` 요청 시 전부 403, 서버가 강제. (3) `mgmtNo`가 서버에서
+  이미 조합된 완성 문자열("26-08-동래경찰서 접수" / 배정 후 "… ST###" 가정) — 사용자
+  지시로 **마지막 공백에서 slice** 후 `formatManagementNumber`로 "· "재조합("… · 접수").
+  기존 접수 행 표기가 "접수번호"만 → "접수번호 · 접수"로 바뀜(승인된 화면 대비 이
+  부분만 변화, 관련 테스트 갱신). (4) 페이지네이션·status 파라미터 없음(전량 로드 +
+  클라이언트 필터라 무관), `keyword`는 관리번호에만 매칭. (5) 배정 이후 `statusName`
+  문자열이 프론트 라벨과 일치하는지는 데이터가 "접수" 1건뿐이라 미검증 —
+  exclusions.md 기록, **3번 직후 + 12·16번 이후 목록 재검증** 필요.
+
+  구현 결정(백엔드 갭 아님): `GuestListPage`(matrix 6번, 미연동)가 경호목록과
+  `listSecurityCases`+쿼리키를 공유하고 있어, 실제 API로 교체하면 게스트 화면의
+  `caseIds` 대조가 깨짐 — `GuestListPage`를 별도 mock 함수(`listGuestScopeSecurityCases`)
+  +별도 쿼리키로 분리해 동작 불변으로 유지(6번 연동 때 정식 처리).
+
+  인프라: 실제 연동 완료 경로(`GET /api/v1/Deploy/Police/W/GetDeployList`)를
+  `mocks/handlers/deploy.ts`(테스트 전용, `server.ts`에만 등록)로 옮겨 브라우저는
+  vite 프록시로 실제 백엔드, vitest는 오프라인 더블 사용 — 로그인 때 `auth.ts`
+  분리와 동일 패턴. `index.ts`의 `testOnlyHandlers`를 `[...authHandlers,
+  ...deployTestHandlers]`로 확장.
+
+  검증: `npm run test`(114/114)·lint·build 통과. 실제 백엔드 `run-s-pgms` —
+  `SPoliceM5`(동래경찰서→"피전") 로그인 시 세션 `groupSeq:32` 확인, 경호목록에
+  실데이터 1건("26-08-동래경찰서 · 접수" / 접수 / 2026.08.19~23) 렌더, 데스크톱·
+  모바일 회귀 없음, 콘솔 에러 없음. 응답 샘플:
+  `docs/backend-integration-responses/Deploy-Police-GetDeployList.md`.
 
 - 2026-09-01: 1번(로그인) 연동 완료(커밋 `008383a`). 응답 샘플 5개 확보 —
   Login/GetMyProfile/RefreshToken/Logout은 사용자가 준 실제 백엔드 주소로 직접

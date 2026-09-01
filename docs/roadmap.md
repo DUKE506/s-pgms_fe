@@ -166,6 +166,10 @@ backend-integration-process.md`, 대상 목록은 `docs/backend-integration-scre
       취급한다는 게 확인돼(`Login` 응답의 `code=100+codeSeq`) 지금 두 화면(경찰/본사 로그인)을
       하나로 합칠지 논의 중 — 아래 백로그 참고, 이번 연동 범위에서는 진행 안 함.
 - [ ] [경찰서] 피전 화면군 연동 (경호목록→접수→상세→수정→게스트관리→이력)
+      - [x] 경찰서 경호목록 — `GET Deploy/Police/W/GetDeployList` (2026-09-01). `groupSeq`
+        필수라 `AuthUser`에 `groupSeq`/`groupName` 추가(로그인 시 `GetMyProfile`에서
+        채움), 스코프는 서버가 403으로 강제. 배정 이후 상태 표시는 데이터가 없어 미검증 —
+        12·16번 이후 재검증 예정(`docs/backend-integration-exclusions.md`).
 - [ ] [경찰서] 게스트 화면군 연동 (목록/상세, 조회전용 — 피전 완료 후)
 - [ ] [본사] 운영관리자/시스템관리자 화면군 연동 (근무자→배치요청+배정→경호목록→
       경호상세→연장단축→관리자계정→이력)
