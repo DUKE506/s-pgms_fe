@@ -46,8 +46,10 @@ describe('PoliceSecurityCaseListPage', () => {
     loginAsStation()
     renderPage()
 
-    await screen.findAllByText('26-02-강남경찰서')
-    expect(withinTable().getByText('26-02-강남경찰서')).toBeInTheDocument()
+    // 실제 백엔드는 접수 단계 관리번호의 경호코드 자리에 "접수"를 넣어 조합해 준다
+    // ("26-02-강남경찰서 접수" → 화면에선 "26-02-강남경찰서 · 접수").
+    await screen.findAllByText('26-02-강남경찰서 · 접수')
+    expect(withinTable().getByText('26-02-강남경찰서 · 접수')).toBeInTheDocument()
     expect(withinTable().getByText('26-01-강남경찰서 · ST101')).toBeInTheDocument()
     expect(withinTable().getByText('26-03-강남경찰서 · ST102')).toBeInTheDocument()
     expect(withinTable().getByText('26-04-강남경찰서 · ST103')).toBeInTheDocument()
@@ -78,7 +80,7 @@ describe('PoliceSecurityCaseListPage', () => {
   it('신규 접수 버튼을 누르면 접수 화면으로 이동한다', async () => {
     loginAsStation()
     renderPage()
-    await screen.findAllByText('26-02-강남경찰서')
+    await screen.findAllByText('26-02-강남경찰서 · 접수')
 
     fireEvent.click(screen.getByRole('button', { name: '신규 접수' }))
 

@@ -51,7 +51,13 @@ export async function login(id: string, password: string): Promise<AuthSession |
   const profile = await fetchProfile(tokens.accessToken)
 
   return {
-    user: { id, name: profile.userName, role: roleFromCodeSeq(profile.codeSeq) },
+    user: {
+      id,
+      name: profile.userName,
+      role: roleFromCodeSeq(profile.codeSeq),
+      groupSeq: profile.groupSeq,
+      groupName: profile.groupName,
+    },
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
   }

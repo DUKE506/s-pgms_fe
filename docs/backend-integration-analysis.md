@@ -172,9 +172,12 @@ USE_YN을 어떻게 세팅하는지는 확인해두는 게 안전합니다.**
 5. ~~본부(StecDept) 관리 방식~~ → **DB로 확정: 본부 데이터는 `BASIC_CODE`에 있으나
    `USER_INFO`와 연결 안 됨** — 백엔드 확인 사항이 아니라 변경 요청 사항으로 전환,
    `docs/backend-integration-issues.md` 1번 참고 (1-3, 6-1)
-6. **`Deploy/Police/GetDeployList`의 스코프** — 여전히 미해소. `DEPLOY_REQUEST` 테이블
-   자체엔 상태 무관 전체 이력이 다 남는 구조라(물리 삭제되는 접수취소 제외), 이 API가
-   전체 상태를 다 내려주는 것으로 보이나 응답 스키마가 없어 확정은 못 함.
+6. ~~**`Deploy/Police/GetDeployList`의 스코프**~~ → **실측으로 해소(2026-09-01, matrix 2번
+   연동)**: `groupSeq`가 필수 파라미터이며 서버가 토큰 소속과 대조해 권한 밖 `groupSeq`는
+   403으로 막는다 — 스코프는 서버가 강제. 상태 커버리지는 응답 항목이 `statusName`(표시용
+   한글 문자열)을 그대로 내려주는 구조로, 실측 시점 데이터가 "접수" 1건뿐이라 배정 이후
+   상태까지 다 포함되는지는 12·16번 이후 재검증 예정. 응답 샘플:
+   `docs/backend-integration-responses/Deploy-Police-GetDeployList.md`.
 7. **로그인 응답 구조** — 미해소. `USER_INFO`에 `LOGIN_PW`가 "해시"라고 명시돼 있어
    (컬럼 코멘트 확인) 최소한 평문 저장은 아님을 확인. 토큰 형식·클레임 구조는 별도 확인 필요.
 8. ~~종결 시 물리 삭제 범위가 이력 조회에 미치는 영향~~ → **DB로 일부 확정**: `GUARD_CASE_INFO`

@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useAuthStore } from '../../auth/store/authStore'
-import { listSecurityCases } from '../api/securityCases'
+import { listGuestScopeSecurityCases } from '../api/securityCases'
 import { listGuestAccounts, type GuestAccount } from '../api/guests'
 import IssueGuestAccountDialog, {
   type IssueGuestDialogState,
@@ -36,7 +36,10 @@ function formatDate(dateLike: string) {
 function GuestListPage() {
   const user = useAuthStore((state) => state.user)
   const guestsQuery = useQuery({ queryKey: ['guests'], queryFn: listGuestAccounts })
-  const casesQuery = useQuery({ queryKey: ['police-security-cases'], queryFn: listSecurityCases })
+  const casesQuery = useQuery({
+    queryKey: ['guest-scope-security-cases'],
+    queryFn: listGuestScopeSecurityCases,
+  })
 
   const [search, setSearch] = useState('')
   const [dialogState, setDialogState] = useState<IssueGuestDialogState>(null)
