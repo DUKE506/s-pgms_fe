@@ -116,14 +116,14 @@
 | 상태별 건수 | (미구현) | `GET DashBoard/Police/W/GetDashBoardCount` | 착수 시 참고 |
 | 조직별 건수 | (미구현) | `GET DashBoard/Police/W/GetDashBoardGroupCount` | 착수 시 참고 |
 
-#### 로그인 (`/`)
+#### 로그인 (`/`) — ✅ 연동 완료 (커밋 `008383a`)
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 로그인 | `policeLogin` | `POST Login/W/Login` | ⚠️ 실제 API는 경찰/본사 로그인이 **엔드포인트 하나**로 통합 — mock은 `/auth/police/login`·`/auth/company/login` 2개로 분리 |
-| 내 프로필 조회 | (없음, mock은 로그인 응답에 role/조직 포함) | `GET Login/W/GetMyProfile` | 2026-09-01 스웨거에 신규 추가됨. `Login` 응답에 role/조직 정보가 없다면 로그인 직후 이 API로 채우는 구조일 가능성 — 응답 샘플 확보 후 로그인 응답과 역할 분담 확인 필요 |
-| 최초 로그인 강제 변경 | `policeChangeInitialPassword` | `POST Login/W/ChangePassword` | |
-| 로그아웃 | (없음, 로컬 상태만 지움) | `POST Login/W/Logout` | mock 미구현(반대 방향 공백) |
+| 로그인 | `login`(구 `policeLogin`) | `POST Login/W/Login` | 경찰/본사 공용 엔드포인트로 통합, `login()` 하나로 합침. 응답에 role 없음 — `code=100+codeSeq`로 역할을 이미 알 수 있다는 것도 확인했지만, 이름 등 다른 필드가 필요해 `GetMyProfile` 호출은 유지 |
+| 내 프로필 조회 | (신규) | `GET Login/W/GetMyProfile` | 로그인 직후 호출해 role/이름을 채움. `codeSeq`→프론트 `Role` 매핑 필요(`features/auth/lib/roleMapping.ts`) — 본청관리자/지방청관리자/피전처럼 codeName 자체가 다름 |
+| 최초 로그인 강제 변경 | `changeInitialPassword`(구 `policeChangeInitialPassword`) | `POST Login/W/ChangePassword` | 인증 헤더·기존 비밀번호 둘 다 불필요, HTTP 428로 신호. 기존 비밀번호 미검증 이슈는 issues.md #4(보류) |
+| 로그아웃 | `logout`(신규) | `POST Login/W/Logout` | AppShell 로그아웃 버튼에 신규 연결, 서버 세션 실제 종료 확인 |
 
 ---
 
@@ -143,12 +143,7 @@
 |---|---|---|---|
 | 조회 | `getSecurityCase` | `GetDeployDetail` / `GetGuardCaseDetail` | 액션 버튼 없음(화면단 처리) |
 
-#### 로그인 (`/`)
-
-| API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
-|---|---|---|---|
-| 로그인 | `policeLogin` | `POST Login/W/Login` | 게스트도 최초 로그인 시 강제 변경 대상(`mustChangePassword`≈`PW_CHANGED_YN`) |
-| 내 프로필 조회 | (없음) | `GET Login/W/GetMyProfile` | 1번 표(경찰서 피전 로그인) 참고 |
+#### 로그인 (`/`) — ✅ 연동 완료(1번 표와 동일 구현, 커밋 `008383a`)
 
 ---
 
@@ -232,13 +227,7 @@
 |---|---|---|---|
 | 상태별/조직별 건수 | (미구현) | `GetDashBoardCount` / `GetDashBoardGroupCount` | Police 태그만 있고 Stec(본사)용은 안 보임 — analysis.md 참고 |
 
-#### 로그인 (`/admin`)
-
-| API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
-|---|---|---|---|
-| 로그인 | `companyLogin` | `POST Login/W/Login` | ⚠️ 경찰 로그인과 동일 엔드포인트 통합 이슈(1번 표 참고) |
-| 내 프로필 조회 | (없음) | `GET Login/W/GetMyProfile` | 1번 표(경찰서 피전 로그인) 참고 |
-| 최초 로그인 강제 변경 | `companyChangeInitialPassword` | `POST Login/W/ChangePassword` | |
+#### 로그인 (`/admin`) — ✅ 연동 완료(1번 표와 동일 구현, 커밋 `008383a`)
 
 ---
 
@@ -286,12 +275,7 @@
 |---|---|---|---|
 | 상태별/조직별 건수 | (미구현) | `GetDashBoardCount` / `GetDashBoardGroupCount` | |
 
-#### 로그인 (`/`)
-
-| API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
-|---|---|---|---|
-| 로그인 | `policeLogin` | `POST Login/W/Login` | |
-| 내 프로필 조회 | (없음) | `GET Login/W/GetMyProfile` | 1번 표(경찰서 피전 로그인) 참고 |
+#### 로그인 (`/`) — ✅ 연동 완료(1번 표와 동일 구현, 커밋 `008383a`)
 
 ---
 
