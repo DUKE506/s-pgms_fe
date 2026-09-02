@@ -11,8 +11,7 @@ function toFormState(securityCase: SecurityCase): FormState {
   return {
     nameInitial: securityCase.subject.nameInitial,
     gender: securityCase.subject.gender,
-    birthYear: securityCase.subject.birthYear,
-    age: securityCase.subject.age,
+    birthDate: securityCase.subject.birthDate,
     occupation: securityCase.subject.occupation,
     residence: securityCase.subject.residence,
     caseType: securityCase.caseType,
@@ -26,7 +25,9 @@ function toFormState(securityCase: SecurityCase): FormState {
     additionalNotes: securityCase.additionalNotes,
     victimOfficer: securityCase.policeContact.victimOfficer,
     investigator: securityCase.policeContact.investigator,
-    requester: securityCase.requester,
+    requesterDept: securityCase.requester.dept,
+    requesterPosition: securityCase.requester.position,
+    requesterName: securityCase.requester.name,
   }
 }
 
@@ -67,8 +68,7 @@ function SecurityCaseEditPage() {
       subject: {
         nameInitial: form.nameInitial,
         gender: form.gender,
-        birthYear: form.birthYear,
-        age: form.age,
+        birthDate: form.birthDate,
         occupation: form.occupation,
         residence: form.residence,
       },
@@ -87,7 +87,11 @@ function SecurityCaseEditPage() {
         victimOfficer: form.victimOfficer,
         investigator: form.investigator,
       },
-      requester: form.requester,
+      requester: {
+        dept: form.requesterDept,
+        position: form.requesterPosition,
+        name: form.requesterName,
+      },
     })
     showToast('배치요구서가 수정되었습니다', 'success')
     navigate(`/security-cases/${securityCase.id}`, { replace: true })

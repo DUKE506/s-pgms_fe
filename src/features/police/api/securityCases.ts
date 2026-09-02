@@ -1,24 +1,54 @@
 import { apiFetch } from '../../auth/api/client'
 import { useAuthStore } from '../../auth/store/authStore'
 import { unwrapEnvelope } from '@/shared/api/envelope'
+import { genderLabelToCode } from '@/shared/lib/subject'
 import type {
   SecurityCase,
   SecurityCaseCreateInput,
   SecurityCaseStatus,
 } from '../types/securityCase'
 
-export async function createSecurityCase(input: SecurityCaseCreateInput): Promise<SecurityCase> {
-  const res = await apiFetch('/security-cases', {
+// 화면3: 접수/배치요구서 작성 → POST Deploy/Police/W/AddDeployRequest.
+// SecurityCaseCreateInput(폼 구조) → AddDeployRequestDto(서버 구조)로 매핑한다.
+// groupSeq는 로그인 시 GetMyProfile로 받아 세션에 저장한 값(GetDeployList와 동일).
+//
+// ⚠️ D-2(2026-09-02): 실제 API는 배치장소가 deploymentPlace 단일 필드인데 폼은
+// 주거지/직장지/기타1/기타2 4필드다. 백엔드에 4필드 확장을 요청해둔 상태
+// (docs/backend-integration-issues.md #5)라, 확장 전까지는 주거지만 전송하고
+// 나머지 3개는 임시 제외한다(docs/backend-integration-exclusions.md).
+export async function createSecurityCase(input: SecurityCaseCreateInput): Promise<void> {
+  const groupSeq = useAuthStore.getState().user?.groupSeq
+
+  const body = {
+    groupSeq,
+    suspectName: input.subject.nameInitial,
+    suspectGender: genderLabelToCode(input.subject.gender),
+    suspectBirthDate: input.subject.birthDate,
+    suspectJob: input.subject.occupation,
+    suspectAddress: input.subject.residence,
+    crimeType: input.caseType,
+    caseSummary: input.caseSummary,
+    deploymentPeriodFrom: input.startDate,
+    deploymentPeriodTo: input.endDate,
+    deploymentPlace: input.location.residence, // D-2: 주거지만 (위 주석 참고)
+    caseMemo: input.additionalNotes,
+    documentDt: new Date().toISOString().slice(0, 10),
+    clientDept: input.requester.dept,
+    clientPosition: input.requester.position,
+    clientName: input.requester.name,
+    investigator: input.policeContact.investigator,
+    responsibleOfficer: input.policeContact.victimOfficer,
+  }
+
+  const res = await apiFetch('/v1/Deploy/Police/W/AddDeployRequest', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
     throw new Error('배치요구서 등록에 실패했습니다')
   }
-
-  return res.json() as Promise<SecurityCase>
 }
 
 // GET /api/v1/Deploy/Police/W/GetDeployList 의 항목 형태
@@ -61,8 +91,7 @@ function toSecurityCase(row: DeployListRow): SecurityCase {
     subject: {
       nameInitial: row.suspectUserName,
       gender: '',
-      birthYear: '',
-      age: '',
+      birthDate: '',
       occupation: '',
       residence: '',
     },
@@ -72,7 +101,7 @@ function toSecurityCase(row: DeployListRow): SecurityCase {
     location: { residence: '', workplace: '', etc1: '', etc2: '' },
     additionalNotes: '',
     policeContact: { victimOfficer: '', investigator: '' },
-    requester: '',
+    requester: { dept: '', position: '', name: '' },
     createdAt: '',
   }
 }

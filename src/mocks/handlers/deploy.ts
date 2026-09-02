@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { allPoliceLoginAccounts } from '../data/guests'
-import { securityCases } from '../data/securityCases'
+import { createSecurityCase, securityCases } from '../data/securityCases'
+import type { CaseType } from '../../features/police/types/securityCase'
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — 경찰서 경호목록은
 // 이미 실제 백엔드(GET /api/v1/Deploy/Police/W/GetDeployList)로 연동 완료됐다
@@ -50,5 +51,55 @@ export const deployTestHandlers = [
       .filter((r) => !keyword || r.mgmtNo.includes(keyword))
 
     return HttpResponse.json({ message: 'ok', data: rows, code: 200 })
+  }),
+
+  // 화면3: 접수/배치요구서 작성 — POST Deploy/Police/W/AddDeployRequest.
+  // 실제 백엔드는 AddDeployRequestDto(서버 구조)를 받는다. 여기서는 그걸 다시
+  // SecurityCaseCreateInput(폼 구조)으로 되돌려 mock createSecurityCase에 넘겨,
+  // 같은 인메모리 배열(securityCases)에 쌓이게 한다 — GetDeployList 더블과
+  // 정합성을 맞추기 위함. groupSeq 검증은 실제 백엔드 몫이라 여기선 생략하고
+  // Bearer 토큰으로 소속 경찰서를 판별한다.
+  http.post('/api/v1/Deploy/Police/W/AddDeployRequest', async ({ request }) => {
+    const account = stationFromBearer(request)
+    if (!account || account.role !== '경찰서') {
+      return HttpResponse.json(
+        { message: '작성 권한이 없습니다.', data: null, code: 403 },
+        { status: 403 },
+      )
+    }
+
+    const dto = (await request.json()) as Record<string, unknown>
+    const record = createSecurityCase(account.name, {
+      subject: {
+        nameInitial: String(dto.suspectName ?? ''),
+        gender: dto.suspectGender === 1 ? '여' : '남',
+        birthDate: String(dto.suspectBirthDate ?? ''),
+        occupation: String(dto.suspectJob ?? ''),
+        residence: String(dto.suspectAddress ?? ''),
+      },
+      caseType: (dto.crimeType as CaseType) ?? '사건미접수',
+      caseSummary: String(dto.caseSummary ?? ''),
+      startDate: String(dto.deploymentPeriodFrom ?? ''),
+      endDate: String(dto.deploymentPeriodTo ?? ''),
+      location: {
+        residence: String(dto.deploymentPlace ?? ''),
+        workplace: '',
+        etc1: '',
+        etc2: '',
+      },
+      additionalNotes: String(dto.caseMemo ?? ''),
+      policeContact: {
+        victimOfficer: String(dto.responsibleOfficer ?? ''),
+        investigator: String(dto.investigator ?? ''),
+      },
+      requester: {
+        dept: String(dto.clientDept ?? ''),
+        position: String(dto.clientPosition ?? ''),
+        name: String(dto.clientName ?? ''),
+      },
+    })
+
+    const deploySeq = Number(record.id.replace(/\D/g, '')) || null
+    return HttpResponse.json({ message: 'ok', data: { deploySeq }, code: 200 })
   }),
 ]

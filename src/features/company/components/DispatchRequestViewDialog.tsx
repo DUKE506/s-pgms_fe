@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { calcAge } from '@/shared/lib/subject'
 import type { SecurityCase } from '../../police/types/securityCase'
 
 interface DispatchRequestViewDialogProps {
@@ -38,8 +39,8 @@ function DispatchRequestViewDialog({ securityCase, open, onOpenChange }: Dispatc
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Field label="성명 (성만 표기)" value={subject.nameInitial} />
               <Field label="성별" value={subject.gender} />
-              <Field label="출생년도" value={subject.birthYear} />
-              <Field label="나이(만)" value={subject.age} />
+              <Field label="생년월일" value={subject.birthDate} />
+              <Field label="나이(만)" value={calcAge(subject.birthDate)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="직업" value={subject.occupation} />
@@ -89,7 +90,9 @@ function DispatchRequestViewDialog({ securityCase, open, onOpenChange }: Dispatc
             <div className="text-xs font-bold text-foreground">8. 작성 정보</div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="배치요구서 작성일" value={securityCase.createdAt.slice(0, 10)} />
-              <Field label="요구자" value={securityCase.requester} />
+              <Field label="요구자 부서" value={securityCase.requester.dept} />
+              <Field label="요구자 직급" value={securityCase.requester.position} />
+              <Field label="요구자 성명" value={securityCase.requester.name} />
             </div>
           </div>
         </div>

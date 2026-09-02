@@ -126,4 +126,37 @@ Login-ChangePassword.md`).
 
 ---
 
+## 5. 🔴 배치요구서의 `deploymentPlace`가 단일 필드 — 4필드(주거지/직장지/기타1/기타2)로 확장 요청
+
+**발견 경위**: 화면3([경찰서] 접수/배치요구서 작성) 연동 중(2026-09-02), `AddDeployRequestDto`
+스키마 확인.
+
+**현재 상태**: 우리 신규접수 폼(5번 섹션 "배치장소")은 주거지·직장지·기타1·기타2 4개
+입력을 받아 `SecurityCase.location` 4필드로 저장한다. 실제 API(`AddDeployRequestDto`/
+`UpdateDeployRequestDto`)와 DB(`DEPLOY_REQUEST.DEPLOYMENT_PLACE varchar(255)`)는 배치장소가
+**단일 문자열 1개**뿐이다. 상세 응답(`GetDeployDetail`, 화면4)도 같은 구조일 것으로 추정.
+
+**왜 문제인가**: 경호 대상자는 보통 주거지와 직장 등 복수 지점에서 경호를 받고, 근무
+스케줄·근무조도 장소별로 편성된다(이미 승인된 화면 설계). 4필드를 1필드에 합쳐 저장하면
+(a) 상세/수정 화면에서 다시 4칸으로 분리 표시할 방법이 없고, (b) 본사 경호계획 단계에서
+장소별 배치를 못 잡는다. 사용자 결정(2026-09-02): **폼을 줄이지 말고 API를 4필드로
+맞춘다.**
+
+**요청/제안**:
+1. `AddDeployRequestDto`/`UpdateDeployRequestDto`에 `deploymentPlaceResidence`/
+   `deploymentPlaceWorkplace`/`deploymentPlaceEtc1`/`deploymentPlaceEtc2`(또는 유사 명칭)
+   4필드 신설, `GetDeployDetail` 응답에도 동일 반영. DB `DEPLOY_REQUEST`에 컬럼 3개 추가.
+2. 1번이 부담되면 최소한 주거지/직장지 2필드만이라도 구조화.
+
+**임시 처리(D-2, 백엔드 반영 전까지)**: 연동은 진행하되 `deploymentPlace`에 **주거지
+(`location.residence`)만** 전송하고 직장지·기타1·기타2는 전송하지 않는다. 상세(화면4)
+연동 시 주거지만 채워지고 나머지는 빈 값. 상세 내용은
+`docs/backend-integration-exclusions.md` · `docs/backend-integration-blockers.md` 참고.
+
+**영향받는 화면/코드**: `SecurityCaseForm.tsx`(5번 섹션), `features/police/api/securityCases.ts`
+(`createSecurityCase`/`updateSecurityCase` 매핑), `DispatchRequestViewDialog.tsx`,
+`features/police/api/securityCaseDetail.ts`(화면4 연동 시), `mocks/data/securityCases.ts`.
+
+---
+
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->

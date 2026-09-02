@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import DateField from '@/shared/components/DateField'
+import { calcAge } from '@/shared/lib/subject'
 import { cn } from '@/lib/utils'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { CaseType } from '../types/securityCase'
@@ -22,8 +23,7 @@ const CASE_TYPES: CaseType[] = ['스토킹', '가정폭력', '교제폭력', '�
 export interface FormState {
   nameInitial: string
   gender: string
-  birthYear: string
-  age: string
+  birthDate: string
   occupation: string
   residence: string
   caseType: CaseType | null
@@ -37,14 +37,15 @@ export interface FormState {
   additionalNotes: string
   victimOfficer: string
   investigator: string
-  requester: string
+  requesterDept: string
+  requesterPosition: string
+  requesterName: string
 }
 
 export const INITIAL_FORM_STATE: FormState = {
   nameInitial: '',
   gender: '',
-  birthYear: '',
-  age: '',
+  birthDate: '',
   occupation: '',
   residence: '',
   caseType: null,
@@ -58,14 +59,15 @@ export const INITIAL_FORM_STATE: FormState = {
   additionalNotes: '',
   victimOfficer: '',
   investigator: '',
-  requester: '',
+  requesterDept: '',
+  requesterPosition: '',
+  requesterName: '',
 }
 
 const REQUIRED_FIELDS: (keyof FormState)[] = [
   'nameInitial',
   'gender',
-  'birthYear',
-  'age',
+  'birthDate',
   'occupation',
   'residence',
   'caseType',
@@ -76,7 +78,9 @@ const REQUIRED_FIELDS: (keyof FormState)[] = [
   'locWorkplace',
   'victimOfficer',
   'investigator',
-  'requester',
+  'requesterDept',
+  'requesterPosition',
+  'requesterName',
 ]
 
 const today = new Date().toISOString().slice(0, 10)
@@ -233,23 +237,19 @@ function SecurityCaseForm({
                 </SelectContent>
               </Select>
             </Field>
-            <Field id="subject-birth-year" label="출생년도" required>
-              <Input
-                id="subject-birth-year"
-                placeholder="1988"
-                value={form.birthYear}
-                onChange={(e) => update('birthYear', e.target.value)}
-                aria-invalid={invalid('birthYear')}
+            <Field id="subject-birth-date" label="생년월일" required>
+              <DateField
+                id="subject-birth-date"
+                placeholder="생년월일 선택"
+                value={form.birthDate}
+                onChange={(value) => update('birthDate', value)}
+                maxDate={today}
+                yearGrid
+                aria-invalid={invalid('birthDate')}
               />
             </Field>
-            <Field id="subject-age" label="나이(만)" required>
-              <Input
-                id="subject-age"
-                placeholder="38"
-                value={form.age}
-                onChange={(e) => update('age', e.target.value)}
-                aria-invalid={invalid('age')}
-              />
+            <Field id="subject-age" label="나이(만)">
+              <Input id="subject-age" value={calcAge(form.birthDate)} disabled />
             </Field>
           </div>
           <div className="flex flex-col gap-4 sm:flex-row">
@@ -426,13 +426,33 @@ function SecurityCaseForm({
             <Field id="written-date" label="배치요구서 작성일">
               <Input id="written-date" value={today} disabled />
             </Field>
-            <Field id="requester" label="요구자" required className="sm:flex-[2]">
+            <Field id="requester-dept" label="요구자 부서" required>
               <Input
-                id="requester"
-                placeholder="안양동안경찰서 여청과 여청계 경사 홍길동"
-                value={form.requester}
-                onChange={(e) => update('requester', e.target.value)}
-                aria-invalid={invalid('requester')}
+                id="requester-dept"
+                placeholder="여성청소년과 여성청소년계"
+                value={form.requesterDept}
+                onChange={(e) => update('requesterDept', e.target.value)}
+                aria-invalid={invalid('requesterDept')}
+              />
+            </Field>
+          </div>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Field id="requester-position" label="요구자 직급" required>
+              <Input
+                id="requester-position"
+                placeholder="경사"
+                value={form.requesterPosition}
+                onChange={(e) => update('requesterPosition', e.target.value)}
+                aria-invalid={invalid('requesterPosition')}
+              />
+            </Field>
+            <Field id="requester-name" label="요구자 성명" required className="sm:flex-[2]">
+              <Input
+                id="requester-name"
+                placeholder="홍길동"
+                value={form.requesterName}
+                onChange={(e) => update('requesterName', e.target.value)}
+                aria-invalid={invalid('requesterName')}
               />
             </Field>
           </div>

@@ -43,6 +43,10 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       setupFiles: './src/setupTests.ts',
+      // 캘린더 팝오버(생년월일 yearGrid 포함)를 여러 개 순차 조작하는 폼 테스트가
+      // jsdom에서 무거워, 워커가 경합하는 풀 스위트 실행에서 기본 5초를 간헐적으로
+      // 넘긴다 — 여유를 둬 flaky를 없앤다.
+      testTimeout: 15000,
     },
   }
 })

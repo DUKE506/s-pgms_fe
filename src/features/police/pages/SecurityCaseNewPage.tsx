@@ -12,8 +12,7 @@ function SecurityCaseNewPage() {
       subject: {
         nameInitial: form.nameInitial,
         gender: form.gender,
-        birthYear: form.birthYear,
-        age: form.age,
+        birthDate: form.birthDate,
         occupation: form.occupation,
         residence: form.residence,
       },
@@ -32,7 +31,11 @@ function SecurityCaseNewPage() {
         victimOfficer: form.victimOfficer,
         investigator: form.investigator,
       },
-      requester: form.requester,
+      requester: {
+        dept: form.requesterDept,
+        position: form.requesterPosition,
+        name: form.requesterName,
+      },
     })
     showToast('배치요구서가 접수되었습니다', 'success')
     navigate('/security-cases', { replace: true })

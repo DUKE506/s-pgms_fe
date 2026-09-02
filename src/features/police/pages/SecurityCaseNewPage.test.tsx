@@ -38,15 +38,17 @@ function byLabel(text: string) {
 async function pickDate(labelText: string, dayIndex: number) {
   fireEvent.click(byLabel(labelText))
   const dayButtons = await screen.findAllByRole('button', { name: /\d{4}/ })
-  fireEvent.click(dayButtons[dayIndex])
+  // 생년월일 필드는 yearGrid가 켜져 있어 캡션도 4자리(연도)를 가진 버튼이라
+  // 날짜 셀(data-day)만 남긴다.
+  const days = dayButtons.filter((b) => b.hasAttribute('data-day'))
+  fireEvent.click(days[dayIndex])
 }
 
 async function fillRequiredFields() {
   fireEvent.change(byLabel('성명 (성만 표기)'), { target: { value: '홍○○' } })
   fireEvent.click(byLabel('성별'))
   fireEvent.click(await screen.findByRole('option', { name: '여' }))
-  fireEvent.change(byLabel('출생년도'), { target: { value: '1988' } })
-  fireEvent.change(byLabel('나이(만)'), { target: { value: '38' } })
+  await pickDate('생년월일', 0)
   fireEvent.change(byLabel('직업'), { target: { value: '회사원' } })
   fireEvent.change(byLabel('거주지'), {
     target: { value: '서울 강남구 테헤란로 123' },
@@ -65,9 +67,9 @@ async function fillRequiredFields() {
   })
   fireEvent.change(byLabel('피해자전담경찰관'), { target: { value: '홍길동' } })
   fireEvent.change(byLabel('수사관'), { target: { value: '김수사' } })
-  fireEvent.change(byLabel('요구자'), {
-    target: { value: '강남경찰서 여청과 여청계 경사 홍길동' },
-  })
+  fireEvent.change(byLabel('요구자 부서'), { target: { value: '여성청소년과 여성청소년계' } })
+  fireEvent.change(byLabel('요구자 직급'), { target: { value: '경사' } })
+  fireEvent.change(byLabel('요구자 성명'), { target: { value: '홍길동' } })
 }
 
 describe('SecurityCaseNewPage', () => {

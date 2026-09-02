@@ -17,10 +17,20 @@ export const ACTIVE_SECURITY_CASE_STATUSES: SecurityCaseStatus[] = ['배정', '�
 export interface SecurityCaseSubject {
   nameInitial: string
   gender: string
-  birthYear: string
-  age: string
+  // 실제 API(AddDeployRequestDto.suspectBirthDate)가 date라 연도만이 아니라
+  // 생년월일 전체를 받는다(2026-09-02). 만나이는 저장하지 않고 이 값에서 계산한다
+  // (shared/lib/subject.ts calcAge).
+  birthDate: string
   occupation: string
   residence: string
+}
+
+// 배치요구서 요구자 — 실제 API는 부서/직급/성명 3필드로 분리돼 있다
+// (AddDeployRequestDto.clientDept/clientPosition/clientName, 2026-09-02).
+export interface SecurityCaseRequester {
+  dept: string
+  position: string
+  name: string
 }
 
 export interface SecurityCaseLocation {
@@ -130,7 +140,7 @@ export interface SecurityCase {
   location: SecurityCaseLocation
   additionalNotes: string
   policeContact: SecurityCasePoliceContact
-  requester: string
+  requester: SecurityCaseRequester
   createdAt: string
   // 담당 본부관리자 계정 id(companyAccounts 참조) — 이름 문자열이 아니라 id로
   // 저장해야 인사이동으로 담당자 이름이 바뀌어도 스코프 필터링/표시가 안 깨진다

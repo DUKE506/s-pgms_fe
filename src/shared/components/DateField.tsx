@@ -15,6 +15,9 @@ interface DateFieldProps {
   // 서로를 넘어가지 못하게 상대편 값을 넘겨준다(2026-08-28).
   minDate?: string
   maxDate?: string
+  // 캘린더 캡션을 눌러 9칸 연도 그리드로 이동할 수 있게 한다 — 생년월일처럼 오늘에서
+  // 수십 년 떨어진 날짜를 고르는 필드에서만 켠다(배치기간 등은 기본값 off로 현행 유지).
+  yearGrid?: boolean
   'aria-invalid'?: boolean
   'aria-label'?: string
 }
@@ -53,6 +56,7 @@ function DateField({
   className,
   minDate,
   maxDate,
+  yearGrid = false,
   'aria-invalid': ariaInvalid,
   'aria-label': ariaLabel,
 }: DateFieldProps) {
@@ -89,6 +93,9 @@ function DateField({
           mode="single"
           selected={selected}
           disabled={calendarDisabled.length > 0 ? calendarDisabled : undefined}
+          yearGrid={yearGrid}
+          startMonth={yearGrid ? minDateObj : undefined}
+          endMonth={yearGrid ? maxDateObj : undefined}
           onSelect={(date) => {
             if (!date) return
             onChange(formatDateOnly(date))

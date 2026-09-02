@@ -43,8 +43,7 @@ function seedPendingCase(input: {
     subject: {
       nameInitial: '김○○',
       gender: '여',
-      birthYear: '1992',
-      age: '34',
+      birthDate: '1992-03-14',
       occupation: '회사원',
       residence: `${input.policeStation} 관할`,
     },
@@ -62,7 +61,7 @@ function seedPendingCase(input: {
       victimOfficer: '홍길동 / 경사 / 01000000000',
       investigator: '김수사 / 경장 / 01000000001',
     },
-    requester: `${input.policeStation} 여청과 여청계`,
+    requester: { dept: '여성청소년과 여성청소년계', position: '경사', name: '홍길동' },
     createdAt: input.requestedAt,
   }
 }
