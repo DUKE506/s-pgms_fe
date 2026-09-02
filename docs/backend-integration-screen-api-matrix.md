@@ -26,8 +26,11 @@
    직후, 그리고 12·16번(배정→경호중→경호완료 데이터 생성) 이후에 목록을 다시 열어
    재검증** 필요 — 새 접수가 목록에 반영되는지, 배정 이후 `statusName` 문자열이 화면
    `SecurityCaseStatus` 라벨과 일치하는지, 관리번호가 배정 후 실제 경호코드로 조합되는지
-3. **[경찰서] 피전 — 접수/배치요구서 작성** (생성) — 2에서 바로 결과 확인
-   (작성 직후 2번 목록 재검증)
+3. **[경찰서] 피전 — 접수/배치요구서 작성** (생성) — ✅ 연동 완료(2026-09-02).
+   `POST AddDeployRequest`. 2번 목록 재검증 동시 소화 — 새 접수가 `GetDeployList`에
+   반영·`mgmtNo` 조합형태(`"YY-MM-경찰서명 접수"`)·`statusName` "접수" 확인. 결정 3건:
+   요구자 3필드 분리, 생년월일 입력(만나이 계산), 배치장소는 API가 단일 필드라
+   **주거지만 전송(D-2, issues #5로 4필드 확장 요청)**
 4. **[경찰서] 피전 — 경호 상세** (조회 + 접수취소/연장단축요청/종결) — 접수 단계는
    지금 검증 가능. 배정 이후 상태(연장/단축/경호취소/종결)는 아직 배정된 건이 없어
    12번(본사 경호 상세) 이후에 재검증
@@ -77,7 +80,7 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 접수 등록 | `createSecurityCase` | `POST Deploy/Police/W/AddDeployRequest` | 필드 거의 1:1 |
+| 접수 등록 | `createSecurityCase` | `POST Deploy/Police/W/AddDeployRequest` | ✅ 연동 완료(2026-09-02). 성공 응답 `{message,data:true,code}` — 생성 id 안 돌려줌. 서버가 스웨거보다 많은 필드 필수 강제(`suspectJob`/`suspectAddress`/`deploymentPlace`/`client*`), 우리 폼이 이미 전부 필수라 무관. 폼 변경: 요구자 3필드 분리, 생년월일 입력. `deploymentPlace` 단일 필드 → 주거지만 전송(D-2, `docs/backend-integration-issues.md` #5 / `blockers.md` / `exclusions.md`). 응답 샘플: `docs/backend-integration-responses/Deploy-Police-AddDeployRequest.md` |
 
 #### 경호 상세 (`/security-cases/:id`)
 

@@ -12,8 +12,8 @@
 | # | 역할 | 화면 | 상태 | 커밋 | 비고 |
 |---|---|---|---|---|---|
 | 1 | 공통 | 로그인 | 완료 | `008383a` | 경찰/본사 실제로는 같은 엔드포인트 — 유일하게 역할보다 먼저 |
-| 2 | [경찰서] 피전 | 경찰서 경호목록 | 완료 | `2679751` | 스코프는 서버가 403으로 강제(analysis.md 4-6 해소). **배정 이후 상태 표시 미검증 → 3번 직후 + 12·16번 이후 목록 재검증** |
-| 3 | [경찰서] 피전 | 접수/배치요구서 작성 | 대기 | | 2번 목록에서 결과 확인 — 작성 직후 2번 목록에 새 접수가 뜨는지도 함께 확인 |
+| 2 | [경찰서] 피전 | 경찰서 경호목록 | 완료 | `2679751` | 스코프는 서버가 403으로 강제(analysis.md 4-6 해소). 3번 직후 재검증 완료(새 접수 반영·mgmtNo 조합형태 확인). **배정 이후 상태 문자열은 여전히 미검증 → 12·16번 이후 재검증** |
+| 3 | [경찰서] 피전 | 접수/배치요구서 작성 | 완료 | (이번 커밋) | `POST AddDeployRequest`. 2번 재검증 동시 소화(새 접수 반영·mgmtNo 조합형태·"접수" 라벨 확인). 배치장소는 API가 단일 필드라 주거지만 전송(D-2, issues #5). 폼: 요구자 3필드 분리 + 생년월일 입력(+ `DateField` yearGrid) |
 | 4 | [경찰서] 피전 | 경호 상세 | 대기 | | 접수 단계만 우선 검증, 배정 이후 상태는 12번 이후 재검증 |
 | 5 | [경찰서] 피전 | 배치요구서 수정 | 대기 | | |
 | 6 | [경찰서] 피전 | 게스트 계정 관리 | 대기 | | 아이디 미리보기 이슈(issues.md #3) |
@@ -34,6 +34,49 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-02: 3번([경찰서] 피전 · 접수/배치요구서 작성) 연동 완료. `createSecurityCase`를
+  mock(`POST /security-cases`) → `POST Deploy/Police/W/AddDeployRequest`로 교체.
+  `SecurityCaseCreateInput`(폼) → `AddDeployRequestDto`(서버) 매핑, envelope 성공 판정.
+
+  사전 결정 3건(사용자와 논의): (1) **요구자**를 단일 자유입력에서 `clientDept`/
+  `clientPosition`/`clientName` 3필드로 분리 — 타입 `requester: string` → `{dept,
+  position, name}`, 폼 8번 섹션 UI 변경. (2) **생년월일** — 출생년도 입력을 `DateField`
+  생년월일 입력으로 교체, 타입 `subject.birthYear` → `birthDate`, `age` 제거(만나이는
+  `shared/lib/subject.ts` `calcAge`로 계산해 표시). (3) **배치장소** — 폼은 주거지/직장지/
+  기타1/기타2 4필드인데 실제 API는 `deploymentPlace` 단일. 폼을 줄이지 않고 백엔드에
+  4필드 확장 요청(`issues.md` #5, `blockers.md`), 반영 전까지 **주거지만 전송하는 D-2
+  임시 처리**(`exclusions.md`). 폼 변경분은 loop-screens 승인 절차대로 스크린샷 제시 후
+  승인받음.
+
+  주요 발견: (a) 성공 응답이 `{message, data:true, code:200}` — 생성된 `deployReqSeq`/
+  `mgmtNo`를 안 돌려줌(프론트는 목록으로 이동해 확인). (b) 스웨거 `required`는
+  `[groupSeq, suspectName]`뿐이지만 서버는 `suspectJob`/`suspectAddress`/
+  `deploymentPlace`/`clientDept`/`clientPosition`/`clientName`도 필수로 강제(400 +
+  `errors` 맵, DB `NOT NULL` 컬럼과 일치) — 우리 폼이 이미 전부 필수 검증이라 추가 대응
+  불필요. (c) `mgmtNo` 조합형태 `"26-09-동래경찰서 접수"` 확정(2번 재검증). (d)
+  `suspectGender` 코드 `0=남/1=여`(`genderLabelToCode`). (e) Windows Git Bash에서
+  인라인 `curl -d` 한글이 cp949로 깨져 500 → UTF-8 파일 바디(`--data-binary @file`)로
+  확인.
+
+  캘린더: 생년월일용으로 `DateField`에 opt-in `yearGrid` prop 신규 — 캡션 클릭 시 9칸
+  (3×3) 연도 그리드로 전환, ‹ › 9년 페이징, 값 있으면 그 연도 중앙. 배치기간 등 다른
+  DateField는 기본값(off)이라 무변경. 이 테마에서 `--muted`/`--accent`가 `--background`와
+  같은 색이라 header hover는 `color-mix(secondary, foreground 8%)` 사용. `YearGrid`는
+  DayPicker root와 별개로 렌더돼 `--cell-size`/`--cell-radius`를 못 물려받아 고정값
+  (`w-7 h-7`/`rounded-sm`) 사용. 부수 수정: `CalendarDayButton`의 `[&>span]:opacity-70`
+  제거(선택일 흰 글자가 회색으로 보이던 문제, 앱 전체 date picker 공통 개선).
+
+  인프라: 테스트 더블 `mocks/handlers/deploy.ts`에 `POST AddDeployRequest` 핸들러 추가
+  (DTO를 다시 `SecurityCaseCreateInput`으로 되돌려 mock `createSecurityCase`에 넘겨
+  같은 인메모리 배열에 쌓음). 캘린더 팝오버 3개를 순차 조작하는 폼 제출 테스트가 풀
+  스위트 부하에서 기본 5초를 간헐 초과 → `vite.config.ts`에 `testTimeout: 15000`.
+
+  검증: `npm run test`(114/114, 풀 스위트 3회 연속)·lint·build 통과. 실제 백엔드
+  `run-s-pgms` — 동래(`SPoliceM5`) 로그인 → 신규접수 폼 작성 → 등록 → 경호목록에
+  `"26-09-동래경찰서 · 접수" / 홍** / 2026.09.10~20` 렌더 확인, 콘솔 에러 없음. curl로
+  성공 응답·검증 규칙 별도 확인. 검증 과정에서 동래에 실제 접수건 2건 생성됨(deploySeq
+  81·82) — 되돌리지 않고 남겨둠, matrix 10번(본사 배치요청→배정) 입력 데이터로 재사용.
 
 - 2026-09-01: 2번([경찰서] 피전 · 경찰서 경호목록) 연동 완료(구현 커밋 `2679751`).
   `listSecurityCases`를 `GET Deploy/Police/W/GetDeployList`로 교체.

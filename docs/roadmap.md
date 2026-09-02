@@ -170,6 +170,12 @@ backend-integration-process.md`, 대상 목록은 `docs/backend-integration-scre
         필수라 `AuthUser`에 `groupSeq`/`groupName` 추가(로그인 시 `GetMyProfile`에서
         채움), 스코프는 서버가 403으로 강제. 배정 이후 상태 표시는 데이터가 없어 미검증 —
         12·16번 이후 재검증 예정(`docs/backend-integration-exclusions.md`).
+      - [x] 접수 / 배치요구서 작성 — `POST Deploy/Police/W/AddDeployRequest` (2026-09-02).
+        폼→서버 DTO 매핑, 실제 백엔드에 접수 생성 후 경호목록 반영 확인. 결정 3건:
+        요구자 단일필드→`clientDept`/`Position`/`Name` 3필드 분리, 출생년도→생년월일
+        입력(만나이는 계산), 배치장소 4필드는 API가 단일(`deploymentPlace`)이라 **주거지만
+        전송하는 임시 처리(D-2)** — 백엔드 4필드 확장 요청(issues #5, blockers).
+        생년월일용으로 `DateField`에 opt-in `yearGrid`(9칸 연도 그리드) 추가.
 - [ ] [경찰서] 게스트 화면군 연동 (목록/상세, 조회전용 — 피전 완료 후)
 - [ ] [본사] 운영관리자/시스템관리자 화면군 연동 (근무자→배치요청+배정→경호목록→
       경호상세→연장단축→관리자계정→이력)
@@ -182,6 +188,8 @@ backend-integration-process.md`, 대상 목록은 `docs/backend-integration-scre
 3. 게스트 계정 발급 아이디 "미리보기" API 없음
 4. `ChangePassword`가 기존 비밀번호를 검증하지 않음 — 비밀번호 정책 결정 시 함께 처리하기로
    보류(2026-09-01)
+5. 배치요구서 `deploymentPlace`가 단일 필드 — 주거지/직장지/기타1/기타2 4필드로 확장 요청
+   (2026-09-02, 반영 전까지 주거지만 전송하는 D-2 임시 처리)
 
 **발견된 후속 항목 (이번 범위 밖, 별도 진행 예정)**:
 
