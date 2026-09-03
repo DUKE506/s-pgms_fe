@@ -126,10 +126,13 @@ Login-ChangePassword.md`).
 
 ---
 
-## 5. 🔴 배치요구서의 `deploymentPlace`가 단일 필드 — 4필드(주거지/직장지/기타1/기타2)로 확장 요청
+## 5. 🟡 배치요구서의 `deploymentPlace`가 단일 필드 — 4필드(주거지/직장지/기타1/기타2)로 확장 요청
 
 **발견 경위**: 화면3([경찰서] 접수/배치요구서 작성) 연동 중(2026-09-02), `AddDeployRequestDto`
 스키마 확인.
+
+**전달**: 2026-09-03, 피전 경호관리 섹션 일괄 요청서
+(`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 1)로 백엔드 전달. 답변 대기.
 
 **현재 상태**: 우리 신규접수 폼(5번 섹션 "배치장소")은 주거지·직장지·기타1·기타2 4개
 입력을 받아 `SecurityCase.location` 4필드로 저장한다. 실제 API(`AddDeployRequestDto`/
@@ -172,6 +175,10 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 
 ## 6. 🟡 경호 상세에서 "경호건에 배정된 근무 스케줄"을 조회하는 API가 누락됨
 
+**전달**: 2026-09-03, 피전 경호관리 섹션 일괄 요청서
+(`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 2·3 — 스케줄 조회 /
+근무자별 보안서약·개인정보동의서 조회 2개 엔드포인트로 분리)로 백엔드 전달. 답변 대기.
+
 **발견 경위**: 화면4([경찰서] 피전 · 경호 상세) 연동 중(2026-09-02). 상세 페이지가
 근무자 배정 패널(`WorkerAssignmentPanel`)·개인정보동의서 카드(`ConsentDocsCard`)를
 채우려고 근무자 마스터 목록(`GET /api/workers`, mock 전용)을 호출하고 있었는데, 실제
@@ -200,7 +207,10 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
    (예: `GET Deploy/Police/W/GetCaseSchedule` 또는 `GetGuardCaseDetail` 응답에 스케줄
    블록 추가). 근무자 정보는 ID만 주고 프론트가 다시 조인하게 하지 말 것(피전은 근무자
    마스터에 접근 권한 없음).
-2. 개인정보동의서(`docAgreeDetail`)도 같은 응답에 근무자별로 실어줄 것.
+2. 근무자별 보안서약·개인정보동의서(`docAgreeDetail`)는 스케줄과 성격이 달라
+   (스케줄 = 일자·근무조·시간, 동의서 = 근무자별 파일 메타) **별도 조회 엔드포인트**로
+   분리 신설 요청 — `GET Deploy/Police/W/GetCaseConsentDocs`류. 근무자 식별·표시정보 +
+   파일명 + 업로드 여부 + 다운로드 경로. (2026-09-03 사용자 지시로 1번과 분리)
 
 **임시 처리(연동 진행)**: 화면4 연동에서 `SecurityCaseDetailPage`의 mock
 `listWorkers`(`GET /api/workers`) 호출을 **제거**했다. `workers`를 빈 배열로 넘겨
@@ -213,7 +223,10 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 
 ---
 
-## 7. 🔴 배치요구서 수정 화면용 "배치요구서 원본 상세조회" API가 없음
+## 7. 🟡 배치요구서 수정 화면용 "배치요구서 원본 상세조회" API가 없음
+
+**전달**: 2026-09-03, 피전 경호관리 섹션 일괄 요청서
+(`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 4)로 백엔드 전달. 답변 대기.
 
 **발견 경위**: 화면5([경찰서] 피전 · 배치요구서 수정) 연동 착수(2026-09-03), prefill
 소스 확인 중. 사용자 설명으로 데이터 모델 확정.

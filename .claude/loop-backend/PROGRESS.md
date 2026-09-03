@@ -60,8 +60,11 @@
   **a안 채택**: 화면5 통째 보류, 그룹 B(#6)로 진행, 신규 조회 API가 오면 조회+저장
   (`PUT UpdateDeployRequest`)을 함께 연동·실측하고 복귀. `UpdateDeployRequestDto`는
   `AddDeployRequestDto`와 대칭(스웨거 확인, `groupSeq`↔`deployReqSeq`만 차이).
-  5번이 피전 경호관리 섹션(2~5번)의 마지막 → 섹션 일괄 요청(#5 배치장소 4필드 /
-  #6 근무 스케줄 조회 API / #7 배치요구서 원본 상세조회 API) 정리해 백엔드 전달 예정.
+  5번이 피전 경호관리 섹션(2~5번)의 마지막 → 섹션 일괄 요청서 작성·**백엔드 전달 완료**
+  (`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` — 요청 1 배치장소
+  4필드 / 2 근무 스케줄 조회 API / 3 근무자별 보안서약·개인정보동의서 조회 API /
+  4 배치요구서 원본 상세조회 API). `issues.md` #5·#6·#7 → 🟡(답변 대기). 응답 안
+  기다리고 그룹 B로 진행.
 
 - 2026-09-03: 4번([경찰서] 피전 · 경호 상세) — **접수 상태만 부분 연동/검증(△, 완료 아님)**.
   `securityCaseDetail.ts` 5개 함수를 mock(`/security-cases/*`)에서 실엔드포인트로 교체:
