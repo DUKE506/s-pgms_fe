@@ -483,6 +483,50 @@
         }
       }
     },
+    "/api/v1/Deploy/Police/W/GetDeployDetailUpdate": {
+      "get": {
+        "tags": ["PoliceDeploy"],
+        "summary": "배치요구서 수정 상세",
+        "description": "수정 화면이 폼에 다시 채울 배치요구서 원본을 준다 (REQ-006). 상세(GetDeployDetail)와 달리 경호건 값으로 덮어쓰지 않는다 - 수정 대상은 배치요구서다. deployStatus 만 예외로, 배정된 뒤에는 경호건 상태(경호중·경호완료)를 쓰고 연장·단축 신청이 올라와 있으면 그쪽을 우선한다.",
+        "parameters": [
+          {
+            "name": "deployReqSeq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/Deploy/Police/W/GetDeployGuardSchedule": {
+      "get": {
+        "tags": ["PoliceDeploy"],
+        "summary": "경호원 근무 스케줄",
+        "description": "배치요구서에 딸린 경호건의 근무 스케줄을 날짜별로 접어서 준다 (GUARD-005 / WORK-010). 휴무도 함께 내려가므로 isWork 로 구분한다. 아직 배정 전이라 근무가 없으면 빈 배열이다. 종결·경호취소된 건은 배치요구서와 끊겨 여기서 나오지 않는다 - 이력 화면을 쓴다.",
+        "parameters": [
+          {
+            "name": "deployReqSeq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/Deploy/Police/W/ExtendDeployPeriod": {
       "patch": {
         "tags": ["PoliceDeploy"],
@@ -2025,7 +2069,19 @@
             "type": "string",
             "format": "date"
           },
-          "deploymentPlace": {
+          "guardWorkLoc": {
+            "type": "string",
+            "nullable": true
+          },
+          "guardHomeLoc": {
+            "type": "string",
+            "nullable": true
+          },
+          "guardEtcLoc1": {
+            "type": "string",
+            "nullable": true
+          },
+          "guardEtcLoc2": {
             "type": "string",
             "nullable": true
           },
@@ -2166,7 +2222,19 @@
             "type": "string",
             "format": "date"
           },
-          "deploymentPlace": {
+          "guardWorkLoc": {
+            "type": "string",
+            "nullable": true
+          },
+          "guardHomeLoc": {
+            "type": "string",
+            "nullable": true
+          },
+          "guardEtcLoc1": {
+            "type": "string",
+            "nullable": true
+          },
+          "guardEtcLoc2": {
             "type": "string",
             "nullable": true
           },

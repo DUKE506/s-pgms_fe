@@ -50,22 +50,24 @@
    재검증(2026-09-03, 7번 배정 직후)**: 동래에 배정 건이 생기자 `GetDeployList`가
    `statusName:"배정"`(프론트 라벨과 일치), `mgmtNo:"26-09-동래경찰서 ST0002"`(경호코드
    조합)로 반환 확인. 나머지 상태(경호중/경호완료/종결/취소)는 여전히 **9번 이후 재검증**
-3. **[경찰서] 피전 — 접수/배치요구서 작성** (생성) — ✅ 연동 완료(2026-09-02).
-   `POST AddDeployRequest`. 2번 목록 재검증 동시 소화. 결정 3건: 요구자 3필드 분리,
-   생년월일 입력(만나이 계산), 배치장소는 API가 단일 필드라 **주거지만 전송(D-2,
-   issues #5로 4필드 확장 요청)**
+3. **[경찰서] 피전 — 접수/배치요구서 작성** (생성) — ✅ 연동 완료(2026-09-02, **배치장소
+   4필드로 보정 2026-09-03**). `POST AddDeployRequest`. 결정 3건: 요구자 3필드 분리,
+   생년월일 입력(만나이 계산), 배치장소는 백엔드 수정 완료로 `guardHomeLoc`/`guardWorkLoc`/
+   `guardEtcLoc1`/`guardEtcLoc2` **4필드 전송**(D-2 제거, issues #5 해결)
 4. **[경찰서] 피전 — 경호 상세** (조회 + 접수취소/연장단축요청/종결) — △ **부분 연동
    (2026-09-03)**. 접수 상태 조회·접수취소는 실측 검증 완료. 배정 이후 4종(연장/단축/
-   경호취소/종결)은 코드만 교체·미검증 → **9번(본사 경호 상세) 이후 재검증**. 근무 스케줄
-   조회 API 누락(issues #6)으로 근무자 표시는 mock 연결 끊음
-5. **[경찰서] 피전 — 배치요구서 수정** — 🚧 **보류(블로커, 2026-09-03)**. prefill 소스
-   없음: `GetDeployDetail`은 상세페이지 표시용 "기본정보" 뷰(배정 후 본사 등록, 접수단계엔
-   배치요구서 임시 매핑)라 배치요구서 원본 필드(성별·생년월일·직업·사건개요·참고사항·
-   배치장소 4필드)를 안 준다 → 배치요구서 원본 상세조회 API 신설 필요(issues #7).
-   **a안**: 화면5 통째 보류하고 그룹 B로 진행, 신규 API 오면 조회+저장 함께 연동·복귀.
-   → **여기까지가 피전 경호관리 섹션.** 이 섹션에서 쌓인 issues(#5 배치장소 4필드,
-   #6 근무 스케줄 조회 API, #7 배치요구서 원본 상세조회 API)/exclusions를 정리해
-   **백엔드에 일괄 요청**
+   경호취소/종결)은 코드만 교체·미검증 → **9번(본사 경호 상세) 이후 재검증**. 근무 스케줄은
+   `GetDeployGuardSchedule`(issues #6 해결, 현재 `[]`)로 재연결 예정 — 화면 9 이후 데이터 확인.
+   `GetDeployDetail`이 배치장소 4필드를 null로 줘서 상세의 배치장소 표시는 아직 빈 값
+   (`GetDeployDetailUpdate` 전환 검토)
+5. **[경찰서] 피전 — 배치요구서 수정** — ✅ 연동 완료(2026-09-03, **블로커 해소 후**).
+   `GET GetDeployDetailUpdate`(prefill, 배치요구서 원본 필드 전부 반환)로 issues #7 해소 →
+   + `PUT UpdateDeployRequest`(저장, `AddDeployRequestDto` 대칭 + `deployReqSeq`). 브라우저
+   왕복 검증(prefill·저장·배치장소 4필드). 읽기/쓰기 필드명 비대칭(`suspectBirth`↔
+   `suspectBirthDate` 등)은 프론트 매핑 처리
+   → **여기까지가 피전 경호관리 섹션.** 섹션 issues #5·#6·#7은 백엔드 수정 완료로 해결
+   (전달 → 반영까지 끝). `GetDeployDetail` 배치장소 표시·동의서 조회 API는 화면 9 이후
+   재확인 후 필요 시 재요청
 
 #### 그룹 B — 메인 워크플로우 (경호건 생명주기) + 그 검증
 
@@ -131,34 +133,29 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 접수 등록 | `createSecurityCase` | `POST Deploy/Police/W/AddDeployRequest` | ✅ 연동 완료(2026-09-02). 성공 응답 `{message,data:true,code}` — 생성 id 안 돌려줌. 서버가 스웨거보다 많은 필드 필수 강제(`suspectJob`/`suspectAddress`/`deploymentPlace`/`client*`), 우리 폼이 이미 전부 필수라 무관. 폼 변경: 요구자 3필드 분리, 생년월일 입력. `deploymentPlace` 단일 필드 → 주거지만 전송(D-2, `docs/backend-integration-issues.md` #5 / `blockers.md` / `exclusions.md`). 응답 샘플: `docs/backend-integration-responses/Deploy-Police-AddDeployRequest.md` |
+| 접수 등록 | `createSecurityCase` | `POST Deploy/Police/W/AddDeployRequest` | ✅ 연동 완료(2026-09-02, **배치장소 4필드 보정 2026-09-03**). 성공 응답 `{message,data:true,code}` — 생성 id 안 돌려줌. 폼 변경: 요구자 3필드 분리, 생년월일 입력. 배치장소는 백엔드 수정으로 `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` **4필드 전송**(공유 `toDeployRequestDto`, D-2 제거, issues #5 해결 — 쓰기 테스트 deploySeq 87로 왕복 확인). 응답 샘플: `Deploy-Police-AddDeployRequest.md` |
 
 #### 경호 상세 (`/security-cases/:id`)
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail` (배정 이후는 `GetGuardCaseDetail` 분기 예정) | △ 연동(2026-09-03), **접수 상태만 실측**. 접수단계 응답: `startDt`/`endDt` null(기간은 `periodFrom`/`periodTo`), 배치장소 4필드(`guardHomeLoc` 등) 존재하나 전부 null, 성별·생년월일·직업·사건개요·참고사항 없음(→ 배치요구서 수정 prefill에서 별도 확인). 배정 이후 `GetGuardCaseDetail` 분기·`caseSeq` 확보는 그룹 B(#9 본사 경호 상세). 응답 샘플: `Deploy-Police-GetDeployDetail.md` |
+| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail` (배정 이후는 `GetGuardCaseDetail` 분기 예정) | △ 연동(2026-09-03), **접수 상태만 실측**. 접수단계 응답: `startDt`/`endDt` null(기간은 `periodFrom`/`periodTo`). 배치장소 4필드는 저장돼 있어도 **이 응답은 항상 null**(`GetDeployDetailUpdate`만 실제 값 반환 — 화면4 배치장소 표시는 빈 값, exclusions). 성별·생년월일·직업·사건개요·참고사항 없음(상세 화면은 원래 미표시). 배정 이후 `GetGuardCaseDetail` 분기·`caseSeq` 확보는 그룹 B(#9). 응답 샘플: `Deploy-Police-GetDeployDetail.md` |
 | 접수취소 | `cancelPendingCase` | `POST CancelGuardCase` | ✅ 연동+검증 완료(2026-09-03). 성공 `{data:true}` + 하드 삭제, 실패 시 400 `{data:false}`. 응답 샘플: `Deploy-Police-CancelGuardCase.md` |
 | 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
 | 연장/단축 요청 | `requestPeriodChange` | `PATCH ExtendDeployPeriod` / `ShortenDeployPeriod` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
 | 종결 | `closeCase` | `POST CloseGuardCase` | △ 코드만 교체, **미검증**. ⚠️ DTO가 `caseSeq`를 요구하나 `GetDeployDetail`이 안 줘서 `deployReqSeq`를 임시 전송 → 그룹 B(#9 본사 경호 상세, `GetGuardCaseDetail`) 재검증/수정. 종결 시 배치요구서·첨부파일 3종이 실제로 삭제됨(mock은 안 지움) — 이력 화면 영향(analysis.md 6-5) |
-| 근무 스케줄 / 근무자 표시 | (mock `listWorkers` 조인) | ⚠️ **없음** | issues #6 — 경호건에 배정된 근무 스케줄을 조회하는 API 누락(백엔드 확인 2026-09-02). 임시로 `SecurityCaseDetailPage`에서 mock `listWorkers` 호출 제거, `workers=[]`. #6 API 나오면 재연결(그룹 B #9 이후) |
+| 근무 스케줄 / 근무자 표시 | (mock `listWorkers` 조인) | `GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=` | issues #6 해결 — 엔드포인트 있음, 200(현재 `data: []` — 스케줄은 화면 9에서 생성). 화면4에서 이걸로 근무자 표시 재연결 예정, 화면 9 이후 데이터로 실측. 근무자별 동의서 조회(요청 3)는 아직 전용 GET 미확인 |
 
-#### 배치요구서 수정 (`/security-cases/:id/edit`) — 🚧 보류(블로커, 2026-09-03)
+#### 배치요구서 수정 (`/security-cases/:id/edit`) — ✅ 연동 완료(2026-09-03)
 
-**prefill 소스 없음 → 화면 전체 보류.** `GetDeployDetail`은 상세페이지 표시용 "기본정보"
-뷰(배정 후 본사가 등록, 접수단계엔 배치요구서를 임시 매핑)라 배치요구서 원본 필드
-(성별·생년월일·직업·사건개요·참고사항·배치장소 4필드)를 돌려주지 않는다.
-`SecurityCaseForm`의 필수 필드를 prefill할 수 없어 저장이 불가능하고, 빈 값을
-`UpdateDeployRequest`에 실으면 기존 DB 값을 덮어쓸 위험. → 배치요구서 원본을 그대로 주는
-조회 API 신설 필요(`docs/backend-integration-issues.md` #7, `blockers.md`).
-**a안(채택)**: 화면5 통째 보류, 그룹 B로 진행. 신규 조회 API가 오면 조회+저장을 함께
-연동·실측하고 복귀.
+블로커였던 prefill 소스가 해결됐다: `GET Deploy/Police/W/GetDeployDetailUpdate`가 배치요구서
+원본 필드(성별·생년월일·직업·사건개요·참고사항·배치장소 4필드 + 요구자/수사관)를 전부
+반환한다(접수·배정 모두 200, `deployStatus`로 구분).
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회 | `getSecurityCase` | ⚠️ **없음** (신규 필요) | issues #7 — `GetDeployDetail`(기본정보 뷰)로는 배치요구서 원본 prefill 불가. `UpdateDeployRequestDto`와 대칭인 GET 신설 요청. 배정 이후 소스는 #9(본사 경호 상세)와 연계 |
-| 수정 저장 | `updateSecurityCase` | `PUT UpdateDeployRequest` | 코드 미교체(a안 — 조회 API와 함께). `UpdateDeployRequestDto` = `AddDeployRequestDto` + `deployReqSeq`(스웨거 확인). 스웨거 설명상 배정 후 배치기간은 서버에서 무시, 경호중/종결/취소는 409, 소속 밖은 403. 배치기간 UI 비활성화는 이미 처리됨 |
+| 조회(prefill) | `getDeployRequestForEdit`(신규, `getSecurityCase`에서 분리) | `GET Deploy/Police/W/GetDeployDetailUpdate?deployReqSeq=` | ✅ issues #7 해결. 상세(화면4, `GetDeployDetail`)와 소스가 달라 쿼리키도 분리(`['deploy-request-edit', id]`). 읽기 필드명이 쓰기 DTO와 다름(`suspectBirth`↔`suspectBirthDate`, `etcLoc1/2`↔`guardEtcLoc1/2`, `deployStatus`) — 프론트 매핑. `mgmtNo` 없어 breadcrumb 축소(exclusions). 응답 샘플: `Deploy-Police-GetDeployDetailUpdate.md` |
+| 수정 저장 | `updateSecurityCase` | `PUT Deploy/Police/W/UpdateDeployRequest` | ✅ `UpdateDeployRequestDto` = `AddDeployRequestDto` + `deployReqSeq`(공유 `toDeployRequestDto`). 성공 `{data:true}`. 브라우저 왕복 검증(prefill·저장·배치장소 4필드, 사건유형 한글화). 배정 후 배치기간은 서버 무시/경호중+ 409/소속 밖 403(스웨거) — 배치기간 UI 비활성화 처리됨. 응답 샘플: `Deploy-Police-UpdateDeployRequest.md` |
 
 #### 게스트 계정 관리 (`/guests`)
 

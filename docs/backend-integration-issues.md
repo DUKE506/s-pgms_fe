@@ -126,13 +126,22 @@ Login-ChangePassword.md`).
 
 ---
 
-## 5. 🟡 배치요구서의 `deploymentPlace`가 단일 필드 — 4필드(주거지/직장지/기타1/기타2)로 확장 요청
+## 5. 🟢 배치요구서 배치장소 — 4필드로 확장 요청 → **해결(백엔드 수정 완료)**
 
 **발견 경위**: 화면3([경찰서] 접수/배치요구서 작성) 연동 중(2026-09-02), `AddDeployRequestDto`
 스키마 확인.
 
 **전달**: 2026-09-03, 피전 경호관리 섹션 일괄 요청서
-(`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 1)로 백엔드 전달. 답변 대기.
+(`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 1)로 백엔드 전달.
+
+**해결(2026-09-03)**: 백엔드가 `AddDeployRequestDto`/`UpdateDeployRequestDto`를
+`guardHomeLoc` / `guardWorkLoc` / `guardEtcLoc1` / `guardEtcLoc2` **4필드**로 수정.
+쓰기 테스트(deploySeq 87)로 4필드 저장·왕복 확인. 프론트 `createSecurityCase`/
+`updateSecurityCase`가 `deploymentPlace`(구 단일 필드)를 보내던 것을 4필드 매핑으로 교체,
+D-2 임시처리(주거지만 전송) 제거. 읽기: `GetDeployDetail`은 여전히 `guard*Loc`를
+null로 주지만(아래 참고) `GetDeployDetailUpdate`는 정상 반환. **남은 것**: `GetDeployDetail`
+(상세 화면용)에도 배치장소 값을 실어주면 좋음 — 지금은 화면4가 `GetDeployDetailUpdate`를
+쓰거나 "-"로 표시. 섹션 종료 시 일괄 요청 후보로만 남김(경미).
 
 **현재 상태**: 우리 신규접수 폼(5번 섹션 "배치장소")은 주거지·직장지·기타1·기타2 4개
 입력을 받아 `SecurityCase.location` 4필드로 저장한다. 실제 API(`AddDeployRequestDto`/
@@ -173,11 +182,17 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 
 ---
 
-## 6. 🟡 경호 상세에서 "경호건에 배정된 근무 스케줄"을 조회하는 API가 누락됨
+## 6. 🟢 경호 상세 근무 스케줄 조회 API → **해결(엔드포인트 확인)** / 동의서 조회는 미확인
 
 **전달**: 2026-09-03, 피전 경호관리 섹션 일괄 요청서
 (`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 2·3 — 스케줄 조회 /
-근무자별 보안서약·개인정보동의서 조회 2개 엔드포인트로 분리)로 백엔드 전달. 답변 대기.
+근무자별 보안서약·개인정보동의서 조회 2개 엔드포인트로 분리)로 백엔드 전달.
+
+**해결(2026-09-03)**: **요청 2** — `GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=`
+가 있고 200 반환(현재 `data: []` — 스케줄은 화면 9에서 생성되므로 그 후 채워짐). 화면4
+연동 시 이 엔드포인트로 근무자 표시를 다시 연결한다. **요청 3**(근무자별 보안서약·
+개인정보동의서 조회) — 피전용 전용 GET은 아직 안 보임. `GetDeployDetail.docAgreeDetail`
+(현재 `[]`)이 후보. 화면 9 이후 데이터가 생기면 재확인 → 필요하면 섹션 종료 시 재요청.
 
 **발견 경위**: 화면4([경찰서] 피전 · 경호 상세) 연동 중(2026-09-02). 상세 페이지가
 근무자 배정 패널(`WorkerAssignmentPanel`)·개인정보동의서 카드(`ConsentDocsCard`)를
@@ -223,10 +238,19 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 
 ---
 
-## 7. 🟡 배치요구서 수정 화면용 "배치요구서 원본 상세조회" API가 없음
+## 7. 🟢 배치요구서 수정 화면용 "배치요구서 원본 상세조회" API → **해결(백엔드 수정 완료)**
 
 **전달**: 2026-09-03, 피전 경호관리 섹션 일괄 요청서
-(`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 4)로 백엔드 전달. 답변 대기.
+(`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 4)로 백엔드 전달.
+
+**해결(2026-09-03)**: `GET Deploy/Police/W/GetDeployDetailUpdate?deployReqSeq=`가 배치요구서
+원본 필드를 전부 반환한다(성별·생년월일·직업·사건개요·참고사항·배치장소 4필드 + 요구자/
+수사관). 접수·배정 상태 모두 200(`deployStatus`로 구분). 화면5를 이 엔드포인트로 prefill +
+`PUT UpdateDeployRequest`로 저장 연동 완료, 브라우저 왕복 검증(2026-09-03).
+응답 샘플: `docs/backend-integration-responses/Deploy-Police-GetDeployDetailUpdate.md`,
+`Deploy-Police-UpdateDeployRequest.md`. **남은 것**: 응답에 `mgmtNo` 없음(수정 화면
+breadcrumb만 영향, 경미) / 읽기·쓰기 필드명 비대칭(`suspectBirth`↔`suspectBirthDate`,
+`etcLoc1/2`↔`guardEtcLoc1/2` — 프론트에서 매핑 처리).
 
 **발견 경위**: 화면5([경찰서] 피전 · 배치요구서 수정) 연동 착수(2026-09-03), prefill
 소스 확인 중. 사용자 설명으로 데이터 모델 확정.

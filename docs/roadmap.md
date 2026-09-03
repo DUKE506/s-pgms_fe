@@ -178,27 +178,25 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         필수라 `AuthUser`에 `groupSeq`/`groupName` 추가(로그인 시 `GetMyProfile`에서
         채움), 스코프는 서버가 403으로 강제. 배정 이후 상태 표시는 데이터가 없어 미검증 —
         그룹 B(본사 경호 상세) 이후 재검증 예정(`docs/backend-integration-exclusions.md`).
-      - [x] 접수 / 배치요구서 작성 — `POST Deploy/Police/W/AddDeployRequest` (2026-09-02).
-        폼→서버 DTO 매핑, 실제 백엔드에 접수 생성 후 경호목록 반영 확인. 결정 3건:
-        요구자 단일필드→`clientDept`/`Position`/`Name` 3필드 분리, 출생년도→생년월일
-        입력(만나이는 계산), 배치장소 4필드는 API가 단일(`deploymentPlace`)이라 **주거지만
-        전송하는 임시 처리(D-2)** — 백엔드 4필드 확장 요청(issues #5, blockers).
-        생년월일용으로 `DateField`에 opt-in `yearGrid`(9칸 연도 그리드) 추가.
+      - [x] 접수 / 배치요구서 작성 — `POST Deploy/Police/W/AddDeployRequest` (2026-09-02,
+        배치장소 4필드 보정 2026-09-03). 폼→서버 DTO 매핑. 결정 3건: 요구자 3필드 분리,
+        출생년도→생년월일 입력(`DateField` yearGrid 신규), 배치장소는 백엔드 수정으로
+        `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드 전송(D-2 제거,
+        issues #5 해결).
       - [~] 경호 상세 — 조회 `GET Deploy/Police/W/GetDeployDetail`, 접수취소·경호취소
         `POST CancelGuardCase`, 연장/단축 `PATCH Extend|ShortenDeployPeriod`, 종결
-        `POST CloseGuardCase` (2026-09-03). **접수 상태만 실측 검증** — 상세 조회·접수취소
-        확인(사용자 확인). 배정 이후(경호취소·연장·단축·종결)는 실백엔드에 데이터가 없어
-        코드만 교체·미검증 → 그룹 B(본사 경호 상세) 이후 재검증. 경호 상세용 근무 스케줄
-        조회 API 누락(issues #6)이라 근무자 표시 mock 연결(`listWorkers`) 끊음. `완료`
+        `POST CloseGuardCase` (2026-09-03). **접수 상태만 실측 검증**. 배정 이후 4종은
+        코드만 교체·미검증 → 그룹 B(#9 본사 경호 상세) 이후 재검증. 근무 스케줄은
+        `GetDeployGuardSchedule`(issues #6 해결, 현재 `[]`)로 화면 9 이후 재연결.
+        `GetDeployDetail`이 배치장소를 null로 줘서 상세 배치장소 표시는 빈 값. `완료`
         표시 보류(△).
-      - [~] 배치요구서 수정 — 🚧 **보류(블로커, 2026-09-03)**. prefill 소스 없음:
-        `GetDeployDetail`은 상세페이지 표시용 "기본정보" 뷰(배정 후 본사가 등록,
-        접수단계엔 배치요구서를 임시 매핑)라 배치요구서 원본 필드(성별·생년월일·직업·
-        사건개요·참고사항·배치장소 4필드)를 안 준다 → 배치요구서 원본 상세조회 API
-        신설 필요(issues #7, blockers). **a안**: 화면5 통째 보류, 그룹 B로 진행,
-        신규 API 오면 조회+저장(`PUT UpdateDeployRequest`) 함께 연동·복귀.
-        **여기까지가 피전 경호관리 섹션** — 종료 시 issues(#5·#6·#7)/exclusions 정리해
-        백엔드 일괄 요청.
+      - [x] 배치요구서 수정 — `GET Deploy/Police/W/GetDeployDetailUpdate`(prefill) +
+        `PUT Deploy/Police/W/UpdateDeployRequest`(저장) (2026-09-03, 블로커 해소 후).
+        백엔드가 `GetDeployDetailUpdate` 응답을 구현해 배치요구서 원본 필드(성별·생년월일·
+        직업·사건개요·참고사항·배치장소 4필드)를 전부 반환 → issues #7 해결. `getSecurityCase`
+        에서 `getDeployRequestForEdit`로 분리(쿼리키 분리), 읽기/쓰기 필드명 비대칭 매핑.
+        브라우저 왕복 검증. **피전 경호관리 섹션 종료** — issues #5·#6·#7은 백엔드 수정
+        완료로 해결(전달→반영까지 끝).
 - [ ] **그룹 B — 메인 워크플로우 (본사 중심) + 그 검증**
       (근무자→배치요청+배정→본사 경호목록→본사 경호상세→연장단축요청목록→관리자계정→
       본부관리자 스코프 재검증). 본사 경호 상세 직후 그룹 A의 2·4번 배정 이후 상태
@@ -228,14 +226,14 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
 3. 게스트 계정 발급 아이디 "미리보기" API 없음
 4. `ChangePassword`가 기존 비밀번호를 검증하지 않음 — 비밀번호 정책 결정 시 함께 처리하기로
    보류(2026-09-01)
-5. 배치요구서 `deploymentPlace`가 단일 필드 — 주거지/직장지/기타1/기타2 4필드로 확장 요청
-   (2026-09-02, 반영 전까지 주거지만 전송하는 D-2 임시 처리). *경호 상세 읽기 응답
-   `GetDeployDetail`에는 4필드가 이미 존재 — 쓰기 DTO만 단일*
-6. 경호 상세에서 "경호건에 배정된 근무 스케줄"을 조회하는 API가 누락됨(백엔드 확인
-   2026-09-02) — 반영 전까지 경찰 경호 상세의 근무자 표시 mock 연결(`listWorkers`) 끊음
-7. 배치요구서 수정 화면용 "배치요구서 원본 상세조회" API가 없음(2026-09-03) —
-   `GetDeployDetail`은 상세페이지 표시용 "기본정보" 뷰라 배치요구서 원본 필드를 안 줌.
-   화면5 보류(a안), 신규 GET 엔드포인트(`UpdateDeployRequestDto`와 대칭) 요청 예정
+5. ~~배치요구서 배치장소 단일 필드~~ → **해결(2026-09-03)**: 백엔드가 `Add/UpdateDeployRequestDto`를
+   `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드로 수정. 프론트 4필드
+   매핑 교체, D-2 제거. 남은 것: `GetDeployDetail`(상세용)은 아직 null 반환
+6. ~~경호 상세 근무 스케줄 조회 API 누락~~ → **해결(2026-09-03)**: `GET Deploy/Police/W/
+   GetDeployGuardSchedule` 있음, 200(현재 `[]` — 스케줄은 화면 9에서 생성). 근무자별
+   동의서 조회(요청 3)는 전용 GET 미확인 — 화면 9 이후 재확인
+7. ~~배치요구서 수정 화면용 원본 상세조회 API 없음~~ → **해결(2026-09-03)**: `GET Deploy/
+   Police/W/GetDeployDetailUpdate`가 배치요구서 원본 필드 전부 반환. 화면5 연동 완료
 8. 근무자 `deptName`이 조회 응답에 안 옴(2026-09-03) — DB(`GUARD_USER_INFO.DEPT_NM`,
    NOT NULL)·등록/수정 INPUT엔 있는데 `GetGuardList` 응답에만 빠짐. 근무자 목록에서
    부서 열 제거. `GetGuardList` 응답에 필드 추가 요청 예정(그룹 B 섹션 #12에서 일괄)

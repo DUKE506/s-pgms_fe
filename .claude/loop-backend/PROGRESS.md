@@ -28,9 +28,9 @@
 |---|---|---|---|---|---|---|
 | 1 | 전제 | 공통 | 로그인 | 완료 | `008383a` | 경찰/본사 실제로는 같은 엔드포인트 — 유일하게 역할보다 먼저 |
 | 2 | A | [경찰서] 피전 | 경찰서 경호목록 | 완료 | `2679751` | 스코프는 서버가 403으로 강제(analysis.md 4-6 해소). 3번 직후 재검증 완료(새 접수 반영·mgmtNo 조합형태 확인). **7번 배정 직후 부분 재검증(2026-09-03)**: 배정 건이 `statusName:"배정"`(프론트 라벨과 일치)·`mgmtNo:"…동래경찰서 ST0002"`(경호코드 조합)로 반환됨 확인. 경호중/경호완료/종결/취소는 **9번 이후 재검증** |
-| 3 | A | [경찰서] 피전 | 접수/배치요구서 작성 | 완료 | `5074920` | `POST AddDeployRequest`. 2번 재검증 동시 소화(새 접수 반영·mgmtNo 조합형태·"접수" 라벨 확인). 배치장소는 API가 단일 필드라 주거지만 전송(D-2, issues #5). 폼: 요구자 3필드 분리 + 생년월일 입력(+ `DateField` yearGrid) |
-| 4 | A | [경찰서] 피전 | 경호 상세 | 부분완료(△) | `19786c4` | **접수 상태만 실측 검증**(2026-09-03). 상세 조회·접수취소 정상. 배정 이후(경호취소·연장·단축·종결)는 데이터가 없어 코드만 교체·**미검증** → 9번(본사 경호 상세) 이후 재검증 필수. 근무 스케줄/근무자 표시는 조회 API 누락(issues #6)이라 mock 연결 끊음. **완료 표시 보류** |
-| 5 | A | [경찰서] 피전 | 배치요구서 수정 | 보류(블로커) | | **prefill 소스 없음** — `GetDeployDetail`은 상세페이지 표시용 "기본정보" 뷰(배정 후 본사 등록, 접수단계엔 배치요구서 임시 매핑)라 배치요구서 원본 필드(성별·생년월일·직업·사건개요·참고사항·배치장소 4필드)를 안 줌. 배치요구서 원본 상세조회 API 신설 필요(issues #7, blockers). **a안(2026-09-03): 화면5 통째 보류, 그룹 B로 진행, 신규 API 오면 조회+저장 함께 연동·복귀.** 피전 경호관리 섹션 마지막 화면 → 섹션 일괄 요청(#5·#6·#7)에 포함 |
+| 3 | A | [경찰서] 피전 | 접수/배치요구서 작성 | 완료 | `5074920` (+배치장소 4필드 보정: 이번 커밋) | `POST AddDeployRequest`. 폼: 요구자 3필드 분리 + 생년월일 입력(+ `DateField` yearGrid). **2026-09-03**: 배치장소를 백엔드 수정에 맞춰 `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드 전송(공유 `toDeployRequestDto`, D-2 제거, issues #5 해결 — 쓰기 테스트 deploySeq 87 왕복) |
+| 4 | A | [경찰서] 피전 | 경호 상세 | 부분완료(△) | `19786c4` | **접수 상태만 실측 검증**(2026-09-03). 상세 조회·접수취소 정상. 배정 이후 4종은 코드만 교체·**미검증** → 9번 이후 재검증. **근무 스케줄은 `GetDeployGuardSchedule`(issues #6 해결) 있음** — 화면 9 이후 데이터로 재연결. `GetDeployDetail`이 배치장소를 null로 줘서 상세 배치장소 표시는 빈 값(`GetDeployDetailUpdate` 전환 검토). **완료 표시 보류** |
+| 5 | A | [경찰서] 피전 | 배치요구서 수정 | 완료 | (이번 커밋) | 블로커 해소 — 백엔드가 `GET GetDeployDetailUpdate` 응답 구현(배치요구서 원본 필드 전부 반환, issues #7 해결). prefill = `getDeployRequestForEdit`(`getSecurityCase`에서 분리, 쿼리키 분리) / 저장 = `PUT UpdateDeployRequest`(공유 `toDeployRequestDto`). 읽기/쓰기 필드명 비대칭 매핑. **저장 후 재진입 stale 캐시 버그 수정**(`removeQueries` — 아래 로그). 브라우저 SPA 플로우 검증. `mgmtNo` 없어 breadcrumb 축소·레거시 crimeType 영문 → exclusions. **피전 경호관리 섹션 종료** |
 | 6 | B | [본사] 운영/시스템관리자 | 근무자 목록/등록 | 완료 | `b5f5738` | `GetGuardList`/`AddGuardInfo`/`PatchGuardInfo`/`DeleteGuardInfo` 4종 실측(생성→수정→삭제 원상복구). 수정/삭제 mock에 없던 기능 → 행별 `⋮` 메뉴 UI 신규. 부서 열 제거(GetGuardList 응답에 `DEPT_NM` 누락 — DB엔 있음, issues #8 신규, 섹션 #12에서 일괄 요청). 조인용 `listCaseJoinWorkers` 분리(#9·#13 회귀 차단) |
 | 7 | B | [본사] 운영/시스템관리자 | 배치요청 목록(+본부 배정) | 완료 | (이번 커밋) | `GetDeployRequestList`/`GetStecUserList`(담당자 필터)/`AddGuardCase` 3종. deploySeq 81 실배정 → **GuardCase 최초 생성 검증**(caseSeq 46, `ST0002`). 담당자 목록 본부(#1)·배정건수 필드 없어 표시 축소. "취소" API 없어 메뉴 비활성화(**issues #9 신규**). 조인용 `listCaseAssignees` 분리(#8 회귀 차단). **함께 수정**: `client.ts` refresh single-flight(동시 401 → 1회용 RefreshToken 회전 → 강제 로그아웃되던 문제) |
 | 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 대기 | | ← **다음 대상**. 7번에서 배정한 건(caseSeq 46)이 보여야 함. `GetGuardCaseList` 실측 HTTP 200 확인(응답: `{meta,data:[{caseSeq,mgmtNo,groupName,userName,statusName,startDate,endDate}]}`). 연동 시 `SecurityCaseTabs`·`SecurityCaseListPage`의 `listSecurityCases` 실 API 전환 → 전환기 401·탭 배지 누락 해소 |
@@ -48,6 +48,54 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-03: **피전 경호관리 섹션 백엔드 요청분(#5·#6·#7) 반영** — 5번(배치요구서
+  수정) 연동 완료 + 3·4번 보정. 7번 커밋 직후 사용자가 "백엔드가 수정했다"고 알려줘,
+  8번 착수 전에 화면 경계에서 반영(`LOOP_INSTRUCTIONS` 1단계).
+  - **확인**: 사용자가 백엔드 수정분을 반영한 새 스웨거를 `docs/api-swagger.json`에
+    갱신(이번 커밋에 포함). HEAD 대비 diff = `GetDeployDetailUpdate`/`GetDeployGuardSchedule`
+    경로 신설 + `Add/UpdateDeployRequestDto`의 `deploymentPlace` 단일 → `guardHomeLoc`/
+    `guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드. 9/3 블로커(#5·#7)는 그때 스펙
+    기준으로는 정확했고, 백엔드가 실제로 수정해서 해소됨.
+  - **issues #5 해결**: `Add/UpdateDeployRequestDto`가 배치장소 4필드
+    (`guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2`). `securityCases.ts`에
+    공유 `toDeployRequestDto` 뽑아 `createSecurityCase`(D-2 제거)·`updateSecurityCase`
+    둘 다 4필드 전송. 쓰기 테스트 deploySeq 87로 왕복 확인 후 삭제. `GetDeployDetail`
+    (상세용)은 여전히 null 반환 → exclusions, 화면4 배치장소 표시는 빈 값 유지.
+  - **issues #7 해결 → 5번 연동**: `GET Deploy/Police/W/GetDeployDetailUpdate?deployReqSeq=`
+    가 배치요구서 원본 필드 전부 반환(성별·생년월일·직업·사건개요·참고사항·배치장소
+    4필드 + 요구자/수사관, 접수·배정 모두 200). `securityCaseDetail.ts`에
+    `getDeployRequestForEdit` 신규(`getSecurityCase`에서 분리 — 상세는 `GetDeployDetail`,
+    수정은 `GetDeployDetailUpdate`, 쿼리키 `['deploy-request-edit', id]`로 분리).
+    `updateSecurityCase` → `PUT Deploy/Police/W/UpdateDeployRequest`(mock → 실 API,
+    반환형 `Promise<SecurityCase>`→`void`). `toSeq`를 `securityCaseDetail.ts`에서 export.
+    읽기/쓰기 필드명 비대칭(`suspectBirth`↔`suspectBirthDate`, `etcLoc1/2`↔`guardEtcLoc1/2`,
+    `deployStatus`↔없음) 매핑. `SecurityCaseEditPage`: breadcrumb에서 `mgmtNo` 없을 때
+    "경호관리"만 표시.
+  - **issues #6 부분 해결**: `GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=`
+    존재·200(현재 `data: []` — 스케줄은 화면 9에서 생성). 코드 연결은 화면 9 이후
+    데이터로. 근무자별 동의서 조회(요청 3)는 전용 GET 아직 없음 — 화면 9 이후 재확인.
+  - **버그 수정(사용자 테스트로 발견)**: 배치요구서 저장 후 상세 → "수정" 재진입 시
+    수정 전 내용이 보임(새로고침하면 정상). 원인 2개: (1) `handleSubmit`이 저장 후
+    `['deploy-request-edit', id]` 캐시를 안 건드림 → stale 캐시가 즉시 서빙됨. (2)
+    `SecurityCaseForm`이 첫 렌더의 `initialForm`을 `useState`로 고정 → 백그라운드
+    refetch가 끝나도 폼이 안 바뀜. → `SecurityCaseEditPage.handleSubmit`에서 저장 후
+    `queryClient.removeQueries(['deploy-request-edit', id])`(아예 제거해 재진입 시 로딩→
+    새 조회) + `invalidateQueries(['security-case', id])`·`(['police-security-cases'])`.
+    회귀 테스트 추가(같은 QueryClient 공유, 저장→언마운트→재마운트→새 값 확인 —
+    `removeQueries` 없으면 실패 확인). 브라우저에서 상세→수정→저장→상세→수정 SPA
+    플로우로 새 값 표시 확인.
+  - 인프라: `mocks/handlers/deploy.ts`에 `dtoToCreateInput`(4필드 배치장소) 공유 헬퍼,
+    `toDeployDetailUpdate` 매퍼, `GET GetDeployDetailUpdate` + `PUT UpdateDeployRequest`
+    더블 추가. 기존 `AddDeployRequest` 더블도 `dto.deploymentPlace` → 4필드로 교체.
+  - exclusions: 배치장소 D-2 항목 해소 표시 / `GetDeployDetail` 배치장소 null 유지 /
+    화면5 `mgmtNo` 없음·레거시 `crimeType` 영문값 신규.
+  - 검증: `npm run test` 117/117 · lint · build 통과. 실백엔드 `run-s-pgms` —
+    `SPoliceM5`(동래) 로그인 → `/security-cases/71/edit` prefill 정상(성별 남·생년월일·
+    직업·사건개요·참고사항 채워짐, 이전엔 빈 값) → 사건유형·배치장소 채워 저장 →
+    `GetDeployDetailUpdate` 재조회로 `crimeType`(stalking→스토킹)·`guardHomeLoc`/
+    `guardWorkLoc` 갱신 확인 → curl로 71 원복. 콘솔 에러 없음. 응답 샘플:
+    `Deploy-Police-GetDeployDetailUpdate.md`, `Deploy-Police-UpdateDeployRequest.md`.
 
 - 2026-09-03: 7번([본사] 운영/시스템관리자 · 배치요청 목록 + 본부 배정) — **연동 완료**.
   그룹 B 두 번째 화면, 메인 워크플로우의 핵심(여기서 GuardCase 최초 생성).

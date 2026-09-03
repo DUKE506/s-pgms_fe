@@ -79,15 +79,14 @@
 
 ### POST /api/v1/Deploy/Police/W/AddDeployRequest — 접수 등록
 
-#### 배치장소: `deploymentPlace`에 주거지만 전송 (직장지 / 기타1 / 기타2 제외) — 임시(D-2)
-- **왜 제외했는지**: 실제 API가 배치장소를 `deploymentPlace` 단일 문자열 1개로만 받음.
-  폼은 주거지/직장지/기타1/기타2 4필드. 사용자 결정(2026-09-02)으로 폼을 줄이지 않고
-  백엔드에 4필드 확장을 요청(`docs/backend-integration-issues.md` #5,
-  `docs/backend-integration-blockers.md`) — 반영 전까지 주거지만 전송.
-- **사용자가 잃는 것**: 신규 접수 시 입력한 직장지·기타1·기타2 장소가 백엔드에 저장되지
-  않음(폼 입력·검증은 그대로 동작). 화면4(상세) 연동 시 배치장소에 주거지만 채워짐.
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #5의 백엔드 4필드 확장 반영 시
-  `createSecurityCase` 매핑 교체.
+#### ~~배치장소: `deploymentPlace`에 주거지만 전송 (직장지 / 기타1 / 기타2 제외) — 임시(D-2)~~ → **해소(2026-09-03)**
+- **왜 제외했었는지**: 실제 API가 배치장소를 `deploymentPlace` 단일 문자열 1개로만 받는
+  줄 알고(2026-09-02 스웨거 판독), 폼의 4필드 중 주거지만 전송했음.
+- **해소**: 백엔드가 `AddDeployRequestDto`/`UpdateDeployRequestDto`를 `guardHomeLoc`/
+  `guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드로 수정(issues #5 해결). `createSecurityCase`/
+  `updateSecurityCase`가 공유 `toDeployRequestDto`로 4필드를 전부 전송하도록 교체, D-2 제거.
+  쓰기 테스트(deploySeq 87)로 4필드 저장·왕복 확인.
+- **연동 커밋 / 해소 예정**: (화면5 iteration 커밋) / 해소 완료.
 
 #### 대상자 만나이(`age`)를 전송하지 않음
 - **왜 제외했는지**: 실제 API·DB에 나이 필드가 없고 `suspectBirthDate`(생년월일)만 있음.
@@ -124,12 +123,14 @@
 - **연동 커밋 / 해소 예정**: `19786c4` / issues #7(배치요구서 원본 상세조회 API) 반영 시
   화면5 조회+저장 연동과 함께 해소.
 
-#### 배치장소 4필드가 전부 빈 값 (`guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2`)
-- **왜 제외했는지**: 응답 스키마엔 4필드가 있으나(→ `location.*`로 매핑함), #3의 D-2
-  임시처리로 생성 시 `deploymentPlace` 단일 필드만 보냈고 서버가 그 값을 `guardHomeLoc`
-  등에 매핑하지 않아 전부 `null`로 내려온다(issues.md #5).
-- **사용자가 잃는 것**: 상세 화면 "배치장소" 4칸이 전부 "-"로 표시(#3에서 이미 예고된 상태).
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #5의 백엔드 4필드 확장 반영 시.
+#### `GetDeployDetail` 응답의 배치장소 4필드(`guardHomeLoc` 등)가 항상 null
+- **왜 제외하는지**: 배치장소는 이제 4필드로 정상 저장되지만(issues #5 해결), 그 값을
+  **`GetDeployDetail`(상세 화면용) 응답은 여전히 null로 준다** — `GetDeployDetailUpdate`
+  (수정 화면용)만 실제 값을 반환한다.
+- **사용자가 잃는 것**: 경찰 경호 상세(화면4)의 "배치장소" 칸이 비어 보인다.
+- **연동 커밋 / 해소 예정**: (화면5 iteration 커밋) / 화면4 재방문 시 `GetDeployDetailUpdate`
+  소스로 전환하거나, `GetDeployDetail` 응답에 배치장소를 실어달라고 섹션 종료 시 요청
+  (issues #5 "남은 것").
 
 #### `jurisdiction`(관할 지방청) — 목록 연동과 동일
 - **왜 제외했는지**: `GetDeployDetail` 응답에 관할 정보 없음. 세션 `groupName`으로 상단
@@ -197,6 +198,28 @@
 - **사용자가 잃는 것**: 없음(두 화면은 계속 mock으로 동작, 동작 불변).
 - **연동 커밋 / 해소 예정**: (이번 iteration) / #9는 `GetGuardCaseDetail` + 스케줄 조회
   (issues #6)로, #13은 이력 상세 연동에서 각각 `listCaseJoinWorkers` 제거.
+
+---
+
+## 배치요구서 수정 (`/security-cases/:id/edit`)
+
+### GET /api/v1/Deploy/Police/W/GetDeployDetailUpdate — 수정 화면 prefill
+
+#### 응답에 `mgmtNo` 없음 → breadcrumb 축소
+- **왜 제외하는지**: `GetDeployDetailUpdate` 응답에 관리번호가 없다(issues #7 요청엔
+  포함했으나 미반영).
+- **사용자가 잃는 것**: 수정 화면 상단 breadcrumb이 "경호관리 / 26-02-… · ST###"에서
+  "경호관리"로 축소. 폼 내용·저장엔 영향 없음.
+- **연동 커밋 / 해소 예정**: (화면5 iteration 커밋) / 응답에 `mgmtNo` 추가 시.
+
+#### 레거시 건의 `crimeType`이 영문값이라 사건유형 미선택으로 뜸
+- **왜 제외하는지**: 폼이 쓰는 사건유형은 한글 라벨('스토킹' 등)인데, 백엔드에 직접
+  들어간 오래된 테스트 건(예: deployReqSeq 71)은 `crimeType: "stalking"` 영문값이라
+  폼 Select와 매칭이 안 된다. 우리 폼으로 생성/수정한 건은 한글이라 정상.
+- **사용자가 잃는 것**: 그런 레거시 건을 수정 화면에서 열면 사건유형이 미선택 상태 —
+  저장하려면 다시 골라야 한다(필수 항목).
+- **연동 커밋 / 해소 예정**: (화면5 iteration 커밋) / 백엔드 사건유형 코드표(`BASIC_CODE`)가
+  생기고 프론트가 코드↔라벨 매핑을 붙이면. 그전까지는 신규 건엔 영향 없어 경미.
 
 ---
 
