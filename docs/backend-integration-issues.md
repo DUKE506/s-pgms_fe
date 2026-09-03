@@ -213,4 +213,46 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 
 ---
 
+## 7. 🔴 배치요구서 수정 화면용 "배치요구서 원본 상세조회" API가 없음
+
+**발견 경위**: 화면5([경찰서] 피전 · 배치요구서 수정) 연동 착수(2026-09-03), prefill
+소스 확인 중. 사용자 설명으로 데이터 모델 확정.
+
+**현재 상태**:
+- `GET Deploy/Police/W/GetDeployDetail`은 **피전 상세페이지에 보이는 "기본정보" 뷰**다.
+  이 기본정보는 원래 **본사 관리자가 배정 이후에 등록**하는 데이터이고, 접수 단계에서는
+  아직 없으므로 백엔드가 **배치요구서 내용을 기본정보 형태로 임시 매핑**해서 내려준다.
+- 그래서 접수 단계 `GetDeployDetail` 응답에는 배치요구서 원본에만 있는 값
+  (성별 `suspectGender` / 생년월일 `suspectBirthDate` / 직업 `suspectJob` /
+  사건개요 `caseSummary` / 참고사항 `caseMemo` / 배치장소 4필드)이 빠져 있다.
+- 스웨거 `Deploy/Police/W`에는 `GetDeployList` / `GetDeployDetail`뿐 —
+  배치요구서 원본을 그대로 돌려주는 조회 엔드포인트가 없다.
+
+**왜 문제인가**: 배치요구서 수정 화면(`SecurityCaseEditPage`)은 `SecurityCaseForm`을
+재사용하는데, 이 폼의 **필수 필드**(성별·생년월일·직업·사건개요·배치장소 직장지)를
+`GetDeployDetail`로는 prefill할 수 없다. 빈 값으로 두면 필수검증에 막혀 저장 불가,
+억지로 `UpdateDeployRequest`에 빈 값을 실으면 (Add 때처럼) 400이 나거나 **기존 DB 값을
+빈 값으로 덮어쓸** 위험이 있다. → `GetDeployDetail`을 편집 소스로 쓸 수 없음.
+
+**요청/제안**:
+1. `deployReqSeq` 기준으로 **배치요구서에 제출된 원본 값을 그대로** 돌려주는 GET
+   엔드포인트 신설(예: `GetDeployRequestForEdit` / `GetDeployRequestDetail`).
+   응답 스키마는 `UpdateDeployRequestDto`와 대칭이면 이상적 —
+   `suspectName`/`suspectGender`/`suspectBirthDate`/`suspectJob`/`suspectAddress`/
+   `crimeType`/`caseSummary`/`deploymentPeriodFrom`/`deploymentPeriodTo`/
+   배치장소(#5 4필드)/`caseMemo`/`clientDept`/`clientPosition`/`clientName`/
+   `investigator`/`responsibleOfficer` + 상태(`statusName`, 배치기간 잠금 판정용) + `mgmtNo`.
+2. 배정 이후 상태에서 이 화면에 들어오는 경우의 소스도 함께 정리
+   (`GetGuardCaseDetail` 분기 여부 — #9 본사 경호 상세와 연계).
+
+**임시 처리**: 없음. 화면5는 이 API 없이는 end-to-end 성립 불가 → `blockers.md`에 등록하고
+**그룹 B로 진행**, 백엔드 반영 후 복귀(`docs/backend-integration-process.md` 원칙 2).
+
+**영향받는 화면/코드**: `features/police/pages/SecurityCaseEditPage.tsx`,
+`features/police/api/securityCaseDetail.ts`(`getSecurityCase` — 지금은 화면4와 공유,
+화면5는 별도 조회 함수로 분리 예정), `features/police/api/securityCases.ts`
+(`updateSecurityCase`), `features/police/components/SecurityCaseForm.tsx`.
+
+---
+
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
