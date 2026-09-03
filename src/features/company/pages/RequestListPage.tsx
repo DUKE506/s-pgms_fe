@@ -181,8 +181,11 @@ function RequestListPage() {
                               <UserPlus />
                               배정
                             </DropdownMenuItem>
+                            {/* 배치요청 취소 API가 아직 없어 비활성화 (requests.ts
+                                cancelPendingRequest 주석 / issues.md 참고) */}
                             <DropdownMenuItem
                               variant="destructive"
+                              disabled
                               onSelect={() => setCancelTargetCase(r)}
                             >
                               <Trash2 />
@@ -219,8 +222,11 @@ function RequestListPage() {
                           <UserPlus />
                           배정
                         </DropdownMenuItem>
+                        {/* 배치요청 취소 API가 아직 없어 비활성화 (requests.ts
+                            cancelPendingRequest 주석 / issues.md 참고) */}
                         <DropdownMenuItem
                           variant="destructive"
+                          disabled
                           onSelect={() => setCancelTargetCase(r)}
                         >
                           <Trash2 />

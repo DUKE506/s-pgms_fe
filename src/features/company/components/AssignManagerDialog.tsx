@@ -98,9 +98,11 @@ function AssignManagerDialog({ targetCase, managers, onOpenChange }: AssignManag
                         {manager.name} 본부관리자{manager.branch ? ` · ${manager.branch}` : ''}
                       </span>
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      배정 {manager.assignedCount}건
-                    </span>
+                    {manager.assignedCount != null && (
+                      <span className="text-xs text-muted-foreground">
+                        배정 {manager.assignedCount}건
+                      </span>
+                    )}
                   </button>
                 )
               })}

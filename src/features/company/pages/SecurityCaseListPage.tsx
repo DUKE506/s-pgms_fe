@@ -21,7 +21,7 @@ import {
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { listSecurityCases } from '../api/requests'
-import { listManagers } from '../api/managers'
+import { listCaseAssignees } from '../api/managers'
 import SecurityCaseTabs from '../components/SecurityCaseTabs'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
 
@@ -37,7 +37,7 @@ function formatDate(dateLike: string) {
 
 function SecurityCaseListPage() {
   const casesQuery = useQuery({ queryKey: ['security-cases-all'], queryFn: listSecurityCases })
-  const managersQuery = useQuery({ queryKey: ['managers'], queryFn: listManagers })
+  const managersQuery = useQuery({ queryKey: ['managers', 'case-list'], queryFn: listCaseAssignees })
   const navigate = useNavigate()
 
   const [jurisdictionFilter, setJurisdictionFilter] = useState(ALL)

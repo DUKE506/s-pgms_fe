@@ -96,26 +96,22 @@ describe('RequestListPage', () => {
 
     fireEvent.click(withinTable().getByText('26-02-분당경찰서'))
 
+    // GetDeployRequestList는 목록 필드(관리번호·경찰서·기간)만 주고 배치요구서
+    // 원본은 안 준다(본사가 볼 API 없음, issues #7) — 다이얼로그는 그 필드만 표시.
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('배치요구서')).toBeInTheDocument()
-    expect(within(dialog).getByText('스토킹')).toBeInTheDocument()
+    expect(within(dialog).getByText(/분당경찰서/)).toBeInTheDocument()
   })
 
-  it('더보기 메뉴 → 취소 선택 → 확인하면 목록에서 삭제된다', async () => {
+  it('취소 메뉴는 취소 API가 없어 비활성화되어 있다', async () => {
     loginAsAdmin()
     renderPage()
-    // 강남경찰서 건은 다른 테스트에서 이미 배정 상태로 바뀔 수 있어(모듈 싱글톤
-    // securityCases 공유) 접수 상태가 보장되는 서초경찰서 건으로 검증한다.
     await screen.findAllByText('26-02-서초경찰서')
     const seochoRow = withinTable().getByText('26-02-서초경찰서').closest('tr')!
 
     fireEvent.pointerDown(within(seochoRow).getByRole('button', { name: '더보기' }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: '취소' }))
 
-    const dialog = await screen.findByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: '접수취소' }))
-
-    await waitFor(() => expect(screen.queryByText('26-02-서초경찰서')).not.toBeInTheDocument())
-    expect(securityCases.find((c) => c.receiptNumber === '26-02-서초경찰서')).toBeUndefined()
+    const cancelItem = await screen.findByRole('menuitem', { name: '취소' })
+    expect(cancelItem).toHaveAttribute('aria-disabled', 'true')
   })
 })
