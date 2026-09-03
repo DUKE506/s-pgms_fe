@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCase } from '../api/securityCaseDetail'
-import { listWorkers } from '../api/workers'
+import { listCaseJoinWorkers } from '../api/workers'
 import BaseInfoForm from '../components/BaseInfoForm'
 import BaseInfoSummaryCard from '../components/BaseInfoSummaryCard'
 import ScheduleSection from '../components/ScheduleSection'
@@ -28,7 +28,7 @@ function SecurityCaseDetailPage() {
     queryFn: () => getSecurityCase(id!),
     enabled: Boolean(id),
   })
-  const workersQuery = useQuery({ queryKey: ['workers'], queryFn: listWorkers })
+  const workersQuery = useQuery({ queryKey: ['workers', 'case-join'], queryFn: listCaseJoinWorkers })
 
   const [editingBaseInfo, setEditingBaseInfo] = useState(false)
   const [scheduleInitOpen, setScheduleInitOpen] = useState(false)

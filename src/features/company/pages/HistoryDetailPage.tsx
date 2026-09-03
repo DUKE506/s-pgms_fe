@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCaseHistoryDetail } from '../../police/api/history'
-import { listWorkers } from '../api/workers'
+import { listCaseJoinWorkers } from '../api/workers'
 import BaseInfoSummaryCard from '../components/BaseInfoSummaryCard'
 import ScheduleSection from '../components/ScheduleSection'
 
@@ -37,7 +37,7 @@ function HistoryDetailPage() {
     queryFn: () => getSecurityCaseHistoryDetail(id!),
     enabled: Boolean(id),
   })
-  const workersQuery = useQuery({ queryKey: ['workers'], queryFn: listWorkers })
+  const workersQuery = useQuery({ queryKey: ['workers', 'case-join'], queryFn: listCaseJoinWorkers })
 
   if (caseQuery.isLoading || workersQuery.isLoading) {
     return (

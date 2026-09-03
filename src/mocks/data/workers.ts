@@ -1,9 +1,19 @@
-import type { Worker, WorkerCreateInput } from '../../features/company/api/workers'
-import { loadPersisted, savePersisted } from './persist'
+import { loadPersisted } from './persist'
 
 const STORAGE_KEY = 's-pgms:workers'
 
-const SEED_WORKERS: Worker[] = [
+// mock 전용 형태 — 실제 GetGuardList 응답엔 부서가 없지만(issues.md #8), 경호
+// 상세/이력 상세가 조인용으로 읽던 기존 mock은 부서를 그대로 들고 있게 둔다
+// (features 쪽 Worker 타입에서 department가 빠진 것과 무관하게 동작 유지).
+export interface MockWorker {
+  id: string
+  name: string
+  employeeId: string
+  department: string
+  phone: string
+}
+
+const SEED_WORKERS: MockWorker[] = [
   { id: 'worker-1', name: '최민준', employeeId: '240231', department: '경호1팀', phone: '010-1234-5678' },
   { id: 'worker-2', name: '정우진', employeeId: '230245', department: '경호1팀', phone: '010-2345-6789' },
   { id: 'worker-3', name: '이서연', employeeId: '220198', department: '경호2팀', phone: '010-3456-7890' },
@@ -16,21 +26,6 @@ const SEED_WORKERS: Worker[] = [
   { id: 'worker-10', name: '한지호', employeeId: '230367', department: '경호1팀', phone: '010-0123-4567' },
 ]
 
-export const workers: Worker[] = loadPersisted(STORAGE_KEY, SEED_WORKERS)
-
-// 별도 카운터를 persist하지 않고 현재 데이터에서 매번 다시 뽑는다 — 배열만
-// 저장돼 있어도(또는 저장이 실패해도) 항상 정합성 있는 다음 id를 계산할 수 있다.
-function nextWorkerId(): number {
-  const max = workers.reduce((acc, w) => {
-    const n = Number(w.id.replace('worker-', ''))
-    return Number.isFinite(n) ? Math.max(acc, n) : acc
-  }, 0)
-  return max + 1
-}
-
-export function createWorker(input: WorkerCreateInput): Worker {
-  const record: Worker = { id: `worker-${nextWorkerId()}`, ...input }
-  workers.push(record)
-  savePersisted(STORAGE_KEY, workers)
-  return record
-}
+// 경호 상세/이력 상세가 조인용으로만 읽는다 — 이 mock 경로로는 더 이상 근무자를
+// 생성/수정하지 않는다(admin CRUD는 실제 백엔드 + mocks/handlers/guard.ts 더블).
+export const workers: MockWorker[] = loadPersisted(STORAGE_KEY, SEED_WORKERS)

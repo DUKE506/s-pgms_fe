@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import WorkerListPage from './WorkerListPage'
 import { companyAccounts } from '../../../mocks/data/accounts'
-import { workers } from '../../../mocks/data/workers'
+import { resetGuardDouble } from '../../../mocks/handlers/guard'
 import { useAuthStore } from '../../auth/store/authStore'
 
 function renderPage() {
@@ -36,9 +36,17 @@ function withinTable() {
   return within(screen.getByRole('table'))
 }
 
+function tableRow(text: string) {
+  const cell = withinTable().getByText(text)
+  const row = cell.closest('tr')
+  if (!row) throw new Error(`row for "${text}" not found`)
+  return within(row)
+}
+
 describe('WorkerListPage', () => {
   beforeEach(() => {
     useAuthStore.setState({ user: null, accessToken: null, refreshToken: null })
+    resetGuardDouble()
   })
 
   it('근무자 10명을 목록에 표시한다', async () => {
@@ -85,6 +93,38 @@ describe('WorkerListPage', () => {
 
     await waitFor(() => expect(screen.getByText('전체 11')).toBeInTheDocument())
     expect(withinTable().getByText('테스트근무자')).toBeInTheDocument()
-    expect(workers.find((w) => w.name === '테스트근무자')).toBeTruthy()
+  })
+
+  it('행 메뉴 → 정보수정으로 이름·연락처를 바꾼다', async () => {
+    loginAsAdmin()
+    renderPage()
+    await screen.findAllByText('최민준')
+
+    fireEvent.pointerDown(tableRow('최민준').getByRole('button', { name: '더보기' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: '정보수정' }))
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('이름'), { target: { value: '최민준2' } })
+    fireEvent.change(within(dialog).getByLabelText('휴대전화번호'), { target: { value: '010-0000-1111' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(withinTable().getByText('최민준2')).toBeInTheDocument())
+    expect(withinTable().getByText('010-0000-1111')).toBeInTheDocument()
+    expect(screen.queryByText('최민준')).not.toBeInTheDocument()
+  })
+
+  it('행 메뉴 → 삭제로 근무자를 제거한다', async () => {
+    loginAsAdmin()
+    renderPage()
+    await screen.findAllByText('정우진')
+
+    fireEvent.pointerDown(tableRow('정우진').getByRole('button', { name: '더보기' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: '삭제' }))
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: '삭제' }))
+
+    await waitFor(() => expect(screen.getByText('전체 9')).toBeInTheDocument())
+    expect(screen.queryByText('정우진')).not.toBeInTheDocument()
   })
 })

@@ -1,7 +1,13 @@
 import { useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
   Table,
@@ -11,13 +17,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { listWorkers } from '../api/workers'
+import { listWorkers, type Worker } from '../api/workers'
 import RegisterWorkerDialog from '../components/RegisterWorkerDialog'
+import EditWorkerDialog from '../components/EditWorkerDialog'
+import DeleteWorkerDialog from '../components/DeleteWorkerDialog'
 
 function WorkerListPage() {
   const workersQuery = useQuery({ queryKey: ['workers'], queryFn: listWorkers })
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<Worker | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Worker | null>(null)
 
   const workers = workersQuery.data ?? []
   const filtered = workers.filter((w) => {
@@ -73,8 +83,8 @@ function WorkerListPage() {
                 <TableRow>
                   <TableHead>이름</TableHead>
                   <TableHead>사번</TableHead>
-                  <TableHead>부서</TableHead>
                   <TableHead>연락처</TableHead>
+                  <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -82,8 +92,13 @@ function WorkerListPage() {
                   <TableRow key={w.id}>
                     <TableCell>{w.name}</TableCell>
                     <TableCell>{w.employeeId}</TableCell>
-                    <TableCell>{w.department}</TableCell>
-                    <TableCell>{w.phone}</TableCell>
+                    <TableCell>{w.phone || '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <WorkerRowMenu
+                        onEdit={() => setEditTarget(w)}
+                        onDelete={() => setDeleteTarget(w)}
+                      />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -98,12 +113,15 @@ function WorkerListPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-foreground">{w.name}</span>
-                  <span className="text-xs text-muted-foreground">{w.employeeId}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">{w.employeeId}</span>
+                    <WorkerRowMenu
+                      onEdit={() => setEditTarget(w)}
+                      onDelete={() => setDeleteTarget(w)}
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{w.department}</span>
-                  <span>{w.phone}</span>
-                </div>
+                <div className="text-xs text-muted-foreground">{w.phone || '-'}</div>
               </div>
             ))}
           </div>
@@ -111,7 +129,34 @@ function WorkerListPage() {
       )}
 
       <RegisterWorkerDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <EditWorkerDialog target={editTarget} onOpenChange={(open) => !open && setEditTarget(null)} />
+      <DeleteWorkerDialog
+        target={deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      />
     </main>
+  )
+}
+
+function WorkerRowMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label="더보기">
+          <MoreVertical />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={onEdit}>
+          <Pencil />
+          정보수정
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+          <Trash2 />
+          삭제
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
