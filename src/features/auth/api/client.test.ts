@@ -38,6 +38,43 @@ describe('apiFetch', () => {
     expect(useAuthStore.getState().accessToken).not.toBe(session.accessToken)
   })
 
+  it('collapses concurrent 401s into a single refresh (rotating refresh token safe)', async () => {
+    const account = policeAccounts[0]
+    const result = await login(account.id, account.password)
+    if ('mustChangePassword' in result) throw new Error('unexpected mustChangePassword response')
+    useAuthStore.getState().setSession(result)
+
+    let refreshCalls = 0
+    server.use(
+      // 실백엔드처럼 1회용 — 두 번째 호출부터는 회전된 토큰이 아니라 401.
+      http.post('/api/v1/Login/W/RefreshToken', () => {
+        refreshCalls += 1
+        if (refreshCalls > 1) return new HttpResponse(null, { status: 401 })
+        return HttpResponse.json({
+          message: 'ok',
+          data: {
+            accessToken: `access.${account.id}.rotated`,
+            refreshToken: `refresh.${account.id}.rotated`,
+          },
+          code: 200,
+        })
+      }),
+      // 아직 mock인 화면처럼 무조건 401.
+      http.get('/api/protected/ping', () => new HttpResponse(null, { status: 401 })),
+    )
+
+    const results = await Promise.all([
+      apiFetch('/protected/ping'),
+      apiFetch('/protected/ping'),
+      apiFetch('/protected/ping'),
+    ])
+
+    expect(refreshCalls).toBe(1)
+    expect(results.every((r) => r.status === 401)).toBe(true)
+    // refresh 자체는 성공했으므로 세션은 유지된다.
+    expect(useAuthStore.getState().accessToken).toBe(`access.${account.id}.rotated`)
+  })
+
   it('logs out when the refresh token is no longer valid', async () => {
     useAuthStore.getState().setSession({
       user: { id: 'ghost', name: 'Ghost', role: '경찰서' },
