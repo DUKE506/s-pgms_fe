@@ -257,14 +257,24 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
    `investigator`/`responsibleOfficer` + 상태(`statusName`, 배치기간 잠금 판정용) + `mgmtNo`.
 2. 배정 이후 상태에서 이 화면에 들어오는 경우의 소스도 함께 정리
    (`GetGuardCaseDetail` 분기 여부 — #9 본사 경호 상세와 연계).
+3. **(2026-09-03 보강) 본사 쪽에서도 같은 데이터가 필요하다.** [본사] 배치요청 목록
+   (`/admin/requests`)의 행 클릭 배치요구서 전문 다이얼로그(`DispatchRequestViewDialog`)가
+   같은 필드(대상자 성별·생년월일·직업·거주지·사건개요·배치장소 4필드·참고사항·수사관/
+   요구자 정보)를 표시하는데, `GetDeployRequestList`엔 없고 본사(Stec) 토큰으로 경찰용
+   `Deploy/Police/W/GetDeployDetail` 호출 시 **403**이다. 신설 API를 **운영/시스템관리자
+   토큰으로도 조회 가능**하게 하거나(권한 공유), 본사용 대칭 엔드포인트
+   (`GuardCase/Stec/W/GetDeployRequestDetail`류)를 함께 만들어달라.
 
-**임시 처리**: 없음. 화면5는 이 API 없이는 end-to-end 성립 불가 → `blockers.md`에 등록하고
+**임시 처리**: 화면5는 이 API 없이는 end-to-end 성립 불가 → `blockers.md`에 등록하고
 **그룹 B로 진행**, 백엔드 반영 후 복귀(`docs/backend-integration-process.md` 원칙 2).
+본사 배치요청 목록의 다이얼로그는 목록 필드(관리번호·경찰서·지역청·요청일·배치기간)만
+표시하고 나머지는 "-"로 둔 채 진행(`exclusions.md`, 사용자 결정 2026-09-03 "놔둔다").
 
 **영향받는 화면/코드**: `features/police/pages/SecurityCaseEditPage.tsx`,
 `features/police/api/securityCaseDetail.ts`(`getSecurityCase` — 지금은 화면4와 공유,
 화면5는 별도 조회 함수로 분리 예정), `features/police/api/securityCases.ts`
-(`updateSecurityCase`), `features/police/components/SecurityCaseForm.tsx`.
+(`updateSecurityCase`), `features/police/components/SecurityCaseForm.tsx`,
+`features/company/components/DispatchRequestViewDialog.tsx`(본사 케이스).
 
 ---
 
@@ -310,5 +320,41 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 `features/company/api/workers.ts`.
 
 ---
+
+## 9. 🔴 [본사] 배치요청 "취소"에 대응하는 API가 없음
+
+**발견 경위**: 화면7([본사] 운영/시스템관리자 · 배치요청 목록) 연동(2026-09-03),
+`GuardCase/Stec/W/*` 스웨거 확인 중.
+
+**현재 상태**:
+- 배치요청 목록(`/admin/requests`)의 ⋮ 메뉴에 "배정"과 "취소"가 있다. "취소" =
+  아직 배정 안 된 배치요구서를 본사가 반려/취소하는 동작(mock은 `DELETE /security-cases/:id`
+  → 하드 삭제).
+- 스웨거에 `GuardCase/Stec/W/CancelGuardCase`가 **없다**. 케이스 취소 엔드포인트는
+  `POST Deploy/Police/W/CancelGuardCase`(Police 태그, DTO `{deployReqSeq, reason?}`)
+  **하나뿐**이고, 이건 경찰(피전)이 자기 접수건을 취소하는 용도다.
+- 본사(운영관리자 `StecM1`) 토큰으로 Police 태그 엔드포인트 `Deploy/Police/W/GetDeployDetail`
+  호출 시 **403** — Police 태그는 본사 토큰으로 못 부를 가능성이 크다(하드삭제라 실제
+  `CancelGuardCase` 호출 테스트는 안 함).
+
+**왜 문제인가**: 배치요청 목록의 "취소" 버튼을 연결할 실제 엔드포인트가 없다.
+
+**요청/제안**:
+1. 본사 운영/시스템관리자가 미배정 배치요구서를 취소(반려)하는 엔드포인트 신설 —
+   예: `POST GuardCase/Stec/W/CancelDeployRequest {deploySeq, reason?}`. 상태를
+   반려로 남길지, 경찰 접수취소처럼 하드 삭제할지도 함께 정의.
+2. 별도 신설이 부담이면 기존 `Deploy/Police/W/CancelGuardCase`를 본사 토큰으로도
+   호출 가능하게 권한 확장(단 "배치요청 취소"와 "경호취소"의 의미 차이는 정리 필요).
+
+**임시 처리**: `RequestListPage`의 "취소" ⋮ 메뉴 항목을 `disabled` 처리
+(`exclusions.md`). `cancelPendingRequest`/`CancelPendingCaseDialog` 코드는 남겨둠 —
+API 오면 `disabled`만 제거하면 됨.
+
+**전달**: 미전달. 그룹 B(본사 운영관리자 경호관리, #6~#12가 한 섹션) → **#12 섹션 종료
+시점에 일괄 요청**(`TASK.md` "백엔드 요청은 섹션 단위").
+
+**영향받는 화면/코드**: `features/company/pages/RequestListPage.tsx`,
+`features/company/components/CancelPendingCaseDialog.tsx`,
+`features/company/api/requests.ts`(`cancelPendingRequest`).
 
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->

@@ -209,6 +209,14 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         확인 다이얼로그 UI 신규. 부서 열 제거 — `GetGuardList` 응답에 `DEPT_NM`이
         빠져 있음(DB엔 있음, issues #8, 섹션 #12에서 일괄 요청). 조인용
         `listCaseJoinWorkers` 분리(#9·#13 회귀 차단).
+      - [x] 배치요청 목록 + 본부 배정 — `GET GuardCase/Stec/W/GetDeployRequestList` /
+        `GET User/Stec/W/GetStecUserList`(담당자 필터) / `POST GuardCase/Stec/W/AddGuardCase`
+        (2026-09-03). deploySeq 81 실배정으로 GuardCase 최초 생성 검증(caseSeq 46,
+        `mgmtNo`에 `ST0002` 부여). 담당자 목록에 소속 본부(issues #1)·배정 건수 필드
+        없어 표시 축소. "취소"는 대응 API가 없어 메뉴 비활성화(issues #9 신규).
+        조인용 `listCaseAssignees` 분리(#8 회귀 차단). **함께 수정**: `client.ts`
+        `refreshAccessToken` single-flight — 동시 401 시 실백엔드 1회용 RefreshToken이
+        회전돼 강제 로그아웃되던 문제.
 - [ ] **그룹 C — 이력** (본사 이력 → 경찰서 이력 → 본청/지역청 이력 + 진행중 건 상세
       조회전용). 그룹 B의 종결·취소가 터미널 데이터를 만든 뒤라야 의미 있음.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).
@@ -231,6 +239,10 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
 8. 근무자 `deptName`이 조회 응답에 안 옴(2026-09-03) — DB(`GUARD_USER_INFO.DEPT_NM`,
    NOT NULL)·등록/수정 INPUT엔 있는데 `GetGuardList` 응답에만 빠짐. 근무자 목록에서
    부서 열 제거. `GetGuardList` 응답에 필드 추가 요청 예정(그룹 B 섹션 #12에서 일괄)
+9. [본사] 배치요청 "취소"에 대응하는 API 없음(2026-09-03) — `GuardCase/Stec/W`에 케이스
+   취소 엔드포인트가 없고, 유일한 `Deploy/Police/W/CancelGuardCase`는 Police 태그라 본사
+   토큰으로 호출 불가(403). 배치요청 목록 "취소" 메뉴 비활성화. 본사용 취소 API 신설
+   요청 예정(그룹 B 섹션 #12에서 일괄)
 
 **발견된 후속 항목 (이번 범위 밖, 별도 진행 예정)**:
 

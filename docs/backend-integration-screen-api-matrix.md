@@ -46,10 +46,10 @@
 
 #### 그룹 A — [경찰서] 피전 경호관리 섹션
 
-2. **[경찰서] 피전 — 경찰서 경호목록** (조회) — ✅ 연동 완료(2026-09-01). 실측 시점
-   데이터가 "접수" 1건뿐 → **9번(본사 경호 상세) 이후 재검증**: 배정 이후 `statusName`이
-   화면 `SecurityCaseStatus` 라벨과 일치하는지, 관리번호가 배정 후 실제 경호코드로
-   조합되는지
+2. **[경찰서] 피전 — 경찰서 경호목록** (조회) — ✅ 연동 완료(2026-09-01). **부분
+   재검증(2026-09-03, 7번 배정 직후)**: 동래에 배정 건이 생기자 `GetDeployList`가
+   `statusName:"배정"`(프론트 라벨과 일치), `mgmtNo:"26-09-동래경찰서 ST0002"`(경호코드
+   조합)로 반환 확인. 나머지 상태(경호중/경호완료/종결/취소)는 여전히 **9번 이후 재검증**
 3. **[경찰서] 피전 — 접수/배치요구서 작성** (생성) — ✅ 연동 완료(2026-09-02).
    `POST AddDeployRequest`. 2번 목록 재검증 동시 소화. 결정 3건: 요구자 3필드 분리,
    생년월일 입력(만나이 계산), 배치장소는 API가 단일 필드라 **주거지만 전송(D-2,
@@ -74,8 +74,13 @@
    수정→삭제 원상복구). 수정/삭제는 mock에 없던 기능 → 행별 `⋮` 메뉴 UI 신규. 부서
    열은 제거(`GetGuardList`가 `DEPT_NM`을 응답에 안 실어줌 — issues #8, 그룹 B 섹션
    #12에서 일괄 요청). 조인용 `listCaseJoinWorkers` 분리(#9·#13 회귀 차단)
-7. **[본사] 운영/시스템관리자 — 배치요청 목록 (+본부 배정 액션)** — 3의 접수 데이터로
-   배정 실행. **여기서 처음으로 GuardCase(경호건)가 실제로 생성됨**
+7. **[본사] 운영/시스템관리자 — 배치요청 목록 (+본부 배정 액션)** — ✅ 연동 완료
+   (2026-09-03). `GetDeployRequestList`(목록)/`GetStecUserList`(담당자 필터)/
+   `AddGuardCase`(배정) 3종. deploySeq 81 실배정으로 **GuardCase 최초 생성 검증**
+   (caseSeq 46, `mgmtNo`에 `ST0002` 부여). 담당자 목록에 본부(issues #1)·배정 건수
+   필드 없어 표시 축소. "취소"는 대응 API 없어 메뉴 비활성화(issues #9 신규). 함께
+   수정: `client.ts` refresh single-flight(동시 401 → 1회용 RefreshToken 회전으로
+   강제 로그아웃되던 문제)
 8. **[본사] 운영/시스템관리자 — 경호목록** (조회) — 7에서 만든 배정 건이 보여야 함
 9. **[본사] 운영/시스템관리자 — 경호 상세** (경호계획 등록/수정, 스케줄, 사전미팅,
    첨부, 취소) — 7·8 이후, 6의 근무자 데이터 필요. 완료 직후 **4번·2번의 배정 이후 상태
@@ -232,12 +237,15 @@
 
 #### 배치요청 목록 (`/admin/requests`)
 
+✅ 연동 완료(2026-09-03, 커밋은 PROGRESS.md).
+
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listPendingRequests` | `GET GuardCase/Stec/W/GetDeployRequestList` | 3번(경찰 접수) 데이터 필요 |
-| 담당자 선택 목록 | `listManagers` | ⚠️ 전용 엔드포인트 불명확 | `GetStecUserList`를 역할 필터링해서 재사용할 가능성 |
-| 본부 배정 | `assignManager` | `POST GuardCase/Stec/W/AddGuardCase` | **여기서 GuardCase(경호건)가 처음 생성됨** — 이후 모든 본사 화면의 전제 |
-| 취소 | `cancelPendingRequest` | `POST CancelGuardCase` | |
+| 목록 조회 | `listPendingRequests` | `GET GuardCase/Stec/W/GetDeployRequestList` | ✅ 파라미터 없이 전량 반환, 스코프 필터 없음(운영/시스템관리자 전국 미배정 건 전부). 본부관리자 403. 응답 `{deploySeq,caseSeq(null),mgmtNo,groupName,parentGroupName,createDt,periodFrom,periodTo,requestedEndDate}` — `mgmtNo`는 접미사 없는 `"26-09-동래경찰서"`라 그대로 사용. 응답 샘플: `GuardCase-Stec-GetDeployRequestList.md` |
+| 담당자 선택 목록 | `listManagers` | `GET User/Stec/W/GetStecUserList` | ✅ 전용 EP 없음 — 클라이언트에서 `codeName==='본부관리자' && useYn`로 필터. `branch`(issues #1)·`assignedCount` 필드 없어 표시 생략. matrix 11번(관리자 계정)과 같은 응답. 응답 샘플: `User-Stec-GetStecUserList.md` |
+| 본부 배정 | `assignManager` | `POST GuardCase/Stec/W/AddGuardCase` | ✅ DTO `{deploySeq,userSeq}`, 성공 `{data:true}`(seq 안 줌). **여기서 GuardCase가 처음 생성됨** — 배정 즉시 `statusName:"배정"` + `mgmtNo`에 `ST####`. deploySeq 81 실배정(caseSeq 46)해 검증·유지(8·9 입력 데이터). 응답 샘플: `GuardCase-Stec-AddGuardCase.md` |
+| 취소 | `cancelPendingRequest` | ⚠️ **없음** | issues #9 — `GuardCase/Stec/W`에 케이스 취소 EP 없음. `Deploy/Police/W/CancelGuardCase`는 Police 태그라 본사 토큰 403. ⋮ 메뉴 "취소" 비활성화(`disabled`), API 오면 해제 |
+| (인프라) refresh single-flight | — | `POST Login/W/RefreshToken` | `client.ts` 수정 — 동시 401 시 각자 refresh 호출 → 실백엔드 1회용 RefreshToken이 회전돼 두 번째부터 401 → 강제 로그아웃되던 문제. 진행 중 refresh를 공유하도록 single-flight화(아직 mock인 화면에 실백엔드 계정으로 들어갈 때 재현됨) |
 
 #### 경호목록 (`/admin/security-cases`)
 

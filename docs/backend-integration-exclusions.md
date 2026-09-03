@@ -197,3 +197,83 @@
 - **사용자가 잃는 것**: 없음(두 화면은 계속 mock으로 동작, 동작 불변).
 - **연동 커밋 / 해소 예정**: (이번 iteration) / #9는 `GetGuardCaseDetail` + 스케줄 조회
   (issues #6)로, #13은 이력 상세 연동에서 각각 `listCaseJoinWorkers` 제거.
+
+---
+
+## [본사] 배치요청 목록 (`/admin/requests`)
+
+### GET /api/v1/GuardCase/Stec/W/GetDeployRequestList — 목록 조회
+
+#### 행 클릭 시 뜨는 배치요구서 전문(`DispatchRequestViewDialog`)이 목록 필드만 표시
+- **왜 제외했는지**: `DispatchRequestViewDialog`는 대상자 성별·생년월일·직업·거주지,
+  사건개요, 배치장소 4필드, 참고사항, 수사관·요구자 정보를 읽는데 `GetDeployRequestList`
+  응답엔 전부 없다. 본사가 배치요구서 원본을 볼 API 자체가 없다 — 본사(Stec) 토큰으로
+  경찰용 `Deploy/Police/W/GetDeployDetail` 호출 시 403 확인(issues #7과 동일 이슈, 본사
+  케이스로 보강). 사용자 결정(2026-09-03): 다이얼로그는 지금 손대지 말고 놔둔다.
+- **사용자가 잃는 것**: 행 클릭 시 배치요구서 다이얼로그는 열리지만 관리번호·경찰서 외
+  대부분 칸이 "-"로 뜬다. 배정 판단에 필요한 배치요구서 내용을 본사가 이 화면에서
+  확인할 수 없다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #7(배치요구서 원본 상세조회
+  API)을 본사도 접근 가능하게 신설·반영 시 다이얼로그를 그 응답으로 채운다.
+
+#### 대상자명(`suspectUserName`) 열 없음
+- **왜 제외했는지**: 응답에 대상자명이 없다. 단 이 화면의 목록 테이블은 원래 대상자명
+  열이 없어(관리번호/경찰서/지역청/요청일/배치기간) 표시상 영향 없음.
+- **사용자가 잃는 것**: 없음(테이블 컬럼 구성상 원래 안 보임). `AssignManagerDialog`
+  헤더도 관리번호·경찰서만 쓴다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 해소 불필요.
+
+### GET /api/v1/User/Stec/W/GetStecUserList — 담당자 선택 목록
+
+#### `Manager.branch`(소속 본부) 표시 생략
+- **왜 제외했는지**: 응답에 본부 필드가 없다(`groupSeq`/`groupName` 전부 null). 본부명은
+  `userName`("HS2본부")에 자유텍스트로 섞여 있을 뿐 — issues.md #1(🔴, 본부 소속 구조화
+  저장 없음)의 실측 확인.
+- **사용자가 잃는 것**: `AssignManagerDialog`의 담당자 항목이 "이름 본부관리자 · 서울본부"
+  → "이름 본부관리자"로 축소(소속 본부 배지 없음).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #1 반영 시(본부 FK 컬럼 신설)
+  `Manager.branch` 다시 채움.
+
+#### `Manager.assignedCount`(담당 배정 건수) 배지 생략
+- **왜 제외했는지**: 응답에 없고, 담당자별 건수를 세는 전용 API도 없음(`GetGuardCaseList`를
+  담당자별로 N번 호출하는 방법뿐).
+- **사용자가 잃는 것**: `AssignManagerDialog`의 담당자 항목 우측 "배정 N건" 배지가 안 뜬다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 담당자별 건수 API가 생기거나
+  `GetStecUserList` 응답에 카운트가 추가되면.
+
+#### "취소" 액션 비활성화 (붙일 API 없음)
+- **왜 제외했는지**: 배치요청 취소 엔드포인트가 없다. `GuardCase/Stec/W/CancelGuardCase`는
+  스웨거에 없고, 유일한 취소 API `POST Deploy/Police/W/CancelGuardCase`는 Police 태그라
+  본사 토큰으로 호출 불가(본사 토큰 `GetDeployDetail` 403으로 방증). → `issues.md` 신규.
+- **조치**: `RequestListPage`의 ⋮ 메뉴 "취소" 항목을 `disabled` 처리(데스크톱·모바일 둘
+  다). `cancelPendingRequest`/`CancelPendingCaseDialog` 코드는 남겨둠(호출 경로만 차단,
+  API 오면 `disabled` 제거).
+- **사용자가 잃는 것**: 본사가 배치요청(미배정 배치요구서)을 이 화면에서 취소할 수 없다.
+  (경찰서는 자기 경호 상세에서 접수취소 가능 — 화면4, 이미 연동.)
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 본사용 배치요청 취소 API 신설 시.
+
+#### 미연동 화면(`SecurityCaseTabs`의 `listSecurityCases`)에서 실백엔드 세션 401
+- **왜 제외했는지**: 버그가 아니라 전환기 상태(로그인 exclusions와 동일). 공통 탭 바
+  `SecurityCaseTabs`가 경호목록 탭 카운트용으로 `listSecurityCases`(`GET /api/security-cases`,
+  아직 mock)를 부르는데, 실 JWT는 mock 계정 토큰이 아니라 mock 핸들러가 401을 준다 →
+  React Query retry×3로 콘솔에 401 몇 줄.
+- **사용자가 잃는 것**: `/admin/requests`에서 경호목록/연장요청/단축요청 탭의 건수 배지가
+  안 뜬다(배치요청 탭 배지는 실 API라 정상). 목록·배정 다이얼로그 등 이 화면 본 기능은
+  영향 없음.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / **바로 다음 iteration인 #8(본사
+  경호목록, `GetGuardCaseList`)** 연동 시 `listSecurityCases`가 실 API로 바뀌며 해소.
+
+#### (함께 수정) 미연동 화면에서 강제 로그아웃되던 문제 — `client.ts` single-flight refresh
+- **증상**: 실백엔드 계정으로 로그인 후 아직 mock인 화면(`/admin/security-cases` 등)에
+  들어가면 **바로 로그인 화면으로 튕겼다.** 원인은 전환기 401 자체가 아니라 `apiFetch`의
+  refresh 처리: 한 화면이 여러 요청을 동시에 던지면 전부 401 → 각자 `RefreshToken` 호출
+  → 실백엔드 `RefreshToken`은 **1회용**(호출 시 refreshToken 회전)이라 두 번째부터
+  이미 무효가 된 토큰으로 호출 → 401 → `logout()`.
+- **조치**: `features/auth/api/client.ts`의 `refreshAccessToken`을 single-flight로 —
+  진행 중인 refresh가 있으면 새로 만들지 않고 그 promise를 공유한다. 동시에 들어온
+  N개의 401이 `RefreshToken` 1회로 합쳐진다. (버그가 전환기에만 드러났을 뿐, 실
+  백엔드에서 동시 요청이 몰릴 때 언제든 날 수 있던 문제라 근본 수정.)
+- **남는 것**: 로그아웃은 안 되지만 mock 화면의 401 콘솔 노이즈는 그대로 — 위 항목대로
+  화면이 순차 연동되며 사라진다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 근본 수정 완료. `client.test.ts`에
+  동시 401 → refresh 1회 회귀 테스트 추가.
