@@ -1,6 +1,7 @@
 import { apiFetch } from '../../auth/api/client'
 import { useAuthStore } from '../../auth/store/authStore'
 import { unwrapEnvelope } from '@/shared/api/envelope'
+import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderLabelToCode } from '@/shared/lib/subject'
 import type {
   SecurityCase,
@@ -65,15 +66,7 @@ interface DeployListRow {
   remainDays: number
 }
 
-// 서버가 관리번호를 이미 조합해서 내려준다("26-08-동래경찰서 접수" / 배정 후엔
-// "26-08-동래경찰서 ST123"). 마지막 공백에서 잘라 접수번호와 경호코드 자리로
-// 나눈 뒤, 화면은 기존대로 formatManagementNumber로 "접수번호 · 경호코드" 형태로
-// 재조합한다(접수 단계는 경호코드 자리에 "접수"가 들어가 "… · 접수"로 표시됨).
-function splitMgmtNo(mgmtNo: string): { receiptNumber: string; securityCode?: string } {
-  const i = mgmtNo.lastIndexOf(' ')
-  if (i === -1) return { receiptNumber: mgmtNo }
-  return { receiptNumber: mgmtNo.slice(0, i), securityCode: mgmtNo.slice(i + 1) }
-}
+// splitMgmtNo(관리번호 완성형 분리)는 상세 연동과 공유하므로 shared/lib로 옮겼다.
 
 // 경찰서 경호목록은 이 목록 응답만 쓰므로, 화면이 읽는 필드(관리번호·대상자·
 // 상태·경호기간)만 채우고 나머지 SecurityCase 필드는 빈 값으로 둔다. 상세/수정

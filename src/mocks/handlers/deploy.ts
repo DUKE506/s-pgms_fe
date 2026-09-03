@@ -1,7 +1,14 @@
 import { http, HttpResponse } from 'msw'
 import { allPoliceLoginAccounts } from '../data/guests'
-import { createSecurityCase, securityCases } from '../data/securityCases'
-import type { CaseType } from '../../features/police/types/securityCase'
+import {
+  cancelAssignedCase,
+  cancelPendingCase,
+  closeCase,
+  createSecurityCase,
+  requestPeriodChange,
+  securityCases,
+} from '../data/securityCases'
+import type { CaseType, ClosureReason, SecurityCase } from '../../features/police/types/securityCase'
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — 경찰서 경호목록은
 // 이미 실제 백엔드(GET /api/v1/Deploy/Police/W/GetDeployList)로 연동 완료됐다
@@ -22,6 +29,56 @@ function stationFromBearer(request: Request) {
 // 넣고("26-08-동래경찰서 접수"), 배정 이후엔 경호코드가 들어간다고 가정.
 function mgmtNo(receiptNumber: string, securityCode?: string) {
   return `${receiptNumber} ${securityCode ?? '접수'}`
+}
+
+function deploySeqOf(c: SecurityCase) {
+  return Number(c.id.replace(/\D/g, '')) || 0
+}
+
+// 실제 백엔드의 deployReqSeq(정수) 또는 vitest가 그대로 넘기는 mock 문자열 id
+// (예: 'case-seed-1') 둘 다로 레코드를 찾는다.
+function findBySeq(seq: unknown): SecurityCase | undefined {
+  const s = String(seq)
+  return (
+    securityCases.find((c) => c.id === s) ??
+    securityCases.find((c) => String(deploySeqOf(c)) === s)
+  )
+}
+
+// mock SecurityCase 레코드 → GetDeployDetail 응답 data 형태.
+// 접수 단계에서 실제로 내려오는 flat 필드만 실측대로 채우고, 배정 이후 상태
+// (baseInfo/schedule/attachments 등) 화면 회귀를 오프라인으로 검증하기 위해
+// mock 레코드 전체를 `mock`에 실어 보낸다 — 실제 GetDeployDetail 응답엔 `mock`
+// 필드가 없다(getSecurityCase가 이걸 인지하고 처리). matrix 12번에서 정리.
+function toDeployDetail(c: SecurityCase) {
+  return {
+    deployReqSeq: deploySeqOf(c),
+    mgmtNo: mgmtNo(c.receiptNumber, c.securityCode),
+    statusName: c.status,
+    suspectUserName: c.subject.nameInitial,
+    startDt: null,
+    endDt: null,
+    periodFrom: c.startDate,
+    periodTo: c.endDate,
+    requestedEndDate: c.pendingPeriodRequest?.requestedEndDate ?? null,
+    clientName: c.requester.name,
+    clientDept: c.requester.dept,
+    clientPosition: c.requester.position,
+    suspectAddress: c.subject.residence,
+    guardHomeLoc: c.location.residence || null,
+    guardWorkLoc: c.location.workplace || null,
+    guardEtcLoc1: c.location.etc1 || null,
+    guardEtcLoc2: c.location.etc2 || null,
+    investigator: c.policeContact.investigator,
+    responsibleOfficer: c.policeContact.victimOfficer,
+    crimeType: c.caseType,
+    extendCount: 0,
+    downloadYn: null,
+    docGuardDetail: null,
+    docDestructionDetail: null,
+    docAgreeDetail: [],
+    mock: c,
+  }
 }
 
 export const deployTestHandlers = [
@@ -101,5 +158,116 @@ export const deployTestHandlers = [
 
     const deploySeq = Number(record.id.replace(/\D/g, '')) || null
     return HttpResponse.json({ message: 'ok', data: { deploySeq }, code: 200 })
+  }),
+
+  // 화면4: 경호 상세 조회 — GET Deploy/Police/W/GetDeployDetail?deployReqSeq=
+  // (docs/backend-integration-responses/Deploy-Police-GetDeployDetail.md).
+  // 조회 전용 role(본청/지역청/게스트)도 이 화면에 들어오므로 role은 제한하지
+  // 않고 유효 계정이면 통과시킨다(게스트 케이스 스코프는 matrix 8번에서 처리).
+  http.get('/api/v1/Deploy/Police/W/GetDeployDetail', ({ request }) => {
+    if (!stationFromBearer(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다.', data: null, code: 401 }, { status: 401 })
+    }
+    const seq = new URL(request.url).searchParams.get('deployReqSeq')
+    const record = findBySeq(seq)
+    if (!record) {
+      return HttpResponse.json(
+        { message: '존재하지 않는 배치요구서입니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    return HttpResponse.json({ message: 'ok', data: toDeployDetail(record), code: 200 })
+  }),
+
+  // 접수취소 + 경호취소 공용 — POST Deploy/Police/W/CancelGuardCase
+  // (docs/backend-integration-responses/Deploy-Police-CancelGuardCase.md).
+  http.post('/api/v1/Deploy/Police/W/CancelGuardCase', async ({ request }) => {
+    if (!stationFromBearer(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다.', data: null, code: 401 }, { status: 401 })
+    }
+    const { deployReqSeq, reason } = (await request.json()) as {
+      deployReqSeq: unknown
+      reason?: string
+    }
+    const record = findBySeq(deployReqSeq)
+    if (!record) {
+      return HttpResponse.json(
+        { message: '존재하지 않는 배치요구서입니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    if (record.status === '접수') {
+      cancelPendingCase(record.id)
+      return HttpResponse.json({ message: 'ok', data: true, code: 200 })
+    }
+    const updated = cancelAssignedCase(record.id, String(reason ?? ''))
+    if (!updated) {
+      return HttpResponse.json({ message: '잘못된 요청입니다.', data: false, code: 400 }, { status: 400 })
+    }
+    return HttpResponse.json({ message: 'ok', data: true, code: 200 })
+  }),
+
+  // 연장/단축 요청 — PATCH Deploy/Police/W/ExtendDeployPeriod | ShortenDeployPeriod
+  // {deployReqSeq, afterEndDate}. matrix 12번 이후 실측 검증.
+  ...(['연장', '단축'] as const).map((type) =>
+    http.patch(
+      `/api/v1/Deploy/Police/W/${type === '연장' ? 'ExtendDeployPeriod' : 'ShortenDeployPeriod'}`,
+      async ({ request }) => {
+        if (!stationFromBearer(request)) {
+          return HttpResponse.json(
+            { message: '인증이 필요합니다.', data: null, code: 401 },
+            { status: 401 },
+          )
+        }
+        const { deployReqSeq, afterEndDate } = (await request.json()) as {
+          deployReqSeq: unknown
+          afterEndDate: string
+        }
+        const record = findBySeq(deployReqSeq)
+        if (!record) {
+          return HttpResponse.json(
+            { message: '존재하지 않는 배치요구서입니다.', data: null, code: 404 },
+            { status: 404 },
+          )
+        }
+        const updated = requestPeriodChange(record.id, type, afterEndDate)
+        if (!updated) {
+          return HttpResponse.json(
+            { message: '요청할 수 없는 상태입니다.', data: false, code: 400 },
+            { status: 400 },
+          )
+        }
+        return HttpResponse.json({ message: 'ok', data: true, code: 200 })
+      },
+    ),
+  ),
+
+  // 종결 — POST Deploy/Police/W/CloseGuardCase {caseSeq, endReason}.
+  // 프론트가 "사유 - 상세"로 합쳐 보내므로 더블에서 되돌려 나눈다(실제 API는
+  // endReason 단일 자유텍스트). matrix 12번 이후 실측 검증.
+  http.post('/api/v1/Deploy/Police/W/CloseGuardCase', async ({ request }) => {
+    if (!stationFromBearer(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다.', data: null, code: 401 }, { status: 401 })
+    }
+    const { caseSeq, endReason } = (await request.json()) as { caseSeq: unknown; endReason: string }
+    const record = findBySeq(caseSeq)
+    if (!record) {
+      return HttpResponse.json(
+        { message: '존재하지 않는 경호건입니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    const raw = String(endReason ?? '')
+    const sep = raw.indexOf(' - ')
+    const reason = (sep === -1 ? raw : raw.slice(0, sep)) as ClosureReason
+    const detail = sep === -1 ? undefined : raw.slice(sep + 3)
+    const updated = closeCase(record.id, reason, detail)
+    if (!updated) {
+      return HttpResponse.json(
+        { message: '종결할 수 없는 상태입니다.', data: false, code: 400 },
+        { status: 400 },
+      )
+    }
+    return HttpResponse.json({ message: 'ok', data: true, code: 200 })
   }),
 ]
