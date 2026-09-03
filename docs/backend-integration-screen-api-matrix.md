@@ -69,8 +69,11 @@
 
 #### 그룹 B — 메인 워크플로우 (경호건 생명주기) + 그 검증
 
-6. **[본사] 운영/시스템관리자 — 근무자 목록/등록** — 9번(경호계획 등록)이 근무자
-   드롭다운으로 의존하므로 선행
+6. **[본사] 운영/시스템관리자 — 근무자 목록/등록** — ✅ 연동 완료(2026-09-03).
+   `GetGuardList`/`AddGuardInfo`/`PatchGuardInfo`/`DeleteGuardInfo` 4종 실측(생성→
+   수정→삭제 원상복구). 수정/삭제는 mock에 없던 기능 → 행별 `⋮` 메뉴 UI 신규. 부서
+   열은 제거(`GetGuardList`가 `DEPT_NM`을 응답에 안 실어줌 — issues #8, 그룹 B 섹션
+   #12에서 일괄 요청). 조인용 `listCaseJoinWorkers` 분리(#9·#13 회귀 차단)
 7. **[본사] 운영/시스템관리자 — 배치요청 목록 (+본부 배정 액션)** — 3의 접수 데이터로
    배정 실행. **여기서 처음으로 GuardCase(경호건)가 실제로 생성됨**
 8. **[본사] 운영/시스템관리자 — 경호목록** (조회) — 7에서 만든 배정 건이 보여야 함
@@ -218,12 +221,14 @@
 
 #### 근무자 목록/등록 (`/admin/workers`)
 
+✅ 연동 완료(2026-09-03, 커밋은 PROGRESS.md).
+
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listWorkers` | `GET Guard/Stec/W/GetGuardList` | |
-| 등록 | `registerWorker` | `POST AddGuardInfo` | |
-| 수정 | (mock에 없음) | `PATCH PatchGuardInfo` | 반대 방향 공백 — 연동하면 새로 얻는 기능 |
-| 삭제 | (mock에 없음) | `DELETE DeleteGuardInfo` | 반대 방향 공백 — 연동하면 새로 얻는 기능 |
+| 목록 조회 | `listWorkers` | `GET Guard/Stec/W/GetGuardList` | ✅ 응답 `{guardSeq,sabun,name,phone}` — `deptName` 빠짐(issues #8). `id←String(guardSeq)` |
+| 등록 | `registerWorker` | `POST AddGuardInfo` | ✅ `{sabun,name,deptName,phone}` → `data:true`(생성 seq 안 줌) |
+| 수정 | (mock에 없음) | `PATCH PatchGuardInfo` | ✅ `{guardSeq,name?,phone?,deptName?}`. sabun 수정 불가. 행별 `⋮` 메뉴 UI 신규 |
+| 삭제 | (mock에 없음) | `DELETE DeleteGuardInfo?guardSeq=` | ✅ 쿼리 파라미터. 확인 다이얼로그 UI 신규 |
 
 #### 배치요청 목록 (`/admin/requests`)
 

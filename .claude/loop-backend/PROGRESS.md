@@ -31,8 +31,8 @@
 | 3 | A | [경찰서] 피전 | 접수/배치요구서 작성 | 완료 | `5074920` | `POST AddDeployRequest`. 2번 재검증 동시 소화(새 접수 반영·mgmtNo 조합형태·"접수" 라벨 확인). 배치장소는 API가 단일 필드라 주거지만 전송(D-2, issues #5). 폼: 요구자 3필드 분리 + 생년월일 입력(+ `DateField` yearGrid) |
 | 4 | A | [경찰서] 피전 | 경호 상세 | 부분완료(△) | `19786c4` | **접수 상태만 실측 검증**(2026-09-03). 상세 조회·접수취소 정상. 배정 이후(경호취소·연장·단축·종결)는 데이터가 없어 코드만 교체·**미검증** → 9번(본사 경호 상세) 이후 재검증 필수. 근무 스케줄/근무자 표시는 조회 API 누락(issues #6)이라 mock 연결 끊음. **완료 표시 보류** |
 | 5 | A | [경찰서] 피전 | 배치요구서 수정 | 보류(블로커) | | **prefill 소스 없음** — `GetDeployDetail`은 상세페이지 표시용 "기본정보" 뷰(배정 후 본사 등록, 접수단계엔 배치요구서 임시 매핑)라 배치요구서 원본 필드(성별·생년월일·직업·사건개요·참고사항·배치장소 4필드)를 안 줌. 배치요구서 원본 상세조회 API 신설 필요(issues #7, blockers). **a안(2026-09-03): 화면5 통째 보류, 그룹 B로 진행, 신규 API 오면 조회+저장 함께 연동·복귀.** 피전 경호관리 섹션 마지막 화면 → 섹션 일괄 요청(#5·#6·#7)에 포함 |
-| 6 | B | [본사] 운영/시스템관리자 | 근무자 목록/등록 | 대기 | | ← **다음 대상**. 9번(경호계획 등록)의 선행 의존성 |
-| 7 | B | [본사] 운영/시스템관리자 | 배치요청 목록(+본부 배정) | 대기 | | 3번 데이터 필요. **여기서 GuardCase 최초 생성** |
+| 6 | B | [본사] 운영/시스템관리자 | 근무자 목록/등록 | 완료 | `b5f5738` | `GetGuardList`/`AddGuardInfo`/`PatchGuardInfo`/`DeleteGuardInfo` 4종 실측(생성→수정→삭제 원상복구). 수정/삭제 mock에 없던 기능 → 행별 `⋮` 메뉴 UI 신규. 부서 열 제거(GetGuardList 응답에 `DEPT_NM` 누락 — DB엔 있음, issues #8 신규, 섹션 #12에서 일괄 요청). 조인용 `listCaseJoinWorkers` 분리(#9·#13 회귀 차단) |
+| 7 | B | [본사] 운영/시스템관리자 | 배치요청 목록(+본부 배정) | 대기 | | ← **다음 대상**. 3번 데이터 필요. **여기서 GuardCase 최초 생성** |
 | 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 대기 | | 7번에서 배정한 건이 보여야 함 |
 | 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 대기 | | 7·8 이후, 6번 근무자 필요. 첨부 3종 파일 업로드 재구현 필요(JSON→multipart). 완료 직후 **4번·2번의 배정 이후 상태 재검증**(새 iteration 아님, 비고에 결과만) |
 | 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 대기 | | 4번(재검증)에서 경찰이 신청한 데이터 필요. 거부 API 이슈(issues.md #2) 방향 확정 후 |
@@ -48,6 +48,46 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-03: 6번([본사] 운영/시스템관리자 · 근무자 목록/등록) — **연동 완료**. 그룹 B
+  첫 화면. `company/api/workers.ts`의 `listWorkers`/`registerWorker`를 실 엔드포인트로
+  교체하고 `updateWorker`/`deleteWorker` 신규:
+  - `GET Guard/Stec/W/GetGuardList` — 응답 `{guardSeq,sabun,name,phone}`. `Worker`
+    타입 `id←String(guardSeq)`·`employeeId←sabun`, `department` 제거.
+  - `POST AddGuardInfo` — `{sabun,name,deptName,phone}` → `{message,data:true,code:200}`
+    (생성 seq 안 줌, 목록 재조회로 확인). `deptName` required.
+  - `PATCH PatchGuardInfo` — `{guardSeq,name?,phone?,deptName?}`. `sabun` 수정 불가.
+    `deptName`은 현재값 조회 불가라 입력했을 때만 body에 실음(빈 값 전송 시 서버 기존
+    부서 덮어쓰기 방지).
+  - `DELETE DeleteGuardInfo?guardSeq=` — 쿼리 파라미터, 바디 없음.
+
+  UI 변경(수정/삭제가 mock에 없던 기능): `WorkerListPage`에 행별 `⋮` 드롭다운
+  (정보수정/삭제, `ManagerAccountListPage` 패턴), 신규 `EditWorkerDialog`(사번 읽기전용,
+  부서 빈 칸)·`DeleteWorkerDialog`(확인). 부서 열은 테이블·모바일 카드에서 제거.
+
+  주요 발견 — **issues #8 신규(🔴)**: 근무자 부서(`deptName`)가 조회 응답에 안 온다.
+  DB엔 `GUARD_USER_INFO.DEPT_NM varchar(255) NOT NULL`로 존재하고 Add/Patch INPUT도
+  받는데(저장 정상), `GetGuardList` 응답에서만 빠짐. 근무자 단건 상세 API도 없음. →
+  목록 부서 열 제거(`exclusions.md`), `GetGuardList` 응답에 필드 추가 요청 예정. 그룹
+  B는 #6~#12가 한 섹션 → **#12 섹션 종료 시 일괄 요청**(비블로킹, 지금은 기록만).
+
+  회귀 차단: `company/api/workers.ts::listWorkers`를 실 API로 바꾸면 아직 mock인
+  `SecurityCaseDetailPage`(#9)·`company/HistoryDetailPage`(#13)의 근무자 조인이 깨져서
+  (`guardSeq` vs mock `worker-N`), mock 조인 경로를 `listCaseJoinWorkers`
+  (`GET /api/workers` 유지 + 쿼리키 `['workers','case-join']`)로 분리 — 2번
+  GuestListPage 분리와 같은 처리. 두 화면 동작 불변. mock `handlers/workers.ts`는
+  GET만 남기고 POST/`createWorker` 제거, `mocks/data/workers.ts`는 자체 `MockWorker`
+  타입으로 전환(부서 유지).
+
+  인프라: 테스트 전용 더블 `mocks/handlers/guard.ts`(4종, 인메모리, `resetGuardDouble()`
+  export) → `testOnlyHandlers`에 등록. `WorkerListPage.test.tsx`를 더블 기반으로
+  재작성 + 수정/삭제 테스트 2건 추가.
+
+  검증: `npm run test` 116/116(114→116)·lint·build 통과. 실백엔드 `run-s-pgms` —
+  `StecM1`(운영관리자) 로그인 → 근무자 목록 5건 렌더(부서 열 없음) → **등록→정보수정→
+  삭제 end-to-end** 정상, 콘솔 에러 없음. curl로 4종 응답·검증 별도 확인. 테스트로
+  만든 근무자(`ZZUI9002`)는 삭제로 원상복구, 백엔드 5행(13·14·15·16·19) 복귀 확인.
+  응답 샘플: `docs/backend-integration-responses/Guard-Stec-GuardInfo.md`.
 
 - 2026-09-03: 5번([경찰서] 피전 · 배치요구서 수정) — **착수했으나 블로커로 보류(코드
   변경 없음, 기록만)**. `SecurityCaseForm`의 필수 필드(성별·생년월일·직업·사건개요·

@@ -168,3 +168,32 @@
 - **연동 커밋 / 해소 예정**: `19786c4` / issues #6(경호 상세 근무 스케줄 조회 API 신설)
   반영 시 `WorkerAssignmentPanel`/`ConsentDocsCard`를 그 응답으로 다시 연결
   (스케줄·근무자 정보 embed 예상). 그룹 B #9에서 함께 처리.
+
+### GET GetGuardList (근무자 목록) — 응답에 부서가 없음
+
+#### 근무자 목록/카드에서 "부서" 열 제거
+- **왜 제외했는지**: `GetGuardList` 응답 항목이 `{ guardSeq, sabun, name, phone }`뿐 —
+  `deptName`이 없다(`AddGuardInfo`/`PatchGuardInfo`는 받는데). 근무자 상세조회 API도
+  없어서 부서 값을 읽을 소스가 전혀 없다(`issues.md` #8).
+- **조치**: `WorkerListPage`의 데스크톱 테이블·모바일 카드에서 "부서" 열/줄 제거
+  (이름·사번·연락처만). 등록 다이얼로그의 부서 입력은 유지(서버 필수, 저장은 정상).
+  정보수정 다이얼로그는 부서를 빈 칸으로 두고 입력했을 때만 `deptName` 전송
+  (빈 값 전송 시 서버 기존 부서를 덮어쓸 위험 회피).
+- **사용자가 잃는 것**: 근무자 목록에서 소속 부서를 볼 수 없다. 등록 때 입력한 부서는
+  서버에 저장되지만 조회 불가.
+- **연동 커밋 / 해소 예정**: (이번 iteration) / `issues.md` #8 반영 시(1안 = 응답에
+  `deptName` 추가) 열만 되살리면 됨. 그룹 B #12 섹션 종료 시 일괄 요청에 포함.
+
+### GET /api/workers → listCaseJoinWorkers 로 분리 (경호 상세 #9 / 이력 상세 #13용)
+
+#### admin 근무자 CRUD를 실 백엔드로 옮기면서, 조인용 mock 경로를 분리
+- **왜 분리했는지**: `company/api/workers.ts::listWorkers`를 실 `GetGuardList`로 교체하면,
+  아직 mock인 `SecurityCaseDetailPage`(#9)·`company/HistoryDetailPage`(#13)가 근무자
+  이름/연락처 조인에 쓰던 데이터가 바뀌어(실 `guardSeq` vs mock `worker-N`) 조인이
+  깨진다 — 아직 연동 안 한 화면의 회귀.
+- **조치**: mock 조인 경로를 `listCaseJoinWorkers`(`GET /api/workers` mock 유지) +
+  쿼리키 `['workers','case-join']`로 분리. `WorkerListPage`만 실 `listWorkers`
+  (`['workers']`) 사용. 2번(GuestListPage) 분리와 같은 처리.
+- **사용자가 잃는 것**: 없음(두 화면은 계속 mock으로 동작, 동작 불변).
+- **연동 커밋 / 해소 예정**: (이번 iteration) / #9는 `GetGuardCaseDetail` + 스케줄 조회
+  (issues #6)로, #13은 이력 상세 연동에서 각각 `listCaseJoinWorkers` 제거.

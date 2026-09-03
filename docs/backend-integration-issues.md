@@ -268,4 +268,47 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 
 ---
 
+## 8. 🔴 근무자(경호원) — `deptName`이 쓰기 전용, 조회로 다시 못 읽음
+
+**발견 경위**: 화면6([본사] 운영/시스템관리자 · 근무자 목록/등록) 연동(2026-09-03),
+`Guard/Stec/W/*` 4종 실측 중.
+
+**현재 상태**:
+- **DB에는 부서가 있다** — `GUARD_USER_INFO.DEPT_NM varchar(255) NOT NULL`
+  (`docs/db-dump/stecPgms_GUARD_USER_INFO.sql:30`, 코멘트 "부서명"). 별도 참조
+  테이블이 아니라 경호원 레코드의 필수 컬럼.
+- **INPUT도 있다** — `POST AddGuardInfo`는 `deptName`을 **required**로 받고
+  (`required: [deptName, name, sabun]`), `PATCH PatchGuardInfo`도 받는다. 실측 시
+  입력한 `deptName`이 400 없이 저장됨(= 서버가 `DEPT_NM`에 정상 기록).
+- **조회 응답에서만 빠진다** — `GET GetGuardList` 응답 항목은
+  `{ guardSeq, sabun, name, phone }`뿐, **`deptName`이 없다**. 근무자 단건 상세조회
+  API도 스웨거에 없음(`Guard/Stec/W`의 read는 `GetGuardList` 하나).
+- 즉 부서는 DB에 실제로 저장돼 있는데 백엔드가 목록 응답에 실어주지 않을 뿐이다 —
+  프론트가 그 값을 어느 화면에서도 다시 읽을 수 없다.
+
+**왜 문제인가**: 근무자 목록 화면의 "부서" 열을 채울 수 없다(실측: 화면에서 부서 열을
+제거함, `exclusions.md`). 정보수정 화면에서도 현재 부서를 prefill할 수 없어, 사용자가
+부서를 바꾸려면 값을 새로 입력해야 하고(빈 값이면 서버 기존 값 유지되도록 프론트가
+`deptName` 필드를 아예 빼고 전송), "현재 부서가 무엇인지"를 확인할 방법이 없다.
+
+**요청/제안**:
+- **`GetGuardList` 응답 항목에 `DEPT_NM`(`deptName`)을 실어달라.** 데이터는 이미 DB에
+  있고 컬럼도 `NOT NULL`이라, select 컬럼/DTO 매핑에 한 줄 추가하는 수준일 것으로 보임.
+  근무자 단건 상세 API를 새로 만들 필요는 없음. 프론트는 응답에 필드가 오면 목록/카드의
+  "부서" 열, 정보수정의 부서 prefill을 바로 되살린다.
+- (대안) `deptName`을 실제로 근무자 모델에서 안 쓸 거면 `AddGuardInfo`의 required에서
+  빼고 optional로. 지금은 "DB 필수 컬럼 + 입력 필수인데 조회에는 안 나오는" 어정쩡한 상태.
+
+**임시 처리**: 목록/카드에서 부서 열 제거(`exclusions.md`). 등록 폼의 부서 입력은 유지
+(서버 저장은 정상). 정보수정은 부서를 빈 칸으로 두고 입력했을 때만 전송.
+
+**전달**: 미전달. 그룹 B(본사 운영관리자 경호관리)는 #6~#12가 한 섹션 → **#12 섹션 종료
+시점에 일괄 요청**(`TASK.md` "백엔드 요청은 섹션 단위").
+
+**영향받는 화면/코드**: `features/company/pages/WorkerListPage.tsx`,
+`features/company/components/EditWorkerDialog.tsx`,
+`features/company/api/workers.ts`.
+
+---
+
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->

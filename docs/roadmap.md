@@ -203,6 +203,12 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
       (근무자→배치요청+배정→본사 경호목록→본사 경호상세→연장단축요청목록→관리자계정→
       본부관리자 스코프 재검증). 본사 경호 상세 직후 그룹 A의 2·4번 배정 이후 상태
       재검증. 여기까지가 본사 운영관리자 경호관리 섹션 — 종료 시 백엔드 일괄 요청.
+      - [x] 근무자 목록/등록 — `GET GetGuardList` / `POST AddGuardInfo` /
+        `PATCH PatchGuardInfo` / `DELETE DeleteGuardInfo` (2026-09-03). 4종 실측
+        (생성→수정→삭제 원상복구). 수정/삭제는 mock에 없던 기능 → 행별 `⋮` 메뉴 +
+        확인 다이얼로그 UI 신규. 부서 열 제거 — `GetGuardList` 응답에 `DEPT_NM`이
+        빠져 있음(DB엔 있음, issues #8, 섹션 #12에서 일괄 요청). 조인용
+        `listCaseJoinWorkers` 분리(#9·#13 회귀 차단).
 - [ ] **그룹 C — 이력** (본사 이력 → 경찰서 이력 → 본청/지역청 이력 + 진행중 건 상세
       조회전용). 그룹 B의 종결·취소가 터미널 데이터를 만든 뒤라야 의미 있음.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).
@@ -222,6 +228,9 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
 7. 배치요구서 수정 화면용 "배치요구서 원본 상세조회" API가 없음(2026-09-03) —
    `GetDeployDetail`은 상세페이지 표시용 "기본정보" 뷰라 배치요구서 원본 필드를 안 줌.
    화면5 보류(a안), 신규 GET 엔드포인트(`UpdateDeployRequestDto`와 대칭) 요청 예정
+8. 근무자 `deptName`이 조회 응답에 안 옴(2026-09-03) — DB(`GUARD_USER_INFO.DEPT_NM`,
+   NOT NULL)·등록/수정 INPUT엔 있는데 `GetGuardList` 응답에만 빠짐. 근무자 목록에서
+   부서 열 제거. `GetGuardList` 응답에 필드 추가 요청 예정(그룹 B 섹션 #12에서 일괄)
 
 **발견된 후속 항목 (이번 범위 밖, 별도 진행 예정)**:
 
