@@ -7,6 +7,7 @@ import {
   createSecurityCase,
   requestPeriodChange,
   securityCases,
+  updateSecurityCase,
 } from '../data/securityCases'
 import type { CaseType, ClosureReason, SecurityCase } from '../../features/police/types/securityCase'
 
@@ -45,6 +46,41 @@ function findBySeq(seq: unknown): SecurityCase | undefined {
   )
 }
 
+// AddDeployRequestDto / UpdateDeployRequestDto(서버 구조) → SecurityCaseCreateInput
+// (mock createSecurityCase/updateSecurityCase가 받는 폼 구조). 배치장소는 4필드
+// (guardHomeLoc/guardWorkLoc/guardEtcLoc1/guardEtcLoc2).
+function dtoToCreateInput(dto: Record<string, unknown>) {
+  return {
+    subject: {
+      nameInitial: String(dto.suspectName ?? ''),
+      gender: dto.suspectGender === 1 ? '여' : '남',
+      birthDate: String(dto.suspectBirthDate ?? ''),
+      occupation: String(dto.suspectJob ?? ''),
+      residence: String(dto.suspectAddress ?? ''),
+    },
+    caseType: (dto.crimeType as CaseType) ?? '사건미접수',
+    caseSummary: String(dto.caseSummary ?? ''),
+    startDate: String(dto.deploymentPeriodFrom ?? ''),
+    endDate: String(dto.deploymentPeriodTo ?? ''),
+    location: {
+      residence: String(dto.guardHomeLoc ?? ''),
+      workplace: String(dto.guardWorkLoc ?? ''),
+      etc1: String(dto.guardEtcLoc1 ?? ''),
+      etc2: String(dto.guardEtcLoc2 ?? ''),
+    },
+    additionalNotes: String(dto.caseMemo ?? ''),
+    policeContact: {
+      victimOfficer: String(dto.responsibleOfficer ?? ''),
+      investigator: String(dto.investigator ?? ''),
+    },
+    requester: {
+      dept: String(dto.clientDept ?? ''),
+      position: String(dto.clientPosition ?? ''),
+      name: String(dto.clientName ?? ''),
+    },
+  }
+}
+
 // mock SecurityCase 레코드 → GetDeployDetail 응답 data 형태.
 // 접수 단계에서 실제로 내려오는 flat 필드만 실측대로 채우고, 배정 이후 상태
 // (baseInfo/schedule/attachments 등) 화면 회귀를 오프라인으로 검증하기 위해
@@ -77,6 +113,38 @@ function toDeployDetail(c: SecurityCase) {
     docGuardDetail: null,
     docDestructionDetail: null,
     docAgreeDetail: [],
+    mock: c,
+  }
+}
+
+// mock SecurityCase → GetDeployDetailUpdate 응답 data 형태(화면5 배치요구서 수정
+// prefill). GetDeployDetail과 달리 배치요구서 원본 필드를 전부 준다. 필드명 주의:
+// 읽기 응답은 suspectBirth/etcLoc1/etcLoc2/deployStatus. mock 필드는 회귀용.
+function toDeployDetailUpdate(c: SecurityCase) {
+  return {
+    deployReqSeq: deploySeqOf(c),
+    deployStatus: c.status,
+    crimeType: c.caseType,
+    suspectUserName: c.subject.nameInitial,
+    suspectGender: c.subject.gender === '여' ? 1 : 0,
+    suspectBirth: c.subject.birthDate || null,
+    suspectJob: c.subject.occupation || null,
+    suspectAddress: c.subject.residence || null,
+    caseSummary: c.caseSummary || null,
+    periodFrom: c.startDate,
+    periodTo: c.endDate,
+    requestedEndDate: c.pendingPeriodRequest?.requestedEndDate ?? null,
+    guardWorkLoc: c.location.workplace || null,
+    guardHomeLoc: c.location.residence || null,
+    etcLoc1: c.location.etc1 || null,
+    etcLoc2: c.location.etc2 || null,
+    caseMemo: c.additionalNotes || null,
+    documentDt: c.createdAt ? c.createdAt.slice(0, 10) : null,
+    clientDept: c.requester.dept || null,
+    clientPosition: c.requester.position || null,
+    clientName: c.requester.name || null,
+    investigator: c.policeContact.investigator || null,
+    responsibleOfficer: c.policeContact.victimOfficer || null,
     mock: c,
   }
 }
@@ -126,38 +194,48 @@ export const deployTestHandlers = [
     }
 
     const dto = (await request.json()) as Record<string, unknown>
-    const record = createSecurityCase(account.name, {
-      subject: {
-        nameInitial: String(dto.suspectName ?? ''),
-        gender: dto.suspectGender === 1 ? '여' : '남',
-        birthDate: String(dto.suspectBirthDate ?? ''),
-        occupation: String(dto.suspectJob ?? ''),
-        residence: String(dto.suspectAddress ?? ''),
-      },
-      caseType: (dto.crimeType as CaseType) ?? '사건미접수',
-      caseSummary: String(dto.caseSummary ?? ''),
-      startDate: String(dto.deploymentPeriodFrom ?? ''),
-      endDate: String(dto.deploymentPeriodTo ?? ''),
-      location: {
-        residence: String(dto.deploymentPlace ?? ''),
-        workplace: '',
-        etc1: '',
-        etc2: '',
-      },
-      additionalNotes: String(dto.caseMemo ?? ''),
-      policeContact: {
-        victimOfficer: String(dto.responsibleOfficer ?? ''),
-        investigator: String(dto.investigator ?? ''),
-      },
-      requester: {
-        dept: String(dto.clientDept ?? ''),
-        position: String(dto.clientPosition ?? ''),
-        name: String(dto.clientName ?? ''),
-      },
-    })
+    const record = createSecurityCase(account.name, dtoToCreateInput(dto))
 
     const deploySeq = Number(record.id.replace(/\D/g, '')) || null
     return HttpResponse.json({ message: 'ok', data: { deploySeq }, code: 200 })
+  }),
+
+  // 화면5: 배치요구서 수정 prefill — GET Deploy/Police/W/GetDeployDetailUpdate.
+  http.get('/api/v1/Deploy/Police/W/GetDeployDetailUpdate', ({ request }) => {
+    if (!stationFromBearer(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다.', data: null, code: 401 }, { status: 401 })
+    }
+    const seq = new URL(request.url).searchParams.get('deployReqSeq')
+    const record = findBySeq(seq)
+    if (!record) {
+      return HttpResponse.json(
+        { message: '존재하지 않는 배치요구서입니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    return HttpResponse.json({ message: 'ok', data: toDeployDetailUpdate(record), code: 200 })
+  }),
+
+  // 화면5: 배치요구서 수정 저장 — PUT Deploy/Police/W/UpdateDeployRequest.
+  // DTO를 SecurityCaseCreateInput으로 되돌려 mock updateSecurityCase에 넘긴다.
+  http.put('/api/v1/Deploy/Police/W/UpdateDeployRequest', async ({ request }) => {
+    const account = stationFromBearer(request)
+    if (!account || account.role !== '경찰서') {
+      return HttpResponse.json(
+        { message: '수정 권한이 없습니다.', data: null, code: 403 },
+        { status: 403 },
+      )
+    }
+    const dto = (await request.json()) as Record<string, unknown>
+    const record = findBySeq(dto.deployReqSeq)
+    if (!record) {
+      return HttpResponse.json(
+        { message: '존재하지 않는 배치요구서입니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    updateSecurityCase(record.id, dtoToCreateInput(dto))
+    return HttpResponse.json({ message: 'ok', data: true, code: 200 })
   }),
 
   // 화면4: 경호 상세 조회 — GET Deploy/Police/W/GetDeployDetail?deployReqSeq=

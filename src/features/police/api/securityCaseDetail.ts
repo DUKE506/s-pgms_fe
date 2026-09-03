@@ -2,6 +2,7 @@ import { apiFetch } from '../../auth/api/client'
 import { useAuthStore } from '../../auth/store/authStore'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
+import { genderCodeToLabel } from '@/shared/lib/subject'
 import type { CaseType, ClosureReason, SecurityCase, SecurityCaseStatus } from '../types/securityCase'
 
 // 화면4: [경찰서] 피전 · 경호 상세 — 백엔드 연동(matrix 4번).
@@ -99,7 +100,7 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
 // 실제 백엔드는 deployReqSeq를 정수로 받는다. vitest 테스트 더블은 mock 레코드의
 // 문자열 id(예: 'case-seed-1')를 그대로 넘겨야 매칭되므로, 숫자 문자열일 때만
 // 정수로 바꾸고 그 외엔 원본 문자열을 넘긴다.
-function toSeq(id: string): number | string {
+export function toSeq(id: string): number | string {
   return /^\d+$/.test(id) ? Number(id) : id
 }
 
@@ -113,6 +114,94 @@ export async function getSecurityCase(id: string): Promise<SecurityCase> {
   const d = await unwrapEnvelope<DeployDetailData>(res)
   const mapped = toSecurityCase(id, d)
   // d.mock은 테스트 더블에서만 온다(위 DeployDetailData 주석 참고).
+  return d.mock ? { ...mapped, ...d.mock, id } : mapped
+}
+
+// 화면5: [경찰서] 피전 · 배치요구서 수정 — prefill 소스.
+// GET Deploy/Police/W/GetDeployDetailUpdate?deployReqSeq= (2026-09-03 실측).
+// GetDeployDetail(상세페이지용 "기본정보" 뷰)과 달리 배치요구서 원본 필드를 전부
+// 준다 — 성별/생년월일/직업/사건개요/참고사항/배치장소 4필드. 배정 이후 상태에서도
+// 200(deployStatus로 구분). 응답에 mgmtNo는 없다(수정 화면 breadcrumb은 그 없이 표시).
+// 필드명 주의: 읽기 응답은 suspectBirth/etcLoc1/etcLoc2/deployStatus, 쓰기 DTO는
+// suspectBirthDate/guardEtcLoc1/guardEtcLoc2.
+interface DeployDetailUpdateData {
+  deployReqSeq: number
+  deployStatus: string
+  crimeType: string | null
+  suspectUserName: string | null
+  suspectGender: number | null
+  suspectBirth: string | null
+  suspectJob: string | null
+  suspectAddress: string | null
+  caseSummary: string | null
+  periodFrom: string | null
+  periodTo: string | null
+  requestedEndDate: string | null
+  guardWorkLoc: string | null
+  guardHomeLoc: string | null
+  etcLoc1: string | null
+  etcLoc2: string | null
+  caseMemo: string | null
+  documentDt: string | null
+  clientDept: string | null
+  clientPosition: string | null
+  clientName: string | null
+  investigator: string | null
+  responsibleOfficer: string | null
+
+  // 테스트 더블만 채우는 필드 — getSecurityCase의 mock과 같은 처리.
+  mock?: SecurityCase
+}
+
+function toSecurityCaseFromEdit(id: string, d: DeployDetailUpdateData): SecurityCase {
+  return {
+    id,
+    // GetDeployDetailUpdate 응답엔 mgmtNo가 없다. 수정 화면 breadcrumb만 쓰던 값이라
+    // 빈 값으로 두고 화면 쪽에서 처리한다.
+    receiptNumber: '',
+    policeStation: useAuthStore.getState().user?.groupName ?? '',
+    jurisdiction: '',
+    status: d.deployStatus as SecurityCaseStatus,
+    caseType: (d.crimeType as CaseType) || '사건미접수',
+    subject: {
+      nameInitial: d.suspectUserName ?? '',
+      gender: d.suspectGender != null ? genderCodeToLabel(d.suspectGender) : '',
+      birthDate: d.suspectBirth ?? '',
+      occupation: d.suspectJob ?? '',
+      residence: d.suspectAddress ?? '',
+    },
+    caseSummary: d.caseSummary ?? '',
+    startDate: d.periodFrom ?? '',
+    endDate: d.periodTo ?? '',
+    location: {
+      residence: d.guardHomeLoc ?? '',
+      workplace: d.guardWorkLoc ?? '',
+      etc1: d.etcLoc1 ?? '',
+      etc2: d.etcLoc2 ?? '',
+    },
+    additionalNotes: d.caseMemo ?? '',
+    policeContact: {
+      victimOfficer: d.responsibleOfficer ?? '',
+      investigator: d.investigator ?? '',
+    },
+    requester: {
+      dept: d.clientDept ?? '',
+      position: d.clientPosition ?? '',
+      name: d.clientName ?? '',
+    },
+    createdAt: d.documentDt ?? '',
+  }
+}
+
+export async function getDeployRequestForEdit(id: string): Promise<SecurityCase> {
+  const res = await apiFetch(
+    `/v1/Deploy/Police/W/GetDeployDetailUpdate?deployReqSeq=${encodeURIComponent(id)}`,
+  )
+  if (!res.ok) {
+    throw new Error('배치요구서를 불러오지 못했습니다')
+  }
+  const d = await unwrapEnvelope<DeployDetailUpdateData>(res)
+  const mapped = toSecurityCaseFromEdit(id, d)
   return d.mock ? { ...mapped, ...d.mock, id } : mapped
 }
 

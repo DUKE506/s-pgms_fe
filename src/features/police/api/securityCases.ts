@@ -3,25 +3,20 @@ import { useAuthStore } from '../../auth/store/authStore'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderLabelToCode } from '@/shared/lib/subject'
+import { toSeq } from './securityCaseDetail'
 import type {
   SecurityCase,
   SecurityCaseCreateInput,
   SecurityCaseStatus,
 } from '../types/securityCase'
 
-// 화면3: 접수/배치요구서 작성 → POST Deploy/Police/W/AddDeployRequest.
-// SecurityCaseCreateInput(폼 구조) → AddDeployRequestDto(서버 구조)로 매핑한다.
-// groupSeq는 로그인 시 GetMyProfile로 받아 세션에 저장한 값(GetDeployList와 동일).
-//
-// ⚠️ D-2(2026-09-02): 실제 API는 배치장소가 deploymentPlace 단일 필드인데 폼은
-// 주거지/직장지/기타1/기타2 4필드다. 백엔드에 4필드 확장을 요청해둔 상태
-// (docs/backend-integration-issues.md #5)라, 확장 전까지는 주거지만 전송하고
-// 나머지 3개는 임시 제외한다(docs/backend-integration-exclusions.md).
-export async function createSecurityCase(input: SecurityCaseCreateInput): Promise<void> {
-  const groupSeq = useAuthStore.getState().user?.groupSeq
-
-  const body = {
-    groupSeq,
+// SecurityCaseCreateInput(폼 구조) → Add/UpdateDeployRequestDto 공통 필드.
+// 신규접수(AddDeployRequest)와 배치요구서 수정(UpdateDeployRequest)이 대칭 DTO라
+// 매핑을 공유한다. 배치장소는 서버가 guardHomeLoc/guardWorkLoc/guardEtcLoc1/
+// guardEtcLoc2 4필드를 받는다(2026-09-03 백엔드 수정 반영 — 이전엔 deploymentPlace
+// 단일 필드로 알고 주거지만 보내던 D-2 임시처리였음). 빈 문자열은 null로 보낸다.
+function toDeployRequestDto(input: SecurityCaseCreateInput) {
+  return {
     suspectName: input.subject.nameInitial,
     suspectGender: genderLabelToCode(input.subject.gender),
     suspectBirthDate: input.subject.birthDate,
@@ -31,7 +26,10 @@ export async function createSecurityCase(input: SecurityCaseCreateInput): Promis
     caseSummary: input.caseSummary,
     deploymentPeriodFrom: input.startDate,
     deploymentPeriodTo: input.endDate,
-    deploymentPlace: input.location.residence, // D-2: 주거지만 (위 주석 참고)
+    guardHomeLoc: input.location.residence || null,
+    guardWorkLoc: input.location.workplace || null,
+    guardEtcLoc1: input.location.etc1 || null,
+    guardEtcLoc2: input.location.etc2 || null,
     caseMemo: input.additionalNotes,
     documentDt: new Date().toISOString().slice(0, 10),
     clientDept: input.requester.dept,
@@ -40,11 +38,17 @@ export async function createSecurityCase(input: SecurityCaseCreateInput): Promis
     investigator: input.policeContact.investigator,
     responsibleOfficer: input.policeContact.victimOfficer,
   }
+}
+
+// 화면3: 접수/배치요구서 작성 → POST Deploy/Police/W/AddDeployRequest.
+// groupSeq는 로그인 시 GetMyProfile로 받아 세션에 저장한 값(GetDeployList와 동일).
+export async function createSecurityCase(input: SecurityCaseCreateInput): Promise<void> {
+  const groupSeq = useAuthStore.getState().user?.groupSeq
 
   const res = await apiFetch('/v1/Deploy/Police/W/AddDeployRequest', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ groupSeq, ...toDeployRequestDto(input) }),
   })
 
   if (!res.ok) {
@@ -124,19 +128,20 @@ export async function listGuestScopeSecurityCases(): Promise<SecurityCase[]> {
   return res.json() as Promise<SecurityCase[]>
 }
 
-// 화면5: 배치요구서 수정 — 접수/배정은 배치기간 포함 전체, 경호중 이후는
-// 화면단에서 배치기간 입력을 막아둔 채로 그대로 전송한다.
+// 화면5: 배치요구서 수정 → PUT Deploy/Police/W/UpdateDeployRequest.
+// AddDeployRequest와 대칭 DTO + deployReqSeq. 접수/배정은 배치기간 포함 전체 수정,
+// 경호중 이후는 화면단에서 배치기간 입력을 막고(스웨거 설명상 서버도 배정 후 배치기간
+// 무시) 그대로 전송한다. 성공 응답은 {data:true}뿐 — 호출부는 상세로 이동만 한다.
 export async function updateSecurityCase(
   id: string,
   input: SecurityCaseCreateInput,
-): Promise<SecurityCase> {
-  const res = await apiFetch(`/security-cases/${id}`, {
+): Promise<void> {
+  const res = await apiFetch('/v1/Deploy/Police/W/UpdateDeployRequest', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ deployReqSeq: toSeq(id), ...toDeployRequestDto(input) }),
   })
   if (!res.ok) {
     throw new Error('배치요구서 수정에 실패했습니다')
   }
-  return res.json() as Promise<SecurityCase>
 }
