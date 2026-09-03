@@ -1,6 +1,10 @@
 # 진행 상태
 
-상태값: `대기` / `구현중` / `승인대기` / `완료`
+상태값: `대기` / `구현중` / `승인대기` / `부분완료(△)` / `완료`
+
+`부분완료(△)` = 엔드포인트 교체는 끝났으나 실백엔드 데이터가 없어 일부 경로만 실측
+검증된 상태. 남은 경로는 비고에 적은 후속 번호에서 재검증해야 하며, 그전까지 `완료`로
+올리지 않는다.
 
 각 화면의 상세 API 목록은 `docs/backend-integration-screen-api-matrix.md` 참고. 이 표는
 **그 문서의 "권장 진행 순서"와 동일한 순서**로 정렬돼 있다. 큰 틀은 계정권한 단위로
@@ -14,7 +18,7 @@
 | 1 | 공통 | 로그인 | 완료 | `008383a` | 경찰/본사 실제로는 같은 엔드포인트 — 유일하게 역할보다 먼저 |
 | 2 | [경찰서] 피전 | 경찰서 경호목록 | 완료 | `2679751` | 스코프는 서버가 403으로 강제(analysis.md 4-6 해소). 3번 직후 재검증 완료(새 접수 반영·mgmtNo 조합형태 확인). **배정 이후 상태 문자열은 여전히 미검증 → 12·16번 이후 재검증** |
 | 3 | [경찰서] 피전 | 접수/배치요구서 작성 | 완료 | (이번 커밋) | `POST AddDeployRequest`. 2번 재검증 동시 소화(새 접수 반영·mgmtNo 조합형태·"접수" 라벨 확인). 배치장소는 API가 단일 필드라 주거지만 전송(D-2, issues #5). 폼: 요구자 3필드 분리 + 생년월일 입력(+ `DateField` yearGrid) |
-| 4 | [경찰서] 피전 | 경호 상세 | 대기 | | 접수 단계만 우선 검증, 배정 이후 상태는 12번 이후 재검증 |
+| 4 | [경찰서] 피전 | 경호 상세 | 부분완료(△) | | **접수 상태만 실측 검증**(2026-09-03, 사용자 확인). 상세 조회·접수취소 정상. 배정 이후(경호취소·연장·단축·종결)는 실백엔드에 데이터가 없어 코드만 실엔드포인트로 교체하고 **미검증** → 12번(본사 경호 상세)에서 배정 데이터 생성 후 재검증 필수. 근무 스케줄/근무자 표시는 조회 API 누락(issues #6)이라 mock 연결 끊음 — #6 API 나오면 재연결. **완료 표시 보류** |
 | 5 | [경찰서] 피전 | 배치요구서 수정 | 대기 | | |
 | 6 | [경찰서] 피전 | 게스트 계정 관리 | 대기 | | 아이디 미리보기 이슈(issues.md #3) |
 | 7 | [경찰서] 피전 | 이력 조회 | 대기 | | 이 시점엔 접수취소 정도만 있을 수 있음 — 16번 이후 재확인 |
@@ -34,6 +38,48 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-03: 4번([경찰서] 피전 · 경호 상세) — **접수 상태만 부분 연동/검증(△, 완료 아님)**.
+  `securityCaseDetail.ts` 5개 함수를 mock(`/security-cases/*`)에서 실엔드포인트로 교체:
+  조회 `GET Deploy/Police/W/GetDeployDetail`, 접수취소·경호취소 공용 `POST CancelGuardCase`,
+  연장/단축 `PATCH Extend|ShortenDeployPeriod`, 종결 `POST CloseGuardCase`. `splitMgmtNo`를
+  `shared/lib/managementNumber.ts`로 추출(목록 연동과 공유). 취소/연장/종결 함수 반환형은
+  `Promise<SecurityCase>` → `Promise<void>`(호출부가 결과를 안 씀).
+
+  검증 범위: **접수 상태 상세 조회만 사용자 확인**. 접수취소는 버려도 되는 84·85번 건을
+  새로 만들어 end-to-end 검증(생성 → UI/curl 취소 → 목록에서 사라짐, 81·82 무손상). 배정
+  이후가 필요한 경호취소·연장·단축·종결은 실백엔드에 배정 건이 없어 **코드만 교체하고
+  미검증**. 종결 DTO는 `caseSeq`를 요구하는데 `GetDeployDetail`이 안 줘서 `deployReqSeq`를
+  임시로 넘김 — 12번에서 `GetGuardCaseDetail` 분기와 함께 재검증/수정.
+
+  주요 발견: (a) `GetDeployDetail` 접수단계 응답은 `startDt`/`endDt` null, 경호기간은
+  `periodFrom`/`periodTo`. 배치장소 4필드(`guardHomeLoc` 등)는 스키마에 존재하나 전부
+  null(작성 때 D-2로 주거지만 보낸 값도 안 돌아옴) — issues #5 보강. (b) 성별·생년월일·
+  직업·사건개요·참고사항 없음 → 5번(배치요구서 수정) prefill에서 별도 확인 필요
+  (exclusions.md `경호 상세` 섹션). (c) 상세 진입 시 `RefreshToken` 4회 호출 문제 —
+  원인은 `SecurityCaseDetailPage`가 mock 전용 `GET /api/workers`(본사 `GetGuardList`)를
+  근무자 조인용으로 부르던 것. 실백엔드에서 401 → RefreshToken → React Query retry×3로
+  증폭. 백엔드 확인 결과 **경호 상세에서 배정된 근무 스케줄을 조회하는 API 자체가 누락**
+  (issues #6 신규). mock 연결을 끊어(`workers = []`) 상세 진입 API 호출을 `GetDeployDetail`
+  1건으로 축소, 콘솔 에러 없음 확인.
+
+  인프라: `mocks/handlers/deploy.ts`에 테스트 전용 더블 5개 추가(`GetDeployDetail` 외 4종).
+  `GetDeployDetail` 더블은 `mock` 필드로 전체 `SecurityCase` 레코드를 실어 보내 배정 이후
+  상태(baseInfo/schedule/attachments 등) 화면 회귀를 vitest 오프라인으로 유지 — 12번
+  실측에서 정리.
+
+  검증: `npm run test`(114/114)·lint·build 통과. 실백엔드 `run-s-pgms` — 동래
+  (`SPoliceM5`) 로그인 → 경호목록 → 접수건 상세 진입 정상 렌더, 접수취소 end-to-end,
+  콘솔 에러 없음. 응답 샘플: `docs/backend-integration-responses/Deploy-Police-GetDeployDetail.md`,
+  `Deploy-Police-CancelGuardCase.md`.
+
+  ⚠️ **완료 표시 보류** — 배정 이후 상태 + 12번(본사 경호 상세) 이후 재확인 필요.
+
+- 2026-09-03: (작업 순서 관련 사용자 의견 — 아직 확정 아님) 경찰 경호관리 화면군(2~5번)이
+  끝나면, 남은 순서를 loop-screens 때처럼 **메인 워크플로우 우선**으로 재정렬하는 방안
+  검토. 지금 표는 "피전 게스트관리(6) → 피전 이력(7) → 게스트(8) → 본사..." 순인데, 이걸
+  본사 메인 흐름(배치요청 → 배정 → 경호목록 → 경호 상세)을 먼저 하고 근무자·이력·게스트를
+  뒤로 미루는 쪽으로. 5번 착수 전후에 사용자와 순서 재논의 후 표/roadmap 재정렬.
 
 - 2026-09-02: 3번([경찰서] 피전 · 접수/배치요구서 작성) 연동 완료. `createSecurityCase`를
   mock(`POST /security-cases`) → `POST Deploy/Police/W/AddDeployRequest`로 교체.

@@ -101,6 +101,67 @@
 #### `crimeType`을 라벨 문자열 그대로 전송
 - **왜 제외했는지**: DB `DEPLOY_REQUEST.CRIME_TYPE` 코멘트는 "범죄유형 코드"지만 대응하는
   코드표(`BASIC_CODE`)가 없음. 폼은 사건유형 라벨('스토킹' 등)을 그대로 씀.
-- **사용자가 잃는 것**: 없음(추정) — 서버가 라벨 문자열을 그대로 저장할 것으로 보고 전송.
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 화면4(상세) 연동 시 생성한 건을
-  `GetDeployDetail`로 읽어 round-trip이 맞는지 확인, 코드 체계가 따로 있으면 그때 매핑 추가.
+- **사용자가 잃는 것**: 없음 — 화면4 연동 검증에서 `GetDeployDetail`의 `crimeType`이
+  `"스토킹"` 문자열로 그대로 돌아오는 것 확인(round-trip 정상).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 해소 불필요(문자열 저장 확인됨).
+
+---
+
+## 경호 상세 (`/security-cases/:id`)
+
+### GET /api/v1/Deploy/Police/W/GetDeployDetail — 상세 조회
+
+#### `caseSummary`(사건개요) / `additionalNotes`(참고사항) / 대상자 성별·생년월일·직업
+- **왜 제외했는지**: `GetDeployDetail` 응답이 이 필드들을 돌려주지 않는다(`AddDeployRequest`
+  로는 보냈지만 상세 조회 스키마에 없음).
+- **사용자가 잃는 것**: 경찰 상세 화면(화면4)은 원래 이 필드들을 표시하지 않으므로 **화면4
+  영향 없음**. 다만 같은 `getSecurityCase`를 프리필에 쓰는 **배치요구서 수정(화면5,
+  `SecurityCaseEditPage`)에서 사건개요·성별·생년월일·직업 칸이 빈 값으로 뜬다** — 화면5는
+  이번 iteration 대상이 아니므로 여기 기록만 하고, 화면5 착수 시 `UpdateDeployRequest`
+  왕복 또는 별도 조회 스펙으로 프리필 소스를 확정한다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / matrix 5번(배치요구서 수정) 연동 시.
+
+#### 배치장소 4필드가 전부 빈 값 (`guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2`)
+- **왜 제외했는지**: 응답 스키마엔 4필드가 있으나(→ `location.*`로 매핑함), #3의 D-2
+  임시처리로 생성 시 `deploymentPlace` 단일 필드만 보냈고 서버가 그 값을 `guardHomeLoc`
+  등에 매핑하지 않아 전부 `null`로 내려온다(issues.md #5).
+- **사용자가 잃는 것**: 상세 화면 "배치장소" 4칸이 전부 "-"로 표시(#3에서 이미 예고된 상태).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #5의 백엔드 4필드 확장 반영 시.
+
+#### `jurisdiction`(관할 지방청) — 목록 연동과 동일
+- **왜 제외했는지**: `GetDeployDetail` 응답에 관할 정보 없음. 세션 `groupName`으로 상단
+  소속 표기를 대체(목록 연동과 같은 처리).
+- **사용자가 잃는 것**: 상단 소속 표기가 계정명(`groupName`)만. 상세 데이터엔 영향 없음.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 백엔드 응답에 관할 필드 추가 시.
+
+### POST CancelGuardCase (경호취소) / PATCH ExtendDeployPeriod·ShortenDeployPeriod / POST CloseGuardCase
+
+#### 배정 이후 상태 4종(경호취소/연장/단축/종결)은 코드만 교체, 실측 미검증
+- **왜 제외했는지**: 이 액션들은 배정~경호완료 상태에서만 열리는데, 실제 백엔드에 아직
+  배정된 건이 없어 재현 불가(matrix 4번 비고).
+- **사용자가 잃는 것**: 없음(현재 접수 상태 건만 존재). 실 엔드포인트로 교체는 해뒀으나
+  응답/부작용은 미확인.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / matrix 12번(본사 경호 상세로 배정→
+  경호중→경호완료 데이터 생성) 이후 재검증. 특히 `CloseGuardCase`는 `caseSeq`가 필요한데
+  `GetDeployDetail`이 안 주므로, 그 시점에 `GetGuardCaseDetail` 분기와 함께 정리.
+
+### (제거) GET /api/workers (listWorkers) — 상세 페이지가 근무자 이름/연락처 조인용으로 호출하던 것
+
+#### 근무자 마스터 목록 조인 방식 자체를 폐기 — mock 호출 제거
+- **왜 제외했는지**: 상세 페이지가 근무자 배정 패널(`WorkerAssignmentPanel`)·개인정보
+  동의서 카드(`ConsentDocsCard`)를 채우려고 mock 근무자 마스터 목록(`GET /api/workers`)을
+  받아 `workerId`로 클라이언트 조인했는데 — (1) 그 API(`GET Guard/Stec/W/GetGuardList`)는
+  **본사 전용**이라 피전(경찰서) 계정이 호출 불가, (2) 백엔드 확인 결과 **경호 상세에서
+  근무 스케줄을 조회하는 API 자체가 누락**(2026-09-02, `docs/backend-integration-issues.md`
+  #6). mock인 채로 두면 실백엔드 로그인 시 `/api/workers`가 401 → `apiFetch`의 refresh +
+  React Query retry×3가 겹쳐 `RefreshToken`이 4회 호출되고 상세 진입이 느려졌다.
+- **조치**: `SecurityCaseDetailPage.tsx`에서 `listWorkers`/`workersQuery` 호출을 제거하고
+  `workers`를 빈 배열로 넘긴다. 두 카드는 그대로 렌더되지만 근무자 이름 대신 `workerId`,
+  연락처는 "-"가 표시된다.
+- **사용자가 잃는 것**: 접수 단계는 스케줄·명부 자체가 없어 영향 없음(두 카드 미표시).
+  배정 이후 상태에서 근무자 이름/연락처가 ID로만 표시된다 — 단 배정 이후는 어차피
+  matrix 12번 이후 검증 대상이고, 그 시점엔 근무 스케줄 조회 API(issues #6)가 개발돼
+  있어야 두 카드를 제대로 채울 수 있다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #6(경호 상세 근무 스케줄
+  조회 API 신설) 반영 시 `WorkerAssignmentPanel`/`ConsentDocsCard`를 그 응답으로 다시
+  연결(스케줄·근무자 정보 embed 예상). matrix 12번에서 함께 처리.

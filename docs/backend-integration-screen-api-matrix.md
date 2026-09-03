@@ -31,9 +31,11 @@
    반영·`mgmtNo` 조합형태(`"YY-MM-경찰서명 접수"`)·`statusName` "접수" 확인. 결정 3건:
    요구자 3필드 분리, 생년월일 입력(만나이 계산), 배치장소는 API가 단일 필드라
    **주거지만 전송(D-2, issues #5로 4필드 확장 요청)**
-4. **[경찰서] 피전 — 경호 상세** (조회 + 접수취소/연장단축요청/종결) — 접수 단계는
-   지금 검증 가능. 배정 이후 상태(연장/단축/경호취소/종결)는 아직 배정된 건이 없어
-   12번(본사 경호 상세) 이후에 재검증
+4. **[경찰서] 피전 — 경호 상세** (조회 + 접수취소/연장단축요청/종결) — △ **부분 연동
+   (2026-09-03, 완료 아님)**. 접수 상태 상세 조회·접수취소는 실측 검증 완료. 배정 이후
+   상태(연장/단축/경호취소/종결)는 배정된 건이 없어 코드만 실엔드포인트로 교체·미검증
+   → 12번(본사 경호 상세)에서 배정 데이터 생성 후 재검증. 경호 상세용 근무 스케줄 조회
+   API 누락(issues #6)으로 근무자 표시는 mock 연결 끊음
 5. **[경찰서] 피전 — 배치요구서 수정**
 6. **[경찰서] 피전 — 게스트 계정 관리** (목록 → 발급 → 수정 → 삭제)
 7. **[경찰서] 피전 — 이력 조회** — 이 시점엔 접수취소 데이터 정도만 있고 종결 데이터는
@@ -86,11 +88,12 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회 | `getSecurityCase` | `GetDeployDetail` / `GetGuardCaseDetail` | 배정 이후 상태(연장/단축요청 등)는 12번(본사 경호 상세) 이후에나 재현 가능 |
-| 접수취소 | `cancelPendingCase` | `POST CancelGuardCase` | 접수 단계에서 바로 검증 가능 |
-| 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | 위와 동일 엔드포인트 — 배정 이후 상태 필요, 12번 이후 재검증 |
-| 연장/단축 요청 | `requestPeriodChange` | `PATCH ExtendDeployPeriod` / `ShortenDeployPeriod` | 배정 이후 상태 필요, 12번 이후 재검증 |
-| 종결 | `closeCase` | `POST CloseGuardCase` | 배정 이후 상태 필요, 12번 이후 재검증. 종결 시 배치요구서·첨부파일 3종이 실제로 삭제됨(mock은 안 지움) — 이력 화면 영향(analysis.md 6-5) |
+| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail` (배정 이후는 `GetGuardCaseDetail` 분기 예정) | △ 연동(2026-09-03), **접수 상태만 실측**. 접수단계 응답: `startDt`/`endDt` null(기간은 `periodFrom`/`periodTo`), 배치장소 4필드(`guardHomeLoc` 등) 존재하나 전부 null, 성별·생년월일·직업·사건개요·참고사항 없음(→ 배치요구서 수정 prefill에서 별도 확인). 배정 이후 `GetGuardCaseDetail` 분기·`caseSeq` 확보는 12번. 응답 샘플: `Deploy-Police-GetDeployDetail.md` |
+| 접수취소 | `cancelPendingCase` | `POST CancelGuardCase` | ✅ 연동+검증 완료(2026-09-03). 성공 `{data:true}` + 하드 삭제, 실패 시 400 `{data:false}`. 응답 샘플: `Deploy-Police-CancelGuardCase.md` |
+| 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 12번 이후 재검증 |
+| 연장/단축 요청 | `requestPeriodChange` | `PATCH ExtendDeployPeriod` / `ShortenDeployPeriod` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 12번 이후 재검증 |
+| 종결 | `closeCase` | `POST CloseGuardCase` | △ 코드만 교체, **미검증**. ⚠️ DTO가 `caseSeq`를 요구하나 `GetDeployDetail`이 안 줘서 `deployReqSeq`를 임시 전송 → 12번(`GetGuardCaseDetail`) 재검증/수정. 종결 시 배치요구서·첨부파일 3종이 실제로 삭제됨(mock은 안 지움) — 이력 화면 영향(analysis.md 6-5) |
+| 근무 스케줄 / 근무자 표시 | (mock `listWorkers` 조인) | ⚠️ **없음** | issues #6 — 경호건에 배정된 근무 스케줄을 조회하는 API 누락(백엔드 확인 2026-09-02). 임시로 `SecurityCaseDetailPage`에서 mock `listWorkers` 호출 제거, `workers=[]`. #6 API 나오면 재연결(12번 이후) |
 
 #### 배치요구서 수정 (`/security-cases/:id/edit`)
 

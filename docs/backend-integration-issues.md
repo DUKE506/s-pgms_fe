@@ -134,7 +134,17 @@ Login-ChangePassword.md`).
 **현재 상태**: 우리 신규접수 폼(5번 섹션 "배치장소")은 주거지·직장지·기타1·기타2 4개
 입력을 받아 `SecurityCase.location` 4필드로 저장한다. 실제 API(`AddDeployRequestDto`/
 `UpdateDeployRequestDto`)와 DB(`DEPLOY_REQUEST.DEPLOYMENT_PLACE varchar(255)`)는 배치장소가
-**단일 문자열 1개**뿐이다. 상세 응답(`GetDeployDetail`, 화면4)도 같은 구조일 것으로 추정.
+**단일 문자열 1개**(`deploymentPlace`)뿐이다.
+
+**화면4 연동으로 추가 확인된 것(2026-09-02)**: `GetDeployDetail` **응답에는 배치장소가
+4필드로 존재한다** — `guardHomeLoc` / `guardWorkLoc` / `guardEtcLoc1` / `guardEtcLoc2`.
+즉 **읽기 쪽 스키마는 이미 4필드를 지원하고, 쓰기 DTO(`AddDeployRequestDto.
+deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`에 주거지 값을
+보냈는데 `GetDeployDetail`의 `guardHomeLoc`을 포함해 4필드 전부 `null`로 내려온다 —
+`deploymentPlace`(단일 컬럼)와 `guardHomeLoc`(4필드)이 서로 다른 저장소이고, 생성
+시점에 단일→4필드 매핑이 안 걸린 것으로 보인다. **결론: 쓰기 DTO에 4필드를 추가하고
+생성 시 `guardHomeLoc` 등에 저장되도록 해주면 읽기(`GetDeployDetail`)는 그대로 쓸 수
+있다.**
 
 **왜 문제인가**: 경호 대상자는 보통 주거지와 직장 등 복수 지점에서 경호를 받고, 근무
 스케줄·근무조도 장소별로 편성된다(이미 승인된 화면 설계). 4필드를 1필드에 합쳐 저장하면
@@ -155,7 +165,51 @@ Login-ChangePassword.md`).
 
 **영향받는 화면/코드**: `SecurityCaseForm.tsx`(5번 섹션), `features/police/api/securityCases.ts`
 (`createSecurityCase`/`updateSecurityCase` 매핑), `DispatchRequestViewDialog.tsx`,
-`features/police/api/securityCaseDetail.ts`(화면4 연동 시), `mocks/data/securityCases.ts`.
+`features/police/api/securityCaseDetail.ts`(화면4 — 지금은 `guardHomeLoc` 등 4필드를
+`location.*`로 매핑, D-2로 전부 빈 값), `mocks/data/securityCases.ts`.
+
+---
+
+## 6. 🟡 경호 상세에서 "경호건에 배정된 근무 스케줄"을 조회하는 API가 누락됨
+
+**발견 경위**: 화면4([경찰서] 피전 · 경호 상세) 연동 중(2026-09-02). 상세 페이지가
+근무자 배정 패널(`WorkerAssignmentPanel`)·개인정보동의서 카드(`ConsentDocsCard`)를
+채우려고 근무자 마스터 목록(`GET /api/workers`, mock 전용)을 호출하고 있었는데, 실제
+백엔드 연동 대상 엔드포인트를 찾다 **해당 API가 스웨거에 없음**을 확인. 백엔드 개발자에게
+문의한 결과 **"경호 상세에서 근무 스케줄을 조회하는 API를 누락했다"**는 답변을 받음
+(2026-09-02).
+
+**현재 상태**:
+- mock에서는 `SecurityCase.workSchedule.days[].groups[].assignments[].workerId`와
+  `baseInfo.defaultWorkers[].workerId`처럼 **근무자 ID만** 케이스 데이터에 들어 있고,
+  화면이 그 ID를 근무자 마스터 목록(`GET /api/workers`)과 클라이언트에서 조인해
+  이름·연락처를 표시했다.
+- 실제 백엔드에는 (a) 경호건별 근무 스케줄(일자별 근무조·근무자·시간)을 돌려주는
+  조회 엔드포인트가 없고, (b) `GetDeployDetail`/`GetGuardCaseDetail` 응답에도 스케줄
+  블록이 없다(`GetDeployDetail`은 `docAgreeDetail: []` 정도만).
+- 참고: 근무자 마스터 목록 API(`GET Guard/Stec/W/GetGuardList`)는 **본사 전용**이라
+  피전(경찰서) 계정이 호출할 수 없다 — 애초에 이 방식으로는 실백엔드에서 동작 불가.
+
+**왜 문제인가**: 경찰 경호 상세의 우측 "근무자 배정" 카드와 "보안서약 및
+개인정보동의서" 카드가 이미 승인된 화면인데, 이를 채울 데이터 소스가 실백엔드에 없다.
+배정 이후 상태(경호중/경호완료)에서 이 두 카드가 항상 비게 된다.
+
+**요청/제안**:
+1. 경호건(`deployReqSeq`/`caseSeq`) 기준으로 **일자별 근무 스케줄 + 각 근무자의 표시
+   정보(이름/사번/연락처)를 embed**해서 돌려주는 조회 엔드포인트 신설
+   (예: `GET Deploy/Police/W/GetCaseSchedule` 또는 `GetGuardCaseDetail` 응답에 스케줄
+   블록 추가). 근무자 정보는 ID만 주고 프론트가 다시 조인하게 하지 말 것(피전은 근무자
+   마스터에 접근 권한 없음).
+2. 개인정보동의서(`docAgreeDetail`)도 같은 응답에 근무자별로 실어줄 것.
+
+**임시 처리(연동 진행)**: 화면4 연동에서 `SecurityCaseDetailPage`의 mock
+`listWorkers`(`GET /api/workers`) 호출을 **제거**했다. `workers`를 빈 배열로 넘겨
+두 카드는 렌더되지만 근무자 이름 대신 ID가, 연락처는 "-"가 표시된다(접수 단계에선
+스케줄·명부 자체가 없어 영향 없음). 상세는 `docs/backend-integration-exclusions.md` 참고.
+
+**영향받는 화면/코드**: `features/police/pages/SecurityCaseDetailPage.tsx`,
+`WorkerAssignmentPanel.tsx`, `ConsentDocsCard.tsx`, `features/police/api/workers.ts`
+(`listWorkers` — 경찰 이력 상세에서는 아직 사용), `features/police/api/securityCaseDetail.ts`.
 
 ---
 
