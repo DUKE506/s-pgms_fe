@@ -120,6 +120,17 @@ const COMMANDS = {
     console.log('click', sel, '-> ok')
   },
 
+  // 파일 업로드: upload <input셀렉터> <파일경로>. <input type=file>에 파일을 주입한다
+  // (숨겨진 input이면 셀렉터로 직접 지정). 예: upload input[type=file] C:/tmp/a.pdf
+  async upload(args) {
+    if (!page) return console.log('ERROR: launch first')
+    const i = args.lastIndexOf(' ')
+    const sel = args.slice(0, i)
+    const file = args.slice(i + 1)
+    await page.setInputFiles(sel, file)
+    console.log('upload', sel, '<-', file, '-> ok')
+  },
+
   async 'click-text'(text) {
     if (!page) return console.log('ERROR: launch first')
     await page.click(`text=${text}`)

@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
-import { FileText } from 'lucide-react'
+import { Download, FileText } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  setDestructionCertFile,
-  setSecurityPlanFile,
-  setWorkerConsentFile,
+  downloadDestructionCert,
+  uploadDestructionCertDoc,
+  uploadSecurityPlanDoc,
+  uploadWorkerConsentDoc,
 } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import DispatchRequestViewDialog from './DispatchRequestViewDialog'
@@ -16,11 +17,21 @@ interface UploadedFileRowProps {
   fileName: string | null | undefined
   subtitle?: string
   onSelect: (file: File) => void
-  // 파일 업로드 3종(multipart)은 화면9 후속 작업 — 그전까지 버튼 비활성.
+  // 상태 등으로 업로드가 불가한 경우(예: 파기확인서는 경호중·경호완료에서만).
   disabled?: boolean
+  disabledHint?: string
+  onDownload?: () => void
 }
 
-function UploadedFileRow({ title, fileName, subtitle, onSelect, disabled }: UploadedFileRowProps) {
+function UploadedFileRow({
+  title,
+  fileName,
+  subtitle,
+  onSelect,
+  disabled,
+  disabledHint,
+  onDownload,
+}: UploadedFileRowProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const uploaded = Boolean(fileName)
 
@@ -37,23 +48,37 @@ function UploadedFileRow({ title, fileName, subtitle, onSelect, disabled }: Uplo
         <div>
           <div className="text-sm font-semibold text-foreground">{uploaded ? fileName : title}</div>
           {uploaded && subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
+          {!uploaded && disabled && disabledHint && (
+            <div className="text-[11px] text-muted-foreground">{disabledHint}</div>
+          )}
         </div>
       </div>
-      <button
-        type="button"
-        disabled={disabled}
-        title={disabled ? '파일 업로드는 아직 지원되지 않습니다' : undefined}
-        onClick={() => inputRef.current?.click()}
-        className={
-          disabled
-            ? 'text-xs font-semibold text-muted-foreground'
-            : uploaded
-              ? 'text-xs font-semibold text-green-700'
-              : 'text-xs font-semibold text-primary'
-        }
-      >
-        {uploaded ? '재업로드' : '업로드'}
-      </button>
+      <div className="flex items-center gap-3">
+        {uploaded && onDownload && (
+          <button
+            type="button"
+            onClick={onDownload}
+            className="flex items-center gap-1 text-xs font-semibold text-green-700"
+          >
+            <Download className="size-3.5" />
+            다운로드
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => inputRef.current?.click()}
+          className={
+            disabled
+              ? 'text-xs font-semibold text-muted-foreground'
+              : uploaded
+                ? 'text-xs font-semibold text-green-700'
+                : 'text-xs font-semibold text-primary'
+          }
+        >
+          {uploaded ? '재업로드' : '업로드'}
+        </button>
+      </div>
       <input
         ref={inputRef}
         type="file"
@@ -80,36 +105,49 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
   const roster = securityCase.baseInfo?.defaultWorkers ?? []
   const [dispatchViewOpen, setDispatchViewOpen] = useState(false)
 
+  // 파기확인서는 경호중·경호완료 상태에서만 등록 가능(그 외 서버 409).
+  const destructionUploadable =
+    securityCase.status === '경호중' || securityCase.status === '경호완료'
+
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
   }
 
+  function toastError(error: unknown) {
+    showToast(error instanceof Error ? error.message : '업로드에 실패했습니다', 'error')
+  }
+
   const securityPlanMutation = useMutation({
-    mutationFn: (fileName: string) => setSecurityPlanFile(securityCase.id, fileName),
+    mutationFn: (file: File) => uploadSecurityPlanDoc(securityCase.id, file),
     onSuccess: () => {
       invalidate()
       showToast('경호계획서가 업로드되었습니다', 'success')
     },
-    onError: () => showToast('업로드에 실패했습니다', 'error'),
+    onError: toastError,
   })
 
   const destructionCertMutation = useMutation({
-    mutationFn: (fileName: string) => setDestructionCertFile(securityCase.id, fileName),
+    mutationFn: (file: File) => uploadDestructionCertDoc(securityCase.id, file),
     onSuccess: () => {
       invalidate()
       showToast('파기확인서가 업로드되었습니다', 'success')
     },
-    onError: () => showToast('업로드에 실패했습니다', 'error'),
+    onError: toastError,
   })
 
   const consentMutation = useMutation({
-    mutationFn: ({ workerId, fileName }: { workerId: string; fileName: string }) =>
-      setWorkerConsentFile(securityCase.id, workerId, fileName),
+    mutationFn: ({ workerId, file }: { workerId: string; file: File }) =>
+      uploadWorkerConsentDoc(securityCase.id, workerId, file),
     onSuccess: () => {
       invalidate()
       showToast('개인정보동의서가 업로드되었습니다', 'success')
     },
-    onError: () => showToast('업로드에 실패했습니다', 'error'),
+    onError: toastError,
+  })
+
+  const destructionDownloadMutation = useMutation({
+    mutationFn: () => downloadDestructionCert(securityCase.id),
+    onError: () => showToast('파기확인서를 불러오지 못했습니다', 'error'),
   })
 
   return (
@@ -122,8 +160,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
         <UploadedFileRow
           title="경호계획서 파일을 업로드하세요"
           fileName={securityCase.attachments?.securityPlanFileName}
-          onSelect={(file) => securityPlanMutation.mutate(file.name)}
-          disabled
+          onSelect={(file) => securityPlanMutation.mutate(file)}
         />
       </div>
 
@@ -146,10 +183,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
                 title={worker?.name ?? w.workerId}
                 fileName={fileName}
                 subtitle={worker?.name}
-                onSelect={(file) =>
-                  consentMutation.mutate({ workerId: w.workerId, fileName: file.name })
-                }
-                disabled
+                onSelect={(file) => consentMutation.mutate({ workerId: w.workerId, file })}
               />
             )
           })}
@@ -199,8 +233,14 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
         <UploadedFileRow
           title="파기확인서 파일을 업로드하세요"
           fileName={securityCase.attachments?.destructionCertFileName}
-          onSelect={(file) => destructionCertMutation.mutate(file.name)}
-          disabled
+          onSelect={(file) => destructionCertMutation.mutate(file)}
+          disabled={!destructionUploadable}
+          disabledHint="경호중·경호완료 상태에서만 등록할 수 있습니다"
+          onDownload={
+            securityCase.attachments?.destructionCertFileName
+              ? () => destructionDownloadMutation.mutate()
+              : undefined
+          }
         />
       </div>
     </div>

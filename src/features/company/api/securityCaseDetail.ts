@@ -152,31 +152,35 @@ interface CaseScheduleDayData {
   groups: { groupSeq: number; order: number; guards: CaseScheduleGuard[] }[]
 }
 
+// GetCaseDoc 실측(2026-09-04 — GuardCase-Stec-CaseMeeting.md/CaseDoc):
+//  caseInfoDto      → 경호계획서 (PatchGuardPlanDoc)
+//  guardAgreementDtos[] → 경호풀 근무자별 개인정보동의서 (PatchConsentDoc)
+//  guardDeployDocDto → 파기확인서 (PatchDestroyDoc, filePath 없음)
 interface CaseDocFile {
+  docSeq: number | null
+  filePath?: string | null
   fileName: string | null
+  fileExt: string | null
 }
 
 interface CaseDocData {
   caseInfoDto: CaseDocFile | null
-  guardAgreementDtos: {
+  guardAgreementDtos: ({
     guardSeq: number
     guardName: string
-    docSeq: number | null
-    filePath: string | null
-    fileName: string | null
-    fileExt: string | null
-  }[]
+  } & CaseDocFile)[]
   deploySeq: number
   guardDeployDocDto: CaseDocFile | null
 }
 
-// GetCaseMeeting은 현재 모든 케이스에서 data:null이라 스키마 미실측 —
-// SaveCaseMeetingDto 기준 추정. 저장 연동(후속) 시 실측으로 확정.
+// GetCaseMeeting 응답(실측 2026-09-04 — GuardCase-Stec-CaseMeeting.md). 미팅 없으면
+// data:null. 근무자별 개별 시간은 없다(미팅 전체 1구간 + 참석 근무자 목록).
 interface CaseMeetingData {
-  hasMeeting?: boolean
-  meetingStart?: string | null
-  meetingEnd?: string | null
-  guardSeqs?: number[]
+  meetingSeq: number
+  meetingDate: string
+  meetingStartDt: string
+  meetingEndDt: string
+  guardInfo: { guardSeq: number; guardName: string }[]
 }
 
 function toHeader(id: string, d: GuardCaseDetailData): SecurityCase {
@@ -252,14 +256,15 @@ function toBaseInfo(d: GuardCaseDetailData, guards: CaseGuardRow[]): CaseBaseInf
 }
 
 function toPreMeeting(meeting: CaseMeetingData | null): PreMeeting | null {
-  if (!meeting || !meeting.hasMeeting || !meeting.meetingStart) return null
+  if (!meeting) return null
   return {
-    date: meeting.meetingStart.slice(0, 10),
-    // 근무자별 개별 시간은 백엔드가 안 준다 — 전원 같은 구간으로 표시(후속 연동 시 확정).
-    assignments: (meeting.guardSeqs ?? []).map((seq) => ({
-      workerId: String(seq),
-      startTime: hhmm(meeting.meetingStart),
-      endTime: hhmm(meeting.meetingEnd),
+    date: meeting.meetingDate,
+    // 백엔드는 미팅 전체 1구간만 준다 — 참석 근무자 전원을 같은 시각으로 표시
+    // (근무자별 개별 시간은 저장 시 유실, issues #11 / exclusions).
+    assignments: meeting.guardInfo.map((g) => ({
+      workerId: String(g.guardSeq),
+      startTime: hhmm(meeting.meetingStartDt),
+      endTime: hhmm(meeting.meetingEndDt),
     })),
   }
 }
@@ -498,10 +503,6 @@ export async function deleteScheduleGroup(id: string, groupSeq: string): Promise
   }
 }
 
-// ─── 후속 연동 예정 (이번 iteration 범위 밖) ────────────────────────────────
-
-const DEFERRED_MESSAGE = '아직 백엔드 연동 전입니다 (화면 9 후속 작업)'
-
 // 경호취소: 본사(Stec) 토큰으로 호출 가능한 케이스 취소 API가 없다 — 유일한
 // Deploy/Police/W/CancelGuardCase는 본사 토큰에 403(2026-09-04 실측). issues #9.
 // UI는 비활성(SecurityCaseDetailPage) — 시그니처만 유지한다.
@@ -511,35 +512,105 @@ export async function cancelAssignedCase(_id: string, _reason: string): Promise<
   throw new Error('경호취소 API가 아직 없습니다')
 }
 
-// 사전미팅 저장(SaveCaseMeeting) — DTO가 근무자별 시간을 못 받는 등 불일치가 있어
-// 후속에서 처리(issues #11). UI도 비활성.
-export async function setPreMeeting(_id: string, _preMeeting: PreMeeting | null): Promise<void> {
-  void _id
-  void _preMeeting
-  throw new Error(DEFERRED_MESSAGE)
+// 사전미팅 저장/수정/삭제 — PUT SaveCaseMeeting.
+// preMeeting이 null이면 삭제(hasMeeting:false). 아니면 근무자별 시간을 하나로 합쳐
+// (가장 이른 시작 ~ 가장 늦은 종료) 미팅 전체 1구간 + guardSeqs로 보낸다(issues #11).
+export async function setPreMeeting(id: string, preMeeting: PreMeeting | null): Promise<void> {
+  let body: Record<string, unknown>
+  if (!preMeeting || preMeeting.assignments.length === 0) {
+    body = {
+      caseSeq: toSeq(id),
+      hasMeeting: false,
+      meetingStart: null,
+      meetingEnd: null,
+      guardSeqs: [],
+    }
+  } else {
+    const starts = preMeeting.assignments.map((a) => a.startTime).sort()
+    const ends = preMeeting.assignments.map((a) => a.endTime).sort()
+    body = {
+      caseSeq: toSeq(id),
+      hasMeeting: true,
+      meetingStart: `${preMeeting.date}T${starts[0]}:00`,
+      meetingEnd: `${preMeeting.date}T${ends[ends.length - 1]}:00`,
+      guardSeqs: preMeeting.assignments.map((a) => Number(a.workerId)),
+    }
+  }
+  await sendJson(
+    '/v1/GuardCase/Stec/W/SaveCaseMeeting',
+    'PUT',
+    body,
+    '사전미팅 저장에 실패했습니다',
+  )
 }
 
-// 파일 업로드 3종(PatchGuardPlanDoc/PatchConsentDoc/PatchDestroyDoc) — multipart
-// 재구현 필요. 후속에서 처리. UI도 비활성.
-export async function setSecurityPlanFile(_id: string, _fileName: string): Promise<void> {
-  void _id
-  void _fileName
-  throw new Error(DEFERRED_MESSAGE)
-}
+// ─── 첨부 파일 업로드/다운로드 ──────────────────────────────────────────────
+// PatchGuardPlanDoc / PatchConsentDoc / PatchDestroyDoc — 전부 multipart/form-data.
+// 서버가 파일 시그니처(매직바이트)를 검사한다("File signature is not allowed" 400).
+// 파기확인서는 경호중·경호완료 상태에서만 등록 가능(그 외 409).
 
-export async function setDestructionCertFile(_id: string, _fileName: string): Promise<void> {
-  void _id
-  void _fileName
-  throw new Error(DEFERRED_MESSAGE)
-}
-
-export async function setWorkerConsentFile(
-  _id: string,
-  _workerId: string,
-  _fileName: string,
+async function uploadDoc(
+  endpoint: string,
+  fields: Record<string, string | number>,
+  file: File,
 ): Promise<void> {
-  void _id
-  void _workerId
-  void _fileName
-  throw new Error(DEFERRED_MESSAGE)
+  const form = new FormData()
+  for (const [k, v] of Object.entries(fields)) form.append(k, String(v))
+  form.append('file', file)
+  // Content-Type은 브라우저가 boundary와 함께 자동 지정 — 직접 넣지 않는다.
+  const res = await apiFetch(`/v1/GuardCase/Stec/W/${endpoint}`, { method: 'PUT', body: form })
+  if (!res.ok) {
+    let message = '파일 업로드에 실패했습니다'
+    try {
+      const envelope = (await res.json()) as { message?: unknown }
+      if (typeof envelope.message === 'string' && envelope.message) {
+        message = envelope.message.includes('File signature')
+          ? '허용되지 않는 파일 형식입니다. PDF 또는 이미지 파일을 올려주세요.'
+          : envelope.message
+      }
+    } catch {
+      // 응답 파싱 실패 시 기본 메시지 유지
+    }
+    throw new Error(message)
+  }
+}
+
+export async function uploadSecurityPlanDoc(id: string, file: File): Promise<void> {
+  await uploadDoc('PatchGuardPlanDoc', { caseSeq: toSeq(id) }, file)
+}
+
+export async function uploadWorkerConsentDoc(
+  id: string,
+  workerId: string,
+  file: File,
+): Promise<void> {
+  await uploadDoc('PatchConsentDoc', { caseSeq: toSeq(id), guardSeq: Number(workerId) }, file)
+}
+
+export async function uploadDestructionCertDoc(id: string, file: File): Promise<void> {
+  await uploadDoc('PatchDestroyDoc', { caseSeq: toSeq(id) }, file)
+}
+
+// 파기확인서 다운로드 — GET GetDestroyDocDownload?caseSeq=. 응답은 바이너리 +
+// Content-Disposition. Authorization 헤더가 필요해 <a href>로는 못 받으므로
+// blob으로 받아 클라이언트에서 저장 트리거한다.
+export async function downloadDestructionCert(id: string): Promise<void> {
+  const res = await apiFetch(
+    `/v1/GuardCase/Stec/W/GetDestroyDocDownload?caseSeq=${toSeq(id)}`,
+  )
+  if (!res.ok) {
+    throw new Error('파기확인서를 불러오지 못했습니다')
+  }
+  const blob = await res.blob()
+  const disposition = res.headers.get('content-disposition') ?? ''
+  const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)
+  const fileName = match ? decodeURIComponent(match[1]) : `파기확인서_${id}.pdf`
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }

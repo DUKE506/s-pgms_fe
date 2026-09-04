@@ -49,6 +49,7 @@ EOF
 | `login-police <id> <password>` | `/`로 이동, 경찰 로그인 폼 채우고 제출 |
 | `login-company <id> <password>` | `/admin`으로 이동, 본사 로그인 폼 채우고 제출 |
 | `fill <selector> <text...>` | input 채우기 |
+| `upload <input셀렉터> <파일경로>` | `<input type=file>`에 파일 주입 (숨겨진 input도 셀렉터로 직접 지정) |
 | `click <selector>` | CSS 셀렉터로 클릭 |
 | `click-text <text>` | 해당 텍스트를 포함한 요소 클릭 |
 | `wait <selector-or-text=...>` | 셀렉터가 나타날 때까지 최대 10초 대기 (Playwright `text=` 로케이터 사용 가능) |

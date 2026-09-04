@@ -5,6 +5,10 @@ import {
   deleteScheduleGroup,
   registerBaseInfo,
   securityCases,
+  setDestructionCertFile,
+  setPreMeeting,
+  setSecurityPlanFile,
+  setWorkerConsentFile,
   upsertScheduleGroup,
 } from '../data/securityCases'
 import { workers } from '../data/workers'
@@ -311,6 +315,100 @@ export const guardCaseDetailTestHandlers = [
     }
     upsertScheduleGroup(record.id, body.workDate, group)
     return envelope(true)
+  }),
+
+  // 사전미팅 저장/삭제 — PUT SaveCaseMeeting.
+  http.put('/api/v1/GuardCase/Stec/W/SaveCaseMeeting', async ({ request }) => {
+    if (!stecUserFromBearer(request)) return unauthorized()
+    const body = (await request.json()) as {
+      caseSeq: string | number
+      hasMeeting?: boolean
+      meetingStart?: string | null
+      meetingEnd?: string | null
+      guardSeqs?: number[]
+    }
+    const record = findCase(String(body.caseSeq))
+    if (!record?.workSchedule) {
+      return HttpResponse.json(
+        { message: '스케줄을 찾을 수 없습니다.', data: false, code: 404 },
+        { status: 404 },
+      )
+    }
+    const preMeeting =
+      body.hasMeeting && body.meetingStart
+        ? {
+            date: body.meetingStart.slice(0, 10),
+            assignments: (body.guardSeqs ?? []).map((seq) => ({
+              workerId: String(seq),
+              startTime: hhmm(body.meetingStart),
+              endTime: hhmm(body.meetingEnd),
+            })),
+          }
+        : null
+    setPreMeeting(record.id, preMeeting)
+    return envelope(true)
+  }),
+
+  // 첨부 업로드 3종 — multipart/form-data. 실제 응답은 저장 경로 문자열(data).
+  http.put('/api/v1/GuardCase/Stec/W/PatchGuardPlanDoc', async ({ request }) => {
+    if (!stecUserFromBearer(request)) return unauthorized()
+    const form = await request.formData()
+    const record = findCase(String(form.get('caseSeq')))
+    const file = form.get('file') as File | null
+    if (!record || !file) {
+      return HttpResponse.json({ message: '잘못된 요청', data: null, code: 400 }, { status: 400 })
+    }
+    setSecurityPlanFile(record.id, file.name)
+    return envelope(`guardcase/${record.id}/${file.name}`)
+  }),
+
+  http.put('/api/v1/GuardCase/Stec/W/PatchConsentDoc', async ({ request }) => {
+    if (!stecUserFromBearer(request)) return unauthorized()
+    const form = await request.formData()
+    const record = findCase(String(form.get('caseSeq')))
+    const guardSeq = String(form.get('guardSeq') ?? '')
+    const file = form.get('file') as File | null
+    if (!record || !file || !guardSeq) {
+      return HttpResponse.json({ message: '잘못된 요청', data: null, code: 400 }, { status: 400 })
+    }
+    setWorkerConsentFile(record.id, guardSeq, file.name)
+    return envelope(`guardcase/${record.id}/${file.name}`)
+  }),
+
+  http.put('/api/v1/GuardCase/Stec/W/PatchDestroyDoc', async ({ request }) => {
+    if (!stecUserFromBearer(request)) return unauthorized()
+    const form = await request.formData()
+    const record = findCase(String(form.get('caseSeq')))
+    const file = form.get('file') as File | null
+    if (!record || !file) {
+      return HttpResponse.json({ message: '잘못된 요청', data: null, code: 400 }, { status: 400 })
+    }
+    if (record.status !== '경호중' && record.status !== '경호완료') {
+      return HttpResponse.json(
+        {
+          message: `파기확인서는 경호중·경호완료 상태에서만 등록할 수 있습니다. (현재 ${record.status})`,
+          data: null,
+          code: 409,
+        },
+        { status: 409 },
+      )
+    }
+    setDestructionCertFile(record.id, file.name)
+    return envelope(`guardcase/${record.id}/${file.name}`)
+  }),
+
+  // 파기확인서 다운로드 — 실제는 바이너리. 더블은 파일명만 Content-Disposition에 실어 준다.
+  http.get('/api/v1/GuardCase/Stec/W/GetDestroyDocDownload', ({ request }) => {
+    if (!stecUserFromBearer(request)) return unauthorized()
+    const caseSeq = new URL(request.url).searchParams.get('caseSeq')
+    const record = findCase(caseSeq)
+    const name = record?.attachments?.destructionCertFileName
+    if (!name) {
+      return HttpResponse.json({ message: '파일 없음', data: null, code: 404 }, { status: 404 })
+    }
+    return new HttpResponse(new Blob(['%PDF-1.4 mock'], { type: 'application/octet-stream' }), {
+      headers: { 'Content-Disposition': `attachment; filename=${name}` },
+    })
   }),
 
   // 근무조 삭제 — DELETE DeleteScheduleGroup?groupSeq=&caseSeq=.
