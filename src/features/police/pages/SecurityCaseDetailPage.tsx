@@ -8,7 +8,7 @@ import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { useAuthStore } from '../../auth/store/authStore'
 import { getSecurityCase } from '../api/securityCaseDetail'
 import StatusStepper from '../components/StatusStepper'
-import BaseInfoReadCard from '../components/BaseInfoReadCard'
+import CaseBaseInfoCard from '@/shared/components/CaseBaseInfoCard'
 import DocumentsCard from '../components/DocumentsCard'
 import ConsentDocsCard from '../components/ConsentDocsCard'
 import WorkerAssignmentPanel from '../components/WorkerAssignmentPanel'
@@ -164,7 +164,7 @@ function SecurityCaseDetailPage() {
 
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
         <div className="flex flex-1 flex-col gap-5">
-          <BaseInfoReadCard securityCase={securityCase} />
+          <CaseBaseInfoCard securityCase={securityCase} variant="police" />
           <DocumentsCard securityCase={securityCase} readOnly={isReadOnlyViewer} />
           {securityCase.baseInfo && <ConsentDocsCard securityCase={securityCase} workers={workers} />}
         </div>

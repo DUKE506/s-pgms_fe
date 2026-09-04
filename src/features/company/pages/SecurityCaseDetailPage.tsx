@@ -8,7 +8,7 @@ import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCase } from '../api/securityCaseDetail'
 import { getCaseGuards } from '../api/workers'
 import BaseInfoForm from '../components/BaseInfoForm'
-import BaseInfoSummaryCard from '../components/BaseInfoSummaryCard'
+import CaseBaseInfoCard from '@/shared/components/CaseBaseInfoCard'
 import ScheduleSection from '../components/ScheduleSection'
 import ScheduleInitDialog from '../components/ScheduleInitDialog'
 import ScheduleGroupDialog from '../components/ScheduleGroupDialog'
@@ -133,9 +133,9 @@ function SecurityCaseDetailPage() {
           </div>
         ) : (
           <>
-            <BaseInfoSummaryCard
+            <CaseBaseInfoCard
               securityCase={securityCase}
-              workers={workers}
+              variant="company"
               onEdit={() => setEditingBaseInfo(true)}
             />
 

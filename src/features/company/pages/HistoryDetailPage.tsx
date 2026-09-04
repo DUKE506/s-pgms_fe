@@ -4,7 +4,7 @@ import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCaseHistoryDetail } from '../../police/api/history'
 import { listCaseJoinWorkers } from '../api/workers'
-import BaseInfoSummaryCard from '../components/BaseInfoSummaryCard'
+import CaseBaseInfoCard from '@/shared/components/CaseBaseInfoCard'
 import ScheduleSection from '../components/ScheduleSection'
 
 function formatDate(dateLike: string) {
@@ -83,7 +83,7 @@ function HistoryDetailPage() {
             </div>
           ) : (
             <>
-              <BaseInfoSummaryCard securityCase={c} workers={workers} hidePlacement />
+              <CaseBaseInfoCard securityCase={c} variant="history" />
               {c.workSchedule && (
                 <ScheduleSection securityCase={c} workers={workers} readOnly />
               )}
