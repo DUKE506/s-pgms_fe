@@ -37,7 +37,7 @@
 | 6 | B | [본사] 운영/시스템관리자 | 근무자 목록/등록 | 완료 | `b5f5738` | `GetGuardList`/`AddGuardInfo`/`PatchGuardInfo`/`DeleteGuardInfo` 4종 실측(생성→수정→삭제 원상복구). 수정/삭제 mock에 없던 기능 → 행별 `⋮` 메뉴 UI 신규. 부서 열 제거(GetGuardList 응답에 `DEPT_NM` 누락 — DB엔 있음, issues #8 신규, 섹션 #12에서 일괄 요청). 조인용 `listCaseJoinWorkers` 분리(#9·#13 회귀 차단) |
 | 7 | B | [본사] 운영/시스템관리자 | 배치요청 목록(+본부 배정) | 완료 | (이번 커밋) | `GetDeployRequestList`/`GetStecUserList`(담당자 필터)/`AddGuardCase` 3종. deploySeq 81 실배정 → **GuardCase 최초 생성 검증**(caseSeq 46, `ST0002`). 담당자 목록 본부(#1)·배정건수 필드 없어 표시 축소. "취소" API 없어 메뉴 비활성화(**issues #9 신규**). 조인용 `listCaseAssignees` 분리(#8 회귀 차단). **함께 수정**: `client.ts` refresh single-flight(동시 401 → 1회용 RefreshToken 회전 → 강제 로그아웃되던 문제) |
 | 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 완료 | `59bcd5b` | `GetGuardCaseList` 실 API 전환. 응답 이중 래핑 `{meta,data:[...]}`, `pageSize` 상한 100 → `meta.totalPages`까지 클라이언트 순회. `caseSeq`→id, `mgmtNo` 완성형 `splitMgmtNo`, `statusName` 라벨 그대로, `userName`→`assigneeName`(담당자 id 없음 — managers 조인 제거). 7번 배정 건(caseSeq 46~48) 렌더 확인. **실백엔드 계정으로 이 화면 진입 시 나던 RefreshToken 폭풍 해소**(mock 호출 0). 회귀 차단: `listManagerAssignedCases`(#11)·`listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` + `handlers/managers.ts` 제거. 지역청·담당자 소속 본부 열 축소(exclusions) |
-| 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 부분완료(△) | (이번 커밋) | **조회 5종 조립**(`GetGuardCaseDetail`/`GetCaseGuardList`/`GetCaseSchedule`/`GetCaseMeeting`/`GetCaseDoc`) + 경호계획 수정(`PatchCaseInfo`) + 스케줄(`AutoAddSchedule`/`PatchScheduleGroup`) 연동·검증. **미검증**: 경호계획 등록(`AddGuardCaseInfo`) — 배정 건의 배치기간을 본사 조회로 못 얻음(blockers, issues #10 신규; DTO는 caseSeq 46에 curl로 실측). **후속 iteration**: 사전미팅 저장·파일 업로드 3종(multipart) — UI 비활성. **경호취소**: 본사 API 없음(본사 토큰 → Police `CancelGuardCase` 403, issues #9) — 버튼 비활성. 조치 5섹션 ↔ `summary1~5` 손실 매핑(issues #11 신규). 대표근무자·그룹 메모 조회 갭(issues #12 신규). 테스트 더블 `guardCaseDetail.ts`. **4·2번 재검증**: caseSeq 46에 경호계획+스케줄 생성됨 — #12 이후 수행 |
+| 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 부분완료(△) | `6aeac40`·`f738723`·`0040d59`·`f4ab7df`·`92a7802` (+이번 커밋) | **조회 5종 조립** + 경호계획 수정(`PatchCaseInfo`) + 스케줄(`AutoAddSchedule`/`PatchScheduleGroup`/`DeleteScheduleGroup` — 그룹1 보호) + **사전미팅 저장/삭제**(`SaveCaseMeeting`) + **파일 업로드 3종**(`PatchGuardPlanDoc`/`PatchConsentDoc`/`PatchDestroyDoc`, multipart) + 파기확인서 다운로드 연동·브라우저 검증. **블록**: 경호계획 등록(`AddGuardCaseInfo`) — 배치기간 조회 경로 없음(blockers, issues #10) → 등록 버튼 비활성 + 안내. 경호취소 — 본사 API 없음(issues #9) → 버튼 비활성. 손실 매핑: 조치 5섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11). 대표근무자·그룹 메모 조회 갭(issues #12). 테스트 더블 `guardCaseDetail.ts`. 기본정보 조회 카드 피전/본사 통일(`CaseBaseInfoCard`, `f738723`). **→ 섹션 B-1(#6~#9) 종료, 백엔드 일괄 요청**(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`). **4·2번 재검증**: caseSeq 46에 경호계획+스케줄+미팅+첨부 데이터 있음 — 다음 |
 | 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 대기 | | 4번(재검증)에서 경찰이 신청한 데이터 필요. 거부 API 이슈(issues.md #2) 방향 확정 후 |
 | 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 대기 | | 8번 이후. 본부 이슈(issues.md #1) 방향 확정 후 |
 | 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 대기 | | 새 API 연동 아님 — 6~11 화면을 본부관리자로 재확인("본인 배정 건만"). 이력 스코프는 그룹 C 후 꼬리 확인. **여기까지 = 메인 워크플로우 검증 완료**, **섹션 B-2 종료 → 백엔드 일괄 요청** |
@@ -51,6 +51,31 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-04: 9번 마무리 — **사전미팅 + 파일 업로드 3종 연동, 섹션 B-1 종료**.
+  (앞선 9번 "조회+계획+스케줄" 커밋들 `6aeac40`·`f738723`·`0040d59`·`f4ab7df`에 이어)
+  - **사전미팅** `PUT SaveCaseMeeting` — `GetCaseMeeting` 응답 실측(저장 후):
+    `{meetingSeq, meetingDate, meetingStartDt, meetingEndDt, guardInfo:[{guardSeq,guardName}]}`
+    또는 null. 쓰기 DTO `{caseSeq, hasMeeting, meetingStart, meetingEnd, guardSeqs[]}`.
+    `hasMeeting:false` = 삭제. **근무자별 시간 없음** → 폼의 개별 시간을 min시작~max종료로
+    합쳐 저장(issues #11 사전미팅 항목). `PreMeetingDialog`/`ScheduleSection` UI 재활성.
+    브라우저 왕복 검증(추가→persist→수정 prefill→삭제→persist).
+  - **파일 업로드 3종** — 전부 `multipart/form-data`, 서버가 파일 시그니처 검사
+    ("File signature is not allowed" 400). `PatchGuardPlanDoc {caseSeq,file}` →
+    `GetCaseDoc.caseInfoDto`. `PatchConsentDoc {caseSeq,guardSeq,file}` →
+    `guardAgreementDtos[]`(경호풀 근무자별 1행). `PatchDestroyDoc {caseSeq,file}` →
+    `guardDeployDocDto`, **경호중·경호완료에서만**(그 외 409) → UI 상태 가드.
+    `downloadDestructionCert`(`GetDestroyDocDownload`, blob+Content-Disposition).
+    `AttachmentsSection` 재작성(파일명 문자열 → File, disabled 해제, 다운로드 버튼).
+    실측: 실PDF로 3종 업로드→`GetCaseDoc` 필드 채워짐 확인, caseSeq 46 UI 파일 주입
+    (`driver.mjs`에 `upload` 커맨드 추가) 성공, caseSeq 29(경호완료) 파기확인서
+    업로드+다운로드 검증.
+  - **섹션 B-1(#6~#9) 종료** — 백엔드 일괄 요청서 작성:
+    `docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md` (요청 9건 —
+    issues #1부분·#7·#8·#9·#10·#11·#12·#13). issues #8~#13 → 🟡. 응답 안 기다리고 B-2로.
+  - 검증: `npm run test` 117/117 · lint · build. exclusions: 사전미팅 근무자별 시간
+    유실 / 파일 시그니처 검사 / 파기확인서 상태 제약 / `destoryDocDownloadYn`은 파일
+    존재가 아니라 피전 다운로드 여부로 추정.
 
 - 2026-09-04: **그룹 B 섹션을 둘로 쪼갬**(사용자 결정). 원래 그룹 B(#6~#12) 전체가 한
   섹션이었는데, #12까지 가서 issues를 묶으면 요청 범위가 너무 커진다는 판단.

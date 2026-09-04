@@ -477,16 +477,42 @@
   (c) `Deploy/Police/W/GetDeployDetailUpdate` 본사 토큰 허용. issues #7·#10. #12 섹션
   종료 시 일괄 요청.
 
-### 후속 연동 예정 (이번 iteration 범위 밖 — 컨트롤 비활성)
+### PUT SaveCaseMeeting — 사전미팅 저장
 
-#### 사전미팅 저장 / 파일 업로드 3종 / 경호취소
-- **왜 이번에 뺐는지**: (1) 사전미팅 `SaveCaseMeeting`은 근무자별 개별 시간을 못 받는
-  DTO 불일치가 있고 `GetCaseMeeting`이 항상 `null`이라 응답 스키마 미실측 — 후속에서
-  실측 후 연동(issues #11). (2) 파일 업로드 3종(`PatchGuardPlanDoc`/`PatchConsentDoc`/
-  `PatchDestroyDoc`)은 `multipart/form-data` 재구현이 필요 — 후속. (3) 경호취소는 본사
-  토큰으로 호출 가능한 케이스 취소 API가 아예 없다(2026-09-04 실측: 본사 토큰 →
-  `Deploy/Police/W/CancelGuardCase` 403) — issues #9.
-- **사용자가 잃는 것**: 상세 화면에서 사전미팅 "추가", 첨부 3종 "업로드", "경호취소"
-  버튼이 비활성(회색). 나머지(경호계획 등록/수정, 스케줄 자동생성/근무조)는 동작.
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋, PROGRESS #9 = 부분완료) / 화면9 후속
-  작업에서 (1)(2), issues #9 반영 시 (3).
+#### 근무자별 개별 시간이 미팅 전체 1구간으로 합쳐짐
+- **왜 제외했는지**: `PreMeetingDialog`은 근무자마다 시작/종료 시간을 따로 받는데
+  `SaveCaseMeetingDto`는 미팅 전체 1구간(`meetingStart`/`meetingEnd`) + `guardSeqs[]`뿐.
+  `GetCaseMeeting`도 `guardInfo:[{guardSeq,guardName}]` — 시간은 미팅 레벨만. 사용자
+  결정(2026-09-04, 조치 섹션과 동일): 폼은 그대로 두고 저장 시 가장 이른 시작 ~ 가장
+  늦은 종료로 합쳐 보낸다.
+- **사용자가 잃는 것**: 근무자별로 다른 시간을 입력해 저장하면, 재조회 시 전원이 같은
+  구간(합쳐진 min~max)으로 보인다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #11(사전미팅 항목 — DTO에
+  `guards:[{guardSeq,start,end}]` 확장) 반영 시. 아니면 폼을 단일 구간으로 단순화(백엔드
+  회신에 따라).
+
+### PUT PatchGuardPlanDoc / PatchConsentDoc / PatchDestroyDoc — 첨부 업로드
+
+#### 파일 시그니처(매직바이트) 검사 — 임의 확장자 불가
+- **왜 기록**: 제외가 아니라 정상 동작 — 서버가 실제 파일 시그니처를 검사한다(비허용 시
+  400 "File signature is not allowed"). 프론트는 이 메시지를 "허용되지 않는 파일
+  형식입니다. PDF 또는 이미지 파일을 올려주세요."로 바꿔 노출.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 해소 불필요.
+
+#### 파기확인서는 경호중·경호완료 상태에서만 등록 가능
+- **왜 기록**: `PatchDestroyDoc`는 배정 등 그 외 상태에서 409("파기확인서는 경호중·
+  경호완료 상태에서만..."). 프론트는 `status`가 경호중/경호완료가 아니면 파기확인서
+  업로드 행을 `disabled` + 안내 처리.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 해소 불필요(설계상 의도된 제약).
+
+#### `destoryDocDownloadYn`(GetGuardCaseDetail)의 의미
+- **왜 기록**: 파기확인서를 업로드해도 이 플래그는 `false` 유지(실측). 파일 존재 여부는
+  `GetCaseDoc.guardDeployDocDto`로 판정한다. `destoryDocDownloadYn`은 "피전이 파기확인서를
+  다운로드했는지"(종결 전제 조건)로 추정 — 종결 흐름 검증(화면4/이력) 시 확정.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 종결 흐름 재검증 시 확정.
+
+#### `GetCaseDoc.guardDeployDocDto`에 `filePath`가 없음
+- **왜 제외**: `caseInfoDto`·`guardAgreementDtos[]`는 `filePath`를 주는데 파기확인서
+  (`guardDeployDocDto`)는 `{docSeq, fileName, fileExt}`만. 프론트는 파일명 표시 +
+  `GetDestroyDocDownload`로 받으므로 영향 없음.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 필요 시 응답에 `filePath` 추가 요청.

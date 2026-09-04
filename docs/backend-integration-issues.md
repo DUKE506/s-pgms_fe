@@ -302,7 +302,7 @@ breadcrumb만 영향, 경미) / 읽기·쓰기 필드명 비대칭(`suspectBirth
 
 ---
 
-## 8. 🔴 근무자(경호원) — `deptName`이 쓰기 전용, 조회로 다시 못 읽음
+## 8. 🟡 근무자(경호원) — `deptName`이 쓰기 전용, 조회로 다시 못 읽음
 
 **발견 경위**: 화면6([본사] 운영/시스템관리자 · 근무자 목록/등록) 연동(2026-09-03),
 `Guard/Stec/W/*` 4종 실측 중.
@@ -336,8 +336,7 @@ breadcrumb만 영향, 경미) / 읽기·쓰기 필드명 비대칭(`suspectBirth
 **임시 처리**: 목록/카드에서 부서 열 제거(`exclusions.md`). 등록 폼의 부서 입력은 유지
 (서버 저장은 정상). 정보수정은 부서를 빈 칸으로 두고 입력했을 때만 전송.
 
-**전달**: 미전달. 그룹 B(본사 운영관리자 경호관리)는 #6~#12가 한 섹션 → **#12 섹션 종료
-시점에 일괄 요청**(`TASK.md` "백엔드 요청은 섹션 단위").
+**전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`)로 정리 — 백엔드 전달 예정, 답변 대기.
 
 **영향받는 화면/코드**: `features/company/pages/WorkerListPage.tsx`,
 `features/company/components/EditWorkerDialog.tsx`,
@@ -345,7 +344,7 @@ breadcrumb만 영향, 경미) / 읽기·쓰기 필드명 비대칭(`suspectBirth
 
 ---
 
-## 9. 🔴 [본사] 배치요청 "취소"에 대응하는 API가 없음
+## 9. 🟡 [본사] 배치요청 "취소"에 대응하는 API가 없음
 
 **발견 경위**: 화면7([본사] 운영/시스템관리자 · 배치요청 목록) 연동(2026-09-03),
 `GuardCase/Stec/W/*` 스웨거 확인 중.
@@ -374,14 +373,13 @@ breadcrumb만 영향, 경미) / 읽기·쓰기 필드명 비대칭(`suspectBirth
 (`exclusions.md`). `cancelPendingRequest`/`CancelPendingCaseDialog` 코드는 남겨둠 —
 API 오면 `disabled`만 제거하면 됨.
 
-**전달**: 미전달. 그룹 B(본사 운영관리자 경호관리, #6~#12가 한 섹션) → **#12 섹션 종료
-시점에 일괄 요청**(`TASK.md` "백엔드 요청은 섹션 단위").
+**전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`)로 정리 — 백엔드 전달 예정, 답변 대기.
 
 **영향받는 화면/코드**: `features/company/pages/RequestListPage.tsx`,
 `features/company/components/CancelPendingCaseDialog.tsx`,
 `features/company/api/requests.ts`(`cancelPendingRequest`).
 
-## 10. 🔴 [본사] 경호계획 등록 — 배정 건의 "배치기간"을 본사 조회로 얻을 수 없음
+## 10. 🟡 [본사] 경호계획 등록 — 배정 건의 "배치기간"을 본사 조회로 얻을 수 없음
 
 **발견 경위**: 화면9([본사] 운영/시스템관리자 · 경호 상세) 연동(2026-09-04),
 `AddGuardCaseInfo` 실측 중. 상세는 `docs/backend-integration-blockers.md` "경호계획
@@ -415,14 +413,14 @@ API 오면 `disabled`만 제거하면 됨.
 curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 자체는 정확 — 화면4·2 재검증용
 데이터로도 사용).
 
-**전달**: 미전달. 그룹 B(#6~#12가 한 섹션) → **#12 섹션 종료 시 일괄 요청**.
+**전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`)로 정리 — 백엔드 전달 예정, 답변 대기.
 
 **영향받는 화면/코드**: `features/company/components/BaseInfoForm.tsx`,
 `features/company/api/securityCaseDetail.ts`(`registerBaseInfo` — `options.period`).
 
 ---
 
-## 11. 🔴 [본사] 경호계획 — 5개 조치 섹션 ↔ `summary1~5` (단일 문자열 2개)
+## 11. 🟡 [본사] 경호계획 — 5개 조치 섹션 ↔ `summary1~5` (단일 문자열 2개)
 
 **발견 경위**: 화면9 연동(2026-09-04), `AddGuardCaseInfoDto` 스키마 확인.
 
@@ -446,7 +444,7 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 
 **임시 처리(D-형)**: 위 손실 매핑으로 연동 진행(`exclusions.md` [본사] 경호 상세).
 
-**전달**: 미전달. 그룹 B #12 섹션 종료 시 일괄 요청.
+**전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`)로 정리 — 백엔드 전달 예정, 답변 대기.
 
 **영향받는 화면/코드**: `features/company/components/BaseInfoForm.tsx`(7~11번 섹션),
 `features/company/api/securityCaseDetail.ts`(`toBaseInfo`/`toCaseInfoBody`,
@@ -455,7 +453,7 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 
 ---
 
-## 12. 🔴 [본사] 경호 상세 — 조회에서 빠지는 저장값들 (대표근무자 플래그·그룹 메모)
+## 12. 🟡 [본사] 경호 상세 — 조회에서 빠지는 저장값들 (대표근무자 플래그·그룹 메모)
 
 **발견 경위**: 화면9 연동(2026-09-04), 조회 5종 + 쓰기 3종 실측.
 
@@ -480,12 +478,12 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 
 **임시 처리**: 대표 여부는 이름 추정, 그룹 메모는 표시 생략(`exclusions.md`).
 
-**전달**: 미전달. 그룹 B #12 섹션 종료 시 일괄 요청.
+**전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`)로 정리 — 백엔드 전달 예정, 답변 대기.
 
 **영향받는 화면/코드**: `features/company/api/securityCaseDetail.ts`(`toBaseInfo`·
 `toWorkSchedule`), `features/company/components/ScheduleSection.tsx`(그룹 특이사항 표시).
 
-## 13. 🔴 [경찰서] 경호 상세 — `GetDeployDetail`에 경호계획의 "조치 5개"·"근무시간"이 없음
+## 13. 🟡 [경찰서] 경호 상세 — `GetDeployDetail`에 경호계획의 "조치 5개"·"근무시간"이 없음
 
 **발견 경위**: 화면9 연동 후 기본정보 카드를 피전/본사 공유(`CaseBaseInfoCard`, 2026-09-04)
 하면서, 같은 건(deploySeq 81 = caseSeq 46)을 두 화면이 나란히 볼 때 피전 쪽만 조치·
@@ -521,9 +519,9 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 (`exclusions.md` [경찰서] 경호 상세). **화면4 "배정 이후 재검증"**(matrix 9번 완료 후)
 시점에 이 API가 반영되면 함께 검증.
 
-**전달**: 미전달. 화면4는 피전 경호관리 섹션(2~5번)이지만 이미 섹션 요청서를 냈고
-(2026-09-03) 그땐 배정 데이터가 없어 못 잡은 항목 → **그룹 B #12 섹션 종료 시 일괄
-요청에 함께** 넣거나 화면4 재검증 결과와 묶어 전달.
+**전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/
+2026-09-04-본사-경호관리-B1.md` 요청 7)로 정리 — 화면4가 피전 섹션(2~5번)이지만
+그땐 배정 데이터가 없어 못 잡은 항목이라 본사 B-1에 함께 실었다. 백엔드 전달 예정.
 
 **영향받는 화면/코드**: `features/police/api/securityCaseDetail.ts`(`toSecurityCase` —
 현재 `baseInfo` 자체를 만들지 않음), `shared/components/CaseBaseInfoCard.tsx`,
