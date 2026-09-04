@@ -64,7 +64,7 @@ describe('SecurityCaseListPage', () => {
     expect(screen.queryByText('26-02-분당경찰서')).not.toBeInTheDocument()
   })
 
-  it('배정된 건은 관리번호(접수번호 · 경호코드)와 담당자·본부가 함께 표시된다', async () => {
+  it('배정된 건은 관리번호(접수번호 · 경호코드)와 담당자명·상태가 함께 표시된다', async () => {
     loginAsAdmin()
     const record = securityCases.find((c) => c.receiptNumber === '26-02-서초경찰서')!
     assignManager(record.id, 'hqmanager1')
@@ -72,8 +72,9 @@ describe('SecurityCaseListPage', () => {
 
     await screen.findAllByText(`26-02-서초경찰서 · ${record.securityCode}`)
     const row = withinTable().getByText(`26-02-서초경찰서 · ${record.securityCode}`).closest('tr')!
+    // GetGuardCaseList는 담당자 이름(userName)만 준다 — id 조인이 없어 소속 본부 열은
+    // 채울 수 없다("-", issues #1).
     expect(within(row).getByText('김민수')).toBeInTheDocument()
-    expect(within(row).getByText('서울본부')).toBeInTheDocument()
     expect(within(row).getByText('배정')).toBeInTheDocument()
   })
 

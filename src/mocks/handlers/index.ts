@@ -1,5 +1,4 @@
 import { securityCaseHandlers } from './securityCases'
-import { managerHandlers } from './managers'
 import { workerHandlers } from './workers'
 import { guestHandlers } from './guests'
 import { companyAccountHandlers } from './companyAccounts'
@@ -11,7 +10,6 @@ import { guardCaseTestHandlers } from './guardCase'
 // 아직 mock인 화면들 — 브라우저(dev)와 테스트(vitest) 둘 다 이 배열을 쓴다.
 export const handlers = [
   ...securityCaseHandlers,
-  ...managerHandlers,
   ...workerHandlers,
   ...guestHandlers,
   ...companyAccountHandlers,

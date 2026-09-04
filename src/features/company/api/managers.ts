@@ -38,15 +38,3 @@ export async function listManagers(): Promise<Manager[]> {
     .filter((u) => u.codeName === '본부관리자' && u.useYn)
     .map((u) => ({ id: String(u.userSeq), name: u.userName }))
 }
-
-// 본사 경호목록(matrix 8번, 아직 mock)이 담당자 id→이름/본부 조인에 쓴다. listManagers를
-// 실 API(GetStecUserList)로 바꾸면 mock assigneeId('hqmanager*')와 id 체계가 안 맞아
-// 조인이 깨지므로 별도 mock 함수 + 별도 쿼리키로 분리한다 — 8번 연동에서 GetGuardCaseList의
-// 담당자 정보로 대체될 때까지 유지(2번 GuestListPage·6번 listCaseJoinWorkers와 같은 처리).
-export async function listCaseAssignees(): Promise<Manager[]> {
-  const res = await apiFetch('/managers')
-  if (!res.ok) {
-    throw new Error('담당자 목록을 불러오지 못했습니다')
-  }
-  return res.json() as Promise<Manager[]>
-}

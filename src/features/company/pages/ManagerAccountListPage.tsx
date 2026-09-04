@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useAuthStore } from '../../auth/store/authStore'
-import { listSecurityCases } from '../api/requests'
+import { listManagerAssignedCases } from '../api/requests'
 import { listManagerAccounts, type ManagerAccount } from '../api/managerAccounts'
 import EditManagerAccountDialog from '../components/EditManagerAccountDialog'
 import ResetManagerPasswordDialog from '../components/ResetManagerPasswordDialog'
@@ -42,7 +42,11 @@ function canResetPassword(actorId: string, actorRole: string, target: ManagerAcc
 function ManagerAccountListPage() {
   const user = useAuthStore((state) => state.user)
   const accountsQuery = useQuery({ queryKey: ['manager-accounts'], queryFn: listManagerAccounts })
-  const casesQuery = useQuery({ queryKey: ['security-cases-all'], queryFn: listSecurityCases })
+  // 담당경호 다이얼로그 전용 — assigneeId 조인이 필요해 아직 mock(matrix 11번에서 정식 처리).
+  const casesQuery = useQuery({
+    queryKey: ['manager-assigned-cases'],
+    queryFn: listManagerAssignedCases,
+  })
 
   const [search, setSearch] = useState('')
   const [editTarget, setEditTarget] = useState<ManagerAccount | null>(null)

@@ -21,13 +21,14 @@ import {
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { listSecurityCases } from '../api/requests'
-import { listCaseAssignees } from '../api/managers'
 import SecurityCaseTabs from '../components/SecurityCaseTabs'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
 
 const ALL = '전체'
 
+// 배정 직후 건은 경호기간이 아직 비어 있다(경호계획 등록 전) — 그때는 "-"로 표시한다.
 function formatDate(dateLike: string) {
+  if (!dateLike) return '-'
   const d = new Date(dateLike)
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -37,7 +38,6 @@ function formatDate(dateLike: string) {
 
 function SecurityCaseListPage() {
   const casesQuery = useQuery({ queryKey: ['security-cases-all'], queryFn: listSecurityCases })
-  const managersQuery = useQuery({ queryKey: ['managers', 'case-list'], queryFn: listCaseAssignees })
   const navigate = useNavigate()
 
   const [jurisdictionFilter, setJurisdictionFilter] = useState(ALL)
@@ -50,22 +50,21 @@ function SecurityCaseListPage() {
   const cases = (casesQuery.data ?? []).filter((c) =>
     ACTIVE_SECURITY_CASE_STATUSES.includes(c.status),
   )
-  const managers = managersQuery.data ?? []
-  const managersById = new Map(managers.map((m) => [m.id, m]))
 
   const jurisdictions = [ALL, ...Array.from(new Set(cases.map((c) => c.jurisdiction)))]
   const stationsInScope =
     jurisdictionFilter === ALL ? cases : cases.filter((c) => c.jurisdiction === jurisdictionFilter)
   const stations = [ALL, ...Array.from(new Set(stationsInScope.map((c) => c.policeStation)))]
-  const assigneeIds = [
+  // 담당자 필터는 이름 문자열 기준 — GetGuardCaseList가 담당자 id 없이 이름만 준다.
+  const assigneeNames = [
     ALL,
-    ...Array.from(new Set(cases.map((c) => c.assigneeId).filter((v): v is string => Boolean(v)))),
+    ...Array.from(new Set(cases.map((c) => c.assigneeName).filter((v): v is string => Boolean(v)))),
   ]
 
   const filteredCases = cases.filter((c) => {
     if (jurisdictionFilter !== ALL && c.jurisdiction !== jurisdictionFilter) return false
     if (stationFilter !== ALL && c.policeStation !== stationFilter) return false
-    if (assigneeFilter !== ALL && c.assigneeId !== assigneeFilter) return false
+    if (assigneeFilter !== ALL && c.assigneeName !== assigneeFilter) return false
     if (statusFilter !== ALL && c.status !== statusFilter) return false
     if (search.trim()) {
       const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
@@ -118,9 +117,9 @@ function SecurityCaseListPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {assigneeIds.map((id) => (
-              <SelectItem key={id} value={id}>
-                {id === ALL ? '담당자 전체' : (managersById.get(id)?.name ?? id)}
+            {assigneeNames.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name === ALL ? '담당자 전체' : name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -187,8 +186,9 @@ function SecurityCaseListPage() {
                   >
                     <TableCell>{formatManagementNumber(c.receiptNumber, c.securityCode)}</TableCell>
                     <TableCell>{c.policeStation}</TableCell>
-                    <TableCell>{c.assigneeId ? (managersById.get(c.assigneeId)?.name ?? '-') : '-'}</TableCell>
-                    <TableCell>{c.assigneeId ? (managersById.get(c.assigneeId)?.branch ?? '-') : '-'}</TableCell>
+                    <TableCell>{c.assigneeName ?? '-'}</TableCell>
+                    {/* 담당자 소속 본부 — GetGuardCaseList에 없음(issues #1) */}
+                    <TableCell>-</TableCell>
                     <TableCell>
                       <StatusBadge status={c.status} />
                     </TableCell>
@@ -225,7 +225,7 @@ function SecurityCaseListPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-foreground/80">
-                    {c.policeStation} · {c.assigneeId ? (managersById.get(c.assigneeId)?.name ?? '-') : '담당자 미배정'}
+                    {c.policeStation} · {c.assigneeName ?? '담당자 미배정'}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {formatDate(c.startDate)} ~ {formatDate(c.endDate)}

@@ -48,6 +48,8 @@ function SecurityCaseTabs({ active }: SecurityCaseTabsProps) {
   const activeCasesCount = casesQuery.data?.filter((c) =>
     ACTIVE_SECURITY_CASE_STATUSES.includes(c.status),
   ).length
+  // GetGuardCaseList에는 pendingPeriodRequest가 없어 연장/단축 배지는 matrix 10번
+  // 연동 전까지 항상 0으로 나온다(실제 대기 건은 그 화면에서 조회).
   const extensionCount = casesQuery.data?.filter(
     (c) => c.pendingPeriodRequest?.type === '연장',
   ).length

@@ -146,6 +146,10 @@ export interface SecurityCase {
   // 저장해야 인사이동으로 담당자 이름이 바뀌어도 스코프 필터링/표시가 안 깨진다
   // (2026-08-31 리팩터, 예전엔 이름 문자열 스냅샷이었음)
   assigneeId?: string
+  // 담당 본부관리자 이름(표시 전용). 실 API GetGuardCaseList는 담당자 id 없이
+  // 이름(userName)만 내려줘서, id 조인이 불가능한 경로(본사 경호목록)에서 이 값을
+  // 그대로 표시한다. mock 경로는 assigneeId 조인을 계속 쓴다.
+  assigneeName?: string
   securityCode?: string
   baseInfo?: CaseBaseInfo
   workSchedule?: WorkSchedule
