@@ -64,3 +64,33 @@ D-2 제거. 쓰기 테스트(deploySeq 87)로 왕복 확인(issues #5).
 응답을 구현(배치요구서 원본 필드 전부 반환, 접수·배정 모두 200). 화면5를 이걸로 prefill +
 `PUT UpdateDeployRequest`로 저장 연동 완료, 브라우저 왕복 검증(issues #7). a안대로 그룹 B를
 먼저 돌고(#6·#7) 복귀해 마무리.
+
+---
+
+## 경호계획 등록(AddGuardCaseInfo)에 필요한 "배치기간"을 본사 조회로 얻을 수 없음
+
+**상황**: 화면9([본사] 경호 상세) 연동(2026-09-04). 경호계획 등록 폼(`BaseInfoForm`)은
+배치기간(시작일/종료일)을 배치요구서 값 그대로 고정 표시(disabled)하고, `AddGuardCaseInfo`
+DTO는 `startDt`/`endDt`(배치기간+배치시간 결합)를 **required**로 받는다.
+**문제**: 경호계획 미등록(배정) 상태에서 `GetGuardCaseDetail`은 `startDate`/`endDate`를
+`null`로 준다(등록 후에만 채워짐). `GetGuardCaseList`도 배정 건은 기간이 null,
+`GetDeployRequestList`는 배정되면 목록에서 빠진다. 본사 토큰으로 `Deploy/Police/W/
+GetDeployDetail*`(배치요구서 기간 보유)을 부르면 **403**(2026-09-04 실측). → 본사가
+배정 건의 배치기간을 조회할 경로가 없다. 폼의 배치기간 칸이 빈 값이라 등록 시 `startDt`가
+`"T09:00:00"`(날짜 없음)로 나가 실패한다.
+**해결되어야 하는 것**: 아래 중 하나.
+1. `GetGuardCaseDetail`(또는 `GetGuardCaseList`)이 경호계획 미등록 상태에서도 배치요구서
+   기간(`periodFrom`/`periodTo`)을 실어준다.
+2. `AddGuardCaseInfo`가 `startDt`/`endDt`를 optional로 받고, 미지정 시 서버가 배치요구서
+   기간 + 폼이 보낸 배치시간으로 조합한다.
+3. 본사용 배치요구서 원본 조회 API 신설(issues #7 3항과 동일 — 본사 권한 확장/대칭 EP).
+**해결방안 후보(프론트)**:
+1. **(채택)** 코드는 폼값(`securityCase.startDate/endDate`) 기준으로 `startDt`/`endDt`를
+   보내도록 구현해 두고, 값이 있는 경우(= 백엔드가 기간을 주게 되면)엔 그대로 동작.
+   그전까지 **경호계획 "등록" 경로는 실백엔드에서 미검증**(수정=PatchCaseInfo 경로는
+   기간 불필요라 완전 동작, 브라우저 검증 완료). PROGRESS #9 = 부분완료(△).
+2. 등록 폼의 배치기간을 사용자 입력 가능하게 전환 — 승인된 화면 설계("고정 적용")를
+   바꿔야 하고 오입력 위험. 보류.
+**상태**: **확인 대기** — 그룹 B(#6~#12) 섹션 종료(#12) 시 issues와 함께 백엔드에 일괄
+요청. 그전까지 등록 경로 미검증 이월. (curl로 caseSeq 46에 기간을 직접 넣어 등록·스케줄
+생성은 실측 완료 — DTO 스펙 자체는 정확.)

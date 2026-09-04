@@ -88,9 +88,14 @@
    페이지 순회, `caseSeq`→id, `userName`→`assigneeName`). 7번 배정 건(caseSeq 46~48)
    렌더 확인. 아직 mock인 화면 회귀 차단 위해 `listManagerAssignedCases`(#11)·
    `listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` 제거
-9. **[본사] 운영/시스템관리자 — 경호 상세** (경호계획 등록/수정, 스케줄, 사전미팅,
-   첨부, 취소) — 7·8 이후, 6의 근무자 데이터 필요. 완료 직후 **4번·2번의 배정 이후 상태
-   표시를 재검증**(새 iteration 아님, 각 행 비고에 결과만 남김)
+9. **[본사] 운영/시스템관리자 — 경호 상세** — △ **부분 연동(2026-09-04)**. 조회 5종
+   (`GetGuardCaseDetail`/`GetCaseGuardList`/`GetCaseSchedule`/`GetCaseMeeting`/`GetCaseDoc`
+   조립) + 경호계획 수정(`PatchCaseInfo`) + 스케줄 자동생성(`AutoAddSchedule`)·근무조
+   저장(`PatchScheduleGroup`) 연동·검증 완료. **미검증/후속**: 경호계획 등록
+   (`AddGuardCaseInfo`) = 배치기간 조회 경로 없음(blockers, issues #10) / 사전미팅 저장·
+   파일 업로드 3종 = 후속 iteration / 경호취소 = 본사 API 없음(issues #9, 버튼 비활성).
+   조치 섹션↔`summary1~5`는 손실 매핑(issues #11). 완료(#12 스코프 재검증 포함) 후
+   **4번·2번의 배정 이후 상태 표시를 재검증**(caseSeq 46에 경호계획+스케줄 데이터 생성됨)
 10. **[본사] 운영/시스템관리자 — 연장/단축요청 목록 (+승인/거부)** — 4번 재검증에서
     경찰이 신청한 데이터 필요. 거부 API 이슈(issues #2) 방향 확정 후
 11. **[본사] 운영/시스템관리자 — 관리자 계정 관리** — 8 이후(담당경호 조회가 경호목록
@@ -254,23 +259,32 @@
 |---|---|---|---|
 | 목록 조회 | `listSecurityCases` | `GET GuardCase/Stec/W/GetGuardCaseList` | ✅ 연동 완료(2026-09-04). 응답 이중 래핑 `{meta,data:[...]}` → `unwrapEnvelope` 후 `.data`. `pageSize` 상한 100이라 `meta.totalPages`까지 클라이언트 순회. `caseSeq`→`id`, `mgmtNo` 완성형 `splitMgmtNo`, `statusName` 라벨 그대로, `userName`→`assigneeName`(담당자 id 없어 이름만 표시). 진행중(배정/경호중/경호완료)만 반환. 지역청·담당자 소속 본부 없음 → 필터/열 축소(exclusions). 7번 배정 건(caseSeq 46~48) 렌더 확인. 응답 샘플: `GuardCase-Stec-GetGuardCaseList.md` |
 
-#### 경호 상세 (`/admin/security-cases/:id`)
+#### 경호 상세 (`/admin/security-cases/:id`) — △ 부분 연동(2026-09-04)
+
+스웨거가 갱신돼 조회가 5종으로 쪼개짐(매트릭스 최초 작성 시엔 `GetGuardCaseDetail` 1종만).
+`getSecurityCase`가 5개 GET을 조립한다. 응답 샘플: `GuardCase-Stec-GetGuardCaseDetail.md`,
+`GetCaseGuardList.md`, `GetCaseSchedule.md`, `GetCaseMeeting-GetCaseDoc.md`.
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회 | `getSecurityCase` | `GET GuardCase/Stec/W/GetGuardCaseDetail` | |
-| 경호계획 등록 | `registerBaseInfo` | `PUT AddGuardCaseInfo` | 근무자 목록(위 표) 필요. 스케줄 생성 후엔 409 — mock에 이 가드 없음, 추가 필요 |
-| 경호계획 부분수정 | (mock에 없음) | `PATCH PatchCaseInfo` | mock 미구현 기능 — 지금은 항상 `AddGuardCaseInfo` 전체 덮어쓰기만 함, 연동 시 새로 붙여야 함(반대 방향 공백) |
-| 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | |
-| 스케줄 자동생성 | `createSchedule` | `POST AutoAddSchedule` | 대표 경호원만 자동 반영 — mock은 전원 반영, 재구현 필요(analysis.md 6-4) |
-| 근무조 저장 | `upsertScheduleGroup` | `PUT PatchScheduleGroup` | |
-| 사전미팅 저장 | `setPreMeeting` | `PUT SaveCaseMeeting` | |
-| 경호계획서 업로드 | `setSecurityPlanFile` | `PUT PatchGuardPlanDoc` | ⚠️ 실제로는 `multipart/form-data` 파일 업로드, mock은 `{fileName}` JSON만 보냄 — 프론트 구현 새로 해야 함 |
-| 개인정보동의서 업로드 | `setWorkerConsentFile` | `PUT PatchConsentDoc` | 위와 동일한 형태 차이 |
-| 파기확인서 업로드 | `setDestructionCertFile` | `PUT PatchDestroyDoc` | 위와 동일한 형태 차이 |
+| 조회(경호계획/헤더) | `getSecurityCase` | `GET GuardCase/Stec/W/GetGuardCaseDetail?caseSeq=` | ✅ 연동. 경호계획 등록 판정 = `startDate != null`. 배치요구서 원본 필드(요구자·사건개요·등록일·성별/생년월일/직업) 없음(issues #7·#12, exclusions). `crimeType` 레거시 영문값 잔존 |
+| 조회(경호원 배정) | `getCaseGuards`(신규, `workers.ts`) | `GET GuardCase/Stec/W/GetCaseGuardList?caseSeq=` | ✅ 연동. `{guardSeq,name,sabun,deptName,isAssigned,phone}` — 경호건 스코프라 부서도 옴(issues #8 무관). `listCaseJoinWorkers`(mock)는 이력 상세 #13용으로만 잔존 |
+| 조회(스케줄) | `getSecurityCase` | `GET GuardCase/Stec/W/GetCaseSchedule?caseSeq=` | ✅ 연동. `data[]={groupName(일자),groups[]{groupSeq,order,guards[]}}` → `WorkSchedule.days[].groups[].assignments[]`. **그룹 메모 응답에 없음**(issues #12, exclusions) |
+| 조회(사전미팅) | `getSecurityCase` | `GET GuardCase/Stec/W/GetCaseMeeting?caseSeq=` | ⚠️ 현재 모든 케이스 `data:null` — 응답 스키마 미실측. 저장 연동은 **후속** |
+| 조회(첨부 메타) | `getSecurityCase` | `GET GuardCase/Stec/W/GetCaseDoc?caseSeq=` | ✅ 읽기만. `{caseInfoDto,guardAgreementDtos[],guardDeployDocDto}` → `attachments`. 필드↔문서 대응은 업로드된 데이터 없어 추정(후속에서 확정) |
+| 경호계획 등록 | `registerBaseInfo(...,{isNew:true,period})` | `PUT AddGuardCaseInfo` | ⚠️ **코드 완성·미검증(△)** — 배치기간 조회 경로 없음(blockers, issues #10). 스케줄 생성 후 재호출 시 409(실측). caseSeq 46은 curl로 등록 |
+| 경호계획 부분수정 | `registerBaseInfo(...,{isNew:false})` | `PATCH PatchCaseInfo` | ✅ 연동·브라우저 검증. `startDt/endDt` 없음(기간 잠금). `isNew`로 등록/수정 분기 |
+| 경호취소 | `cancelAssignedCase`(throw) | ⚠️ **없음** | 본사 토큰 → `Deploy/Police/W/CancelGuardCase` 403(실측). issues #9. 버튼 비활성 |
+| 스케줄 자동생성 | `createSchedule` | `POST AutoAddSchedule` | ✅ 연동·curl 검증. `{caseSeq,startDate,endDate,startTime:"HH:MM:SS",endTime}`. 대표(isRepresentative) 근무자만 자동 배정(실측 — matrix 최초 우려 해소) |
+| 근무조 저장 | `upsertScheduleGroup(...,order)` | `PUT PatchScheduleGroup` | ✅ 연동·curl 검증. `groupSeq` 있으면 수정/없으면 추가. `order`(신규 인자)는 1+ & 일자 내 유일 필수(중복 시 409). 근무자 중복시각 배정도 409, 경호풀 밖 근무자 400. `memo` 저장되나 조회엔 없음(issues #12) |
+| 근무조 삭제 | (mock UI 없음) | `DELETE DeleteScheduleGroup?groupSeq=&caseSeq=` | 실측 200. 프론트 삭제 UI 자체가 없음(반대 방향 공백) — 후속 |
+| 사전미팅 저장 | `setPreMeeting`(throw) | `PUT SaveCaseMeeting` | **후속**. DTO `{hasMeeting,meetingStart,meetingEnd,guardSeqs[]}` = 근무자별 시간 없음(issues #11). UI 비활성 |
+| 경호계획서 업로드 | `setSecurityPlanFile`(throw) | `PUT PatchGuardPlanDoc` | **후속**. `multipart/form-data`(`caseSeq`+`file`) 재구현 필요. UI 비활성 |
+| 개인정보동의서 업로드 | `setWorkerConsentFile`(throw) | `PUT PatchConsentDoc` | **후속**. `multipart`(`caseSeq`+`guardSeq`+`file`). UI 비활성 |
+| 파기확인서 업로드 | `setDestructionCertFile`(throw) | `PUT PatchDestroyDoc` | **후속**. `multipart`(`caseSeq`+`file`). UI 비활성 |
 
-이 화면 완료 후 **4번([경찰서] 경호 상세)의 배정 이후 상태(연장/단축요청, 경호취소,
-종결)를 재검증**한다 — 그때는 배정된 건이 없어서 못 본 부분.
+이 화면(및 #12) 완료 후 **4번([경찰서] 경호 상세)의 배정 이후 상태(연장/단축요청,
+경호취소, 종결)를 재검증**한다 — caseSeq 46에 경호계획+스케줄 데이터가 생겼다.
 
 #### 연장요청/단축요청 목록 (`/admin/period-requests/extension`, `/shorten`)
 

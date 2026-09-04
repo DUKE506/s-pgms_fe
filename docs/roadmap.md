@@ -224,6 +224,24 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         폭풍 해소(mock 호출 제거). 회귀 차단: `listManagerAssignedCases`(#11)·
         `listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` +
         `handlers/managers.ts` 제거.
+      - [~] 본사 경호 상세 — **부분 연동(2026-09-04, △)**. 스웨거 갱신으로 상세가 조회
+        5종(`GetGuardCaseDetail`/`GetCaseGuardList`/`GetCaseSchedule`/`GetCaseMeeting`/
+        `GetCaseDoc`)으로 쪼개짐 → `getSecurityCase`가 조립. 연동·검증 완료: 조회 5종,
+        경호계획 수정(`PATCH PatchCaseInfo`, 브라우저 왕복), 스케줄 자동생성
+        (`POST AutoAddSchedule`)·근무조 저장(`PUT PatchScheduleGroup`, curl 검증 —
+        `order` 1+ & 일자 유일, 근무자 중복시각/경호풀 밖 근무자 거부). **미검증/후속**:
+        경호계획 등록(`PUT AddGuardCaseInfo`) = 배치기간을 본사 조회로 못 얻음
+        (`blockers.md`, issues #10, DTO 자체는 caseSeq 46에 curl로 실측) / 사전미팅
+        저장·파일 업로드 3종(`multipart`) = 다음 iteration / 경호취소 = 본사 API 없음
+        (본사 토큰 → `Deploy/Police/W/CancelGuardCase` 403, issues #9, 버튼 비활성).
+        조치 섹션 5개 ↔ `summary1~5`는 손실 매핑(선택 항목 `", "` 조인 + 기간 `"~"`
+        문자열, issues #11). 대표근무자·그룹 메모는 조회에서 빠짐(issues #12).
+        `getCaseGuards` 신규, `listCaseJoinWorkers`(mock)는 이력 상세 #13용으로만 잔존.
+        테스트 더블 `handlers/guardCaseDetail.ts`. **함께: 기본정보 카드 통일** — 피전
+        `BaseInfoReadCard` + 본사 `BaseInfoSummaryCard` → `shared/components/CaseBaseInfoCard`
+        하나로(variant로만 분기). 이 과정에서 issues #13 발견(`GetDeployDetail`이 경호계획
+        조치·근무시간을 안 줘서 피전 상세에서 `-`). 완료(#12 포함) 후 4·2번 배정 이후
+        상태 재검증(caseSeq 46에 데이터 생성됨).
 - [ ] **그룹 C — 이력** (본사 이력 → 경찰서 이력 → 본청/지역청 이력 + 진행중 건 상세
       조회전용). 그룹 B의 종결·취소가 터미널 데이터를 만든 뒤라야 의미 있음.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).

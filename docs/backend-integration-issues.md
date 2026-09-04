@@ -381,4 +381,152 @@ API 오면 `disabled`만 제거하면 됨.
 `features/company/components/CancelPendingCaseDialog.tsx`,
 `features/company/api/requests.ts`(`cancelPendingRequest`).
 
+## 10. 🔴 [본사] 경호계획 등록 — 배정 건의 "배치기간"을 본사 조회로 얻을 수 없음
+
+**발견 경위**: 화면9([본사] 운영/시스템관리자 · 경호 상세) 연동(2026-09-04),
+`AddGuardCaseInfo` 실측 중. 상세는 `docs/backend-integration-blockers.md` "경호계획
+등록(AddGuardCaseInfo)에 필요한 배치기간…" 참고.
+
+**현재 상태**:
+- `AddGuardCaseInfo` DTO는 `startDt`/`endDt`(배치기간 시작·종료 + 배치시간 결합)를
+  **required**로 받는다(실측: 스케줄 생성 후 재호출 시 409, 등록 자체는 이 필드 필요).
+- 경호계획 미등록(배정) 상태에서 `GetGuardCaseDetail.startDate`/`endDate`는 `null` —
+  경호계획을 등록해야 채워진다(닭-달걀). `GetGuardCaseList`도 배정 건은 기간 null.
+  `GetDeployRequestList`는 배정되면 목록에서 빠진다.
+- 본사(운영관리자 `StecM1`) 토큰으로 `Deploy/Police/W/GetDeployDetail`·
+  `GetDeployDetailUpdate`(배치요구서 기간 보유) 호출 시 **403**(2026-09-04 실측).
+- → 본사 화면이 "배정된, 아직 경호계획 없는" 건의 배치요구서 기간을 조회할 경로가 전무.
+  경호계획 등록 폼의 배치기간 칸이 빈 값이 되고, 등록 시 `startDt`가 날짜 없는
+  `"T09:00:00"`로 나가 실패한다.
+
+**왜 문제인가**: 본사 메인 워크플로우의 핵심 단계(배정 → 경호계획 등록)를 실백엔드에서
+완주할 수 없다. 프론트 코드는 폼값 기준으로 `startDt`/`endDt`를 보내도록 구현해 뒀지만
+소스가 없어 **등록 경로가 미검증(△)**으로 이월된다. (수정 = `PatchCaseInfo`는 기간
+불필요라 완전 동작·검증 완료.)
+
+**요청/제안** (하나면 충분):
+1. `GetGuardCaseDetail`(또는 `GetGuardCaseList`)이 경호계획 미등록 상태에서도 배치요구서
+   기간(`periodFrom`/`periodTo`)을 함께 반환.
+2. `AddGuardCaseInfo`가 `startDt`/`endDt`를 optional로 받고, 미지정 시 서버가 배치요구서
+   기간 + 폼이 보낸 배치시간으로 조합.
+3. 본사용 배치요구서 원본 조회 API 신설(#7 3항과 동일).
+
+**임시 처리**: 등록 경로 코드는 완성해 두고 미검증 이월(`blockers.md`). caseSeq 46에는
+curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 자체는 정확 — 화면4·2 재검증용
+데이터로도 사용).
+
+**전달**: 미전달. 그룹 B(#6~#12가 한 섹션) → **#12 섹션 종료 시 일괄 요청**.
+
+**영향받는 화면/코드**: `features/company/components/BaseInfoForm.tsx`,
+`features/company/api/securityCaseDetail.ts`(`registerBaseInfo` — `options.period`).
+
+---
+
+## 11. 🔴 [본사] 경호계획 — 5개 조치 섹션 ↔ `summary1~5` (단일 문자열 2개)
+
+**발견 경위**: 화면9 연동(2026-09-04), `AddGuardCaseInfoDto` 스키마 확인.
+
+**현재 상태**: 경호계획 등록 폼의 조치 섹션 5개(안전조치/긴급응급조치/잠정조치/
+긴급임시조치/임시조치)는 각각 **다중선택 배열 + {시작일, 종료일} 기간**이다. 백엔드는
+섹션당 `summaryN`(단일 문자열) + `summaryNDate`(단일 문자열) 2개뿐 — 배열도 기간 객체도
+아니다. `AddGuardCaseInfoDto`/`PatchCaseInfoDto`/`GetGuardCaseDetail` 모두 동일.
+(필드명이 `summary`라 조치 섹션 대응인지도 스키마상 불명확 — 폼 순서로 1=안전조치…
+5=임시조치로 매핑 중.)
+
+**왜 문제인가**: 사용자 결정(2026-09-04)으로 **폼은 그대로 두고 손실 매핑**한다 —
+선택 항목을 `", "`로 조인해 `summaryN`, 기간을 `"시작일 ~ 종료일"` 문자열로
+`summaryNDate`에 넣고 읽을 때 역파싱. 실측(caseSeq 46)에서 왕복은 정확하나:
+(a) 저장 포맷 규칙이 프론트에만 존재(백엔드 계약 아님), (b) 다른 클라이언트가 칩 선택지
+밖 자유텍스트를 넣으면 프론트 칩이 매칭 안 됨, (c) 항목별 개별 기간을 표현할 수 없음.
+
+**요청/제안**:
+1. `summaryN`을 구조화 — 항목 배열(코드/라벨) + 적용기간(from/to) 2필드. 5개 섹션 각각.
+   DB `GUARD_CASE_INFO`(또는 관련 테이블)에 컬럼/자식테이블 추가.
+2. 최소한 `summaryNDate`를 단일 문자열이 아니라 `summaryNFrom`/`summaryNTo` 2필드로.
+
+**임시 처리(D-형)**: 위 손실 매핑으로 연동 진행(`exclusions.md` [본사] 경호 상세).
+
+**전달**: 미전달. 그룹 B #12 섹션 종료 시 일괄 요청.
+
+**영향받는 화면/코드**: `features/company/components/BaseInfoForm.tsx`(7~11번 섹션),
+`features/company/api/securityCaseDetail.ts`(`toBaseInfo`/`toCaseInfoBody`,
+`parseMeasure*`/`joinMeasure*`/`formatMeasurePeriod`),
+`features/company/components/BaseInfoSummaryCard.tsx`.
+
+---
+
+## 12. 🔴 [본사] 경호 상세 — 조회에서 빠지는 저장값들 (대표근무자 플래그·그룹 메모)
+
+**발견 경위**: 화면9 연동(2026-09-04), 조회 5종 + 쓰기 3종 실측.
+
+**현재 상태**: 쓰기 DTO는 받는데 조회 응답엔 없는 필드들 —
+- **대표근무자 여부**: `AddGuardCaseInfoDto.guards[].isRepresentative`로 저장되고
+  `GetGuardCaseDetail.guardUserList`에 대표만 나오지만 **이름(`guardName`)만** 준다
+  (guardSeq 없음). `GetCaseGuardList`는 배정 근무자 전체(`isAssigned`)를 주지만
+  `isRepresentative` 플래그가 없다. → 프론트가 "이름이 guardUserList에 있으면 대표"로
+  추정(동명이인 취약).
+- **근무조 메모**: `PatchScheduleGroupDto.memo`로 저장되고 실측 200이나,
+  `GetCaseSchedule` 응답의 그룹 항목에 `memo`가 없다 → 재조회 시 "특이사항 · 없음".
+- (참고) `GetGuardCaseDetail`은 경호계획 뷰라 배치요구서 원본 필드(요구자 3필드·사건개요·
+  참고사항·문서 등록일·대상자 성별/생년월일/직업)가 없다 — 본사용 배치요구서 원본 조회
+  API 부재(#7)와 같은 뿌리.
+
+**왜 문제인가**: 저장은 되는데 화면을 다시 열면 사라진 것처럼 보인다(대표 체크는 추정값,
+그룹 특이사항은 항상 빈 값). 화면4 배치장소 `GetDeployDetail` null과 같은 패턴.
+
+**요청/제안**:
+1. `GetCaseGuardList` 항목(또는 `guardUserList`)에 `guardSeq` + `isRepresentative` 포함.
+2. `GetCaseSchedule`의 그룹 항목에 `memo` 포함.
+
+**임시 처리**: 대표 여부는 이름 추정, 그룹 메모는 표시 생략(`exclusions.md`).
+
+**전달**: 미전달. 그룹 B #12 섹션 종료 시 일괄 요청.
+
+**영향받는 화면/코드**: `features/company/api/securityCaseDetail.ts`(`toBaseInfo`·
+`toWorkSchedule`), `features/company/components/ScheduleSection.tsx`(그룹 특이사항 표시).
+
+## 13. 🔴 [경찰서] 경호 상세 — `GetDeployDetail`에 경호계획의 "조치 5개"·"근무시간"이 없음
+
+**발견 경위**: 화면9 연동 후 기본정보 카드를 피전/본사 공유(`CaseBaseInfoCard`, 2026-09-04)
+하면서, 같은 건(deploySeq 81 = caseSeq 46)을 두 화면이 나란히 볼 때 피전 쪽만 조치·
+배치시간이 빈 값(`-`)으로 나오는 것을 사용자가 발견. `GetDeployDetail?deployReqSeq=81`
+실측으로 확인.
+
+**현재 상태**:
+- 근무시간(배치시간)·5개 조치(안전조치/긴급응급조치/잠정조치/긴급임시조치/임시조치 +
+  각 적용기간)는 **본사가 배정 후 등록하는 "경호계획"의 일부**다. 본사용
+  `GetGuardCaseDetail`은 이를 `startTime`/`endTime` + `summary1~5`/`summary1~5Date`로
+  반환한다(화면9에서 연동).
+- 경찰용 `GetDeployDetail`은 배정·경호계획 등록 이후에도 이 필드들을 **응답에 싣지
+  않는다**. 실측(deploySeq 81, 배정+경호계획 등록됨) 응답에 `summary*`가 아예 없고,
+  근무시간은 `startDt`/`endDt`의 시각부로 유추만 가능(조치는 유추 불가).
+- 배치장소 4필드(`guardHomeLoc` 등)·경호기간·담당 경찰관은 `GetDeployDetail`에도 있어
+  정상 표시된다 — 조치·근무시간만 공백.
+
+**왜 문제인가**: 피전(경찰)이 자기 경호 대상 건의 경호계획(어떤 안전조치가 어느 기간
+적용되는지, 근무시간이 몇 시부터인지)을 상세 화면에서 볼 수 없다. 이미 승인된 화면
+(`BaseInfoReadCard` → 통합 후 `CaseBaseInfoCard`)이 이 5개 조치 칸을 갖고 있는데 채울
+데이터가 없다. (회귀 아님 — 기존 피전 카드도 `baseInfo` 없으면 `-`였고, 화면4는 원래
+"접수 상태만 검증"이라 배정 이후 경호계획 표시는 미검증/이월 상태였음.)
+
+**요청/제안**:
+1. `GetDeployDetail` 응답에 `summary1~5` / `summary1~5Date`(조치 5개 + 적용기간) 추가.
+2. 근무시간을 명시 필드로(`startTime`/`endTime` 또는 `workHours`) 추가 —
+   `GetGuardCaseDetail`과 대칭.
+3. (선택) 배정 이후 경찰 상세를 `GetDeployDetail` 대신 `GetGuardCaseDetail` 대칭
+   엔드포인트로 분기하는 방안도 함께 검토(경찰 토큰으로 `GuardCase/Stec/*` 호출은
+   현재 불가 — 별도 경찰용 EP 필요).
+
+**임시 처리**: 피전 경호 상세에서 조치 5개·배치시간은 `-`로 둔다
+(`exclusions.md` [경찰서] 경호 상세). **화면4 "배정 이후 재검증"**(matrix 9번 완료 후)
+시점에 이 API가 반영되면 함께 검증.
+
+**전달**: 미전달. 화면4는 피전 경호관리 섹션(2~5번)이지만 이미 섹션 요청서를 냈고
+(2026-09-03) 그땐 배정 데이터가 없어 못 잡은 항목 → **그룹 B #12 섹션 종료 시 일괄
+요청에 함께** 넣거나 화면4 재검증 결과와 묶어 전달.
+
+**영향받는 화면/코드**: `features/police/api/securityCaseDetail.ts`(`toSecurityCase` —
+현재 `baseInfo` 자체를 만들지 않음), `shared/components/CaseBaseInfoCard.tsx`,
+`features/police/pages/SecurityCaseDetailPage.tsx`.
+
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
