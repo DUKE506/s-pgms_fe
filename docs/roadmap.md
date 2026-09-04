@@ -215,6 +215,15 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         조인용 `listCaseAssignees` 분리(#8 회귀 차단). **함께 수정**: `client.ts`
         `refreshAccessToken` single-flight — 동시 401 시 실백엔드 1회용 RefreshToken이
         회전돼 강제 로그아웃되던 문제.
+      - [x] 본사 경호목록 — `GET GuardCase/Stec/W/GetGuardCaseList` (2026-09-04).
+        응답 이중 래핑 `{meta,data:[...]}`, `pageSize` 상한 100이라 `meta.totalPages`까지
+        클라이언트 순회. `caseSeq`→id, `mgmtNo` 완성형 분리, `statusName` 라벨 그대로,
+        `userName`→`assigneeName`(담당자 id 없어 이름만 표시 — managers 조인 제거).
+        진행중 건만 반환. 지역청·담당자 소속 본부 없어 필터/열 축소(exclusions).
+        7번 배정 건 렌더 확인. 실백엔드 계정으로 이 화면 진입 시 나던 RefreshToken
+        폭풍 해소(mock 호출 제거). 회귀 차단: `listManagerAssignedCases`(#11)·
+        `listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` +
+        `handlers/managers.ts` 제거.
 - [ ] **그룹 C — 이력** (본사 이력 → 경찰서 이력 → 본청/지역청 이력 + 진행중 건 상세
       조회전용). 그룹 B의 종결·취소가 터미널 데이터를 만든 뒤라야 의미 있음.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).

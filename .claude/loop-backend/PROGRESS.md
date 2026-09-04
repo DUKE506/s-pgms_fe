@@ -33,7 +33,7 @@
 | 5 | A | [경찰서] 피전 | 배치요구서 수정 | 완료 | (이번 커밋) | 블로커 해소 — 백엔드가 `GET GetDeployDetailUpdate` 응답 구현(배치요구서 원본 필드 전부 반환, issues #7 해결). prefill = `getDeployRequestForEdit`(`getSecurityCase`에서 분리, 쿼리키 분리) / 저장 = `PUT UpdateDeployRequest`(공유 `toDeployRequestDto`). 읽기/쓰기 필드명 비대칭 매핑. **저장 후 재진입 stale 캐시 버그 수정**(`removeQueries` — 아래 로그). 브라우저 SPA 플로우 검증. `mgmtNo` 없어 breadcrumb 축소·레거시 crimeType 영문 → exclusions. **피전 경호관리 섹션 종료** |
 | 6 | B | [본사] 운영/시스템관리자 | 근무자 목록/등록 | 완료 | `b5f5738` | `GetGuardList`/`AddGuardInfo`/`PatchGuardInfo`/`DeleteGuardInfo` 4종 실측(생성→수정→삭제 원상복구). 수정/삭제 mock에 없던 기능 → 행별 `⋮` 메뉴 UI 신규. 부서 열 제거(GetGuardList 응답에 `DEPT_NM` 누락 — DB엔 있음, issues #8 신규, 섹션 #12에서 일괄 요청). 조인용 `listCaseJoinWorkers` 분리(#9·#13 회귀 차단) |
 | 7 | B | [본사] 운영/시스템관리자 | 배치요청 목록(+본부 배정) | 완료 | (이번 커밋) | `GetDeployRequestList`/`GetStecUserList`(담당자 필터)/`AddGuardCase` 3종. deploySeq 81 실배정 → **GuardCase 최초 생성 검증**(caseSeq 46, `ST0002`). 담당자 목록 본부(#1)·배정건수 필드 없어 표시 축소. "취소" API 없어 메뉴 비활성화(**issues #9 신규**). 조인용 `listCaseAssignees` 분리(#8 회귀 차단). **함께 수정**: `client.ts` refresh single-flight(동시 401 → 1회용 RefreshToken 회전 → 강제 로그아웃되던 문제) |
-| 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 대기 | | ← **다음 대상**. 7번에서 배정한 건(caseSeq 46)이 보여야 함. `GetGuardCaseList` 실측 HTTP 200 확인(응답: `{meta,data:[{caseSeq,mgmtNo,groupName,userName,statusName,startDate,endDate}]}`). 연동 시 `SecurityCaseTabs`·`SecurityCaseListPage`의 `listSecurityCases` 실 API 전환 → 전환기 401·탭 배지 누락 해소 |
+| 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 완료 | `59bcd5b` | `GetGuardCaseList` 실 API 전환. 응답 이중 래핑 `{meta,data:[...]}`, `pageSize` 상한 100 → `meta.totalPages`까지 클라이언트 순회. `caseSeq`→id, `mgmtNo` 완성형 `splitMgmtNo`, `statusName` 라벨 그대로, `userName`→`assigneeName`(담당자 id 없음 — managers 조인 제거). 7번 배정 건(caseSeq 46~48) 렌더 확인. **실백엔드 계정으로 이 화면 진입 시 나던 RefreshToken 폭풍 해소**(mock 호출 0). 회귀 차단: `listManagerAssignedCases`(#11)·`listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` + `handlers/managers.ts` 제거. 지역청·담당자 소속 본부 열 축소(exclusions) |
 | 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 대기 | | 7·8 이후, 6번 근무자 필요. 첨부 3종 파일 업로드 재구현 필요(JSON→multipart). 완료 직후 **4번·2번의 배정 이후 상태 재검증**(새 iteration 아님, 비고에 결과만) |
 | 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 대기 | | 4번(재검증)에서 경찰이 신청한 데이터 필요. 거부 API 이슈(issues.md #2) 방향 확정 후 |
 | 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 대기 | | 8번 이후. 본부 이슈(issues.md #1) 방향 확정 후 |
@@ -48,6 +48,50 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-04: 8번([본사] 운영/시스템관리자 · 경호목록) — **연동 완료**. 그룹 B 세 번째
+  화면, 7번에서 배정한 건이 처음 목록에 뜨는 지점.
+  - `company/api/requests.ts::listSecurityCases` → `GET GuardCase/Stec/W/GetGuardCaseList`.
+    응답이 envelope `{message,data,code}`의 `data`를 다시 `{meta:{pageNumber,pageSize,
+    totalCount,totalPages}, data:[...]}`로 감싼 **이중 래핑**. `pageSize` 상한이 100
+    (200/500 → HTTP 400 `"페이지 크기는 1~100"`)이라 화면에 페이지네이션 UI가 없어도
+    `meta.totalPages`까지 클라이언트에서 순회해 이어붙임(`fetchGuardCasePage` 헬퍼 +
+    `GUARD_CASE_MAX_PAGES=50` 방어). 매핑: `id←String(caseSeq)`(경찰서 목록은
+    `deploySeq`였지만 본사 상세 #9가 `caseSeq` 기준), `mgmtNo`는 경호코드 붙은 완성형
+    `"26-09-동래경찰서 ST0004"` → `splitMgmtNo`로 접수번호/경호코드 분리,
+    `statusName`은 프론트 라벨과 그대로 일치(매핑 불필요), `userName→assigneeName`.
+  - 진행중 건(배정/경호중/경호완료)만 반환 — 종결/취소는 이력 화면 소관(HIST-001) →
+    프론트 `ACTIVE_SECURITY_CASE_STATUSES` 필터와 일치.
+  - **담당자 id가 응답에 없다** → `SecurityCase.assigneeName?`(표시 전용) 필드 신규,
+    `SecurityCaseListPage`에서 managers 조인(`listCaseAssignees`) 제거하고 담당자 열/
+    필터를 이름 문자열 기준으로. **지역청·담당자 소속 본부 없음** → 지역청 필터 무력화,
+    본부 열 "-" 고정(issues #1). 배정 직후 건은 `startDate/endDate` null → `formatDate`
+    빈 값 가드("-").
+  - **회귀 차단**: `listSecurityCases`를 실 API로 바꾸면 `pendingPeriodRequest`·
+    `assigneeId` 조인에 의존하던 화면이 깨짐 → `ManagerAccountListPage` 담당경호
+    다이얼로그는 `listManagerAssignedCases`(mock, 쿼리키 `['manager-assigned-cases']`,
+    #11에서 정식 처리), `listPeriodRequests`는 내부 호출을 `listMockSecurityCases`로
+    분리(#10). `SecurityCaseTabs`의 연장/단축 배지는 `GetGuardCaseList`에
+    `pendingPeriodRequest`가 없어 #10 전까지 항상 0(주석). 죽은 코드 제거:
+    `listCaseAssignees` 함수 + `mocks/handlers/managers.ts`(`GET /api/managers`).
+  - **처음 사용자가 보고한 증상 해소**: 실백엔드 계정으로 `/admin/security-cases`
+    진입 시 화면이 안 뜨고 `RefreshToken`이 반복 호출되던 문제 = 이 화면이 mock
+    `/api/security-cases`·`/api/managers`를 부르는데 실 JWT를 mock 파서가 못 읽어 401
+    → `apiFetch` refresh → React Query `retry:3`로 증폭된 것. 이 화면의 mock 호출을
+    전부 제거해 해소(실측: `GetGuardCaseList` 1회, `/api/security-cases`·
+    `RefreshToken` 0회, 콘솔 에러 0). 남은 미연동 본사 화면(`/admin/managers`,
+    `/admin/period-requests/*`)의 같은 폭풍은 #10·#11에서 해소 — 전역 QueryClient
+    retry 가드는 사용자와 별도 논의(exclusions에 기록).
+  - 인프라: 테스트 전용 더블 `mocks/handlers/guardCase.ts`에 `GET GetGuardCaseList`
+    추가(진행중 필터 + `pageSize` 1~100 검증 400 + 본부관리자 "본인 건만" 스코프
+    재현). `SecurityCaseListPage.test.tsx` 1건 갱신(본부 열이 "-"라 `서울본부` 단언
+    제거, 담당자명·상태만 확인).
+  - 검증: `npm run test` 118/118 · lint(기존 warning 2개, error 0) · build 통과.
+    실백엔드 `run-s-pgms` — `StecM1`(운영관리자) → 4건 렌더(동래 3 배정 + 강남 1
+    경호완료), `GetGuardCaseList` 1회, 콘솔 에러 0, refresh 폭풍 없음. `StecM2`
+    (본부관리자) → HTTP 200(403 아님), 4건 + 탭 배지 `경호목록 4 / 연장요청 0 /
+    단축요청 0`. 데스크톱·모바일 회귀 없음. 응답 샘플:
+    `GuardCase-Stec-GetGuardCaseList.md`.
 
 - 2026-09-03: **피전 경호관리 섹션 백엔드 요청분(#5·#6·#7) 반영** — 5번(배치요구서
   수정) 연동 완료 + 3·4번 보정. 7번 커밋 직후 사용자가 "백엔드가 수정했다"고 알려줘,

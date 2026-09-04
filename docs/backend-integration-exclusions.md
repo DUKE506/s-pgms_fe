@@ -300,3 +300,68 @@
   화면이 순차 연동되며 사라진다.
 - **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 근본 수정 완료. `client.test.ts`에
   동시 401 → refresh 1회 회귀 테스트 추가.
+
+## [본사] 경호목록 (`/admin/security-cases`)
+
+### GET /api/v1/GuardCase/Stec/W/GetGuardCaseList — 목록 조회
+
+#### 지역청(`jurisdiction`) 열·필터 빈 값
+- **왜 제외했는지**: 응답에 지역청(경찰서 상위 조직)이 없다 — `groupName`(경찰서)만 온다.
+  경찰서 경호목록(`GetDeployList`)과 같은 상황.
+- **사용자가 잃는 것**: "지역청" 필터 드롭다운이 "지역청 전체" 하나만 남아 사실상 무력화.
+  지역청 단위로 경호건을 좁혀 볼 수 없다(경찰서 필터는 정상).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 응답에 상위 조직명(예: `parentGroupName`)
+  추가 요청 시 — 그룹 B 섹션 일괄 요청 후보(`GetDeployList`와 묶어서).
+
+#### 담당자 소속 본부 열 "-" 고정
+- **왜 제외했는지**: `GetGuardCaseList`는 담당자 이름(`userName`)만 주고 담당자 id·소속
+  본부는 안 준다. 본부 소속 구조화 저장이 없어(issues.md #1) 이름으로 조인할 곳도 없다.
+- **사용자가 잃는 것**: 경호목록 테이블의 "본부" 열이 전부 "-". 담당자 열엔 이름이 뜨지만
+  그 이름이 실서버 데이터상 "HS2본부"처럼 본부명 같은 자유텍스트일 수 있다(계정 `userName`
+  값 그대로).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #1 반영(본부 FK) + 응답에
+  담당자 소속 본부 포함 시.
+
+#### 담당자 필터가 id 아닌 이름 문자열 기준
+- **왜 제외했는지**: 담당자 id가 응답에 없어 이름(`userName`)으로 필터한다. 동명이인이
+  있으면 구분 못 하고, 담당자 목록(`GetStecUserList`)과 조인하지 않는다.
+- **사용자가 잃는 것**: 실사용상 거의 없음(본부관리자 수가 적고 이름 중복 가능성 낮음).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 응답에 담당자 id(`userSeq`) 포함 시.
+
+#### 서버 페이지네이션을 클라이언트에서 전체 순회
+- **왜 제외했는지**: `GetGuardCaseList`는 `pageNumber`/`pageSize`(1~100) 페이지네이션이
+  있는데 화면엔 페이지네이션 UI가 없다(필터·검색이 전부 클라이언트). `pageSize=100`으로
+  `meta.totalPages`까지 순회해 이어붙인 뒤 클라이언트에서 필터한다(방어적으로 50페이지
+  = 5000건 상한). 경찰서 경호목록·URL 쿼리 필터 계획과 같은 방향.
+- **사용자가 잃는 것**: 없음(현재 데이터량에선 1페이지). 활성 경호건이 5000건을 넘으면
+  초과분이 안 보인다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 목록 화면에 서버 페이지네이션 +
+  서버측 필터(상태/경찰서/담당자/검색) 도입 시(URL 쿼리 필터 계획과 함께).
+
+#### 배정 직후 경호기간 "-" 표시
+- **왜 제외했는지**: 제외가 아니라 정상 처리 — 배정 상태 건은 `startDate`/`endDate`가
+  `null`이다(경호계획 등록(#9) 전까지 배치요구서 기간과 별개로 비어 있음). `formatDate`가
+  빈 값이면 "-"를 반환하도록 가드.
+- **사용자가 잃는 것**: 없음(정확한 표시). 경호계획 등록 후 채워진다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 해소 불필요.
+
+#### (제거) `listCaseAssignees` + `GET /api/managers` mock 핸들러
+- **왜**: 이번 연동으로 경호목록이 담당자 id 조인을 안 하게 되면서 `listCaseAssignees`
+  (7번에서 회귀 차단용으로 분리해뒀던 mock 함수)와 `mocks/handlers/managers.ts`가
+  완전히 죽은 코드가 됐다 — 삭제.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 해소 불필요.
+
+#### 아직 mock인 다른 본사 화면의 401 폭풍은 그대로
+- **왜 제외했는지**: 전환기 상태. `/admin/managers`(관리자 계정, matrix 11번)와
+  `/admin/period-requests/*`(연장/단축, 10번)는 아직 mock(`listManagerAssignedCases`/
+  `listPeriodRequests` → `GET /api/security-cases`)이라, 실백엔드 계정으로 열면 mock이
+  실 JWT를 거부해 401 → React Query retry×3 → 매 retry마다 `RefreshToken` 재호출
+  (기본 `retry: 3` + 401 시 refresh). 화면이 로딩/에러에 머문다.
+- **조치(이번 iteration)**: 8번이 `listSecurityCases`를 실 API로 바꾸면서, 그 함수를
+  같이 쓰던 10·11번을 각각 `listPeriodRequests`(mock 유지)·`listManagerAssignedCases`
+  (mock 유지, 쿼리키 `['manager-assigned-cases']`)로 분리 — 8번 화면은 mock 쿼리가 0이
+  돼 폭풍이 사라졌다. 10·11번의 폭풍은 각 화면 연동에서 해소.
+- **사용자가 잃는 것**: `/admin/managers`·`/admin/period-requests/*`를 실백엔드 계정으로
+  열면 여전히 목록이 안 뜬다(그 화면들이 아직 mock이라 실백엔드엔 데이터도 없음).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / matrix 10·11번 연동 시. (전역
+  `QueryClient` retry 정책으로 폭풍 자체를 막는 방어책은 사용자와 별도 논의 예정.)

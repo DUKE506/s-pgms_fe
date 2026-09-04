@@ -83,7 +83,11 @@
    필드 없어 표시 축소. "취소"는 대응 API 없어 메뉴 비활성화(issues #9 신규). 함께
    수정: `client.ts` refresh single-flight(동시 401 → 1회용 RefreshToken 회전으로
    강제 로그아웃되던 문제)
-8. **[본사] 운영/시스템관리자 — 경호목록** (조회) — 7에서 만든 배정 건이 보여야 함
+8. **[본사] 운영/시스템관리자 — 경호목록** (조회) — ✅ 연동 완료(2026-09-04).
+   `GetGuardCaseList` 실 API 전환(응답 이중 래핑, `pageSize` 상한 100 → 클라이언트
+   페이지 순회, `caseSeq`→id, `userName`→`assigneeName`). 7번 배정 건(caseSeq 46~48)
+   렌더 확인. 아직 mock인 화면 회귀 차단 위해 `listManagerAssignedCases`(#11)·
+   `listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` 제거
 9. **[본사] 운영/시스템관리자 — 경호 상세** (경호계획 등록/수정, 스케줄, 사전미팅,
    첨부, 취소) — 7·8 이후, 6의 근무자 데이터 필요. 완료 직후 **4번·2번의 배정 이후 상태
    표시를 재검증**(새 iteration 아님, 각 행 비고에 결과만 남김)
@@ -248,7 +252,7 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listSecurityCases` | `GET GuardCase/Stec/W/GetGuardCaseList` | 페이지네이션 있음. 직전(배치요청목록) 단계에서 배정한 건이 보여야 함 |
+| 목록 조회 | `listSecurityCases` | `GET GuardCase/Stec/W/GetGuardCaseList` | ✅ 연동 완료(2026-09-04). 응답 이중 래핑 `{meta,data:[...]}` → `unwrapEnvelope` 후 `.data`. `pageSize` 상한 100이라 `meta.totalPages`까지 클라이언트 순회. `caseSeq`→`id`, `mgmtNo` 완성형 `splitMgmtNo`, `statusName` 라벨 그대로, `userName`→`assigneeName`(담당자 id 없어 이름만 표시). 진행중(배정/경호중/경호완료)만 반환. 지역청·담당자 소속 본부 없음 → 필터/열 축소(exclusions). 7번 배정 건(caseSeq 46~48) 렌더 확인. 응답 샘플: `GuardCase-Stec-GetGuardCaseList.md` |
 
 #### 경호 상세 (`/admin/security-cases/:id`)
 
@@ -284,7 +288,7 @@
 | 정보수정 | `updateManagerAccountInfo` | `PATCH User/Stec/W/UpdateUser` | |
 | 비밀번호 초기화 | `resetManagerAccountPassword` | `PATCH User/Stec/W/UpdateUser` | 정보수정과 동일 엔드포인트, 파라미터만 다름 |
 | 계정 정지/재활성화 | (mock에 없음) | `PATCH UpdateUser`의 `useYn` | 반대 방향 공백 — 연동하면 새로 얻는 기능 |
-| 담당경호 조회 | `listSecurityCases`(재사용, `ManagerAssignedCasesDialog`) | `GET GetGuardCaseList` | 위 경호목록 연동 이후 |
+| 담당경호 조회 | `listManagerAssignedCases`(mock 유지) | `GET GetGuardCaseList` | 8번에서 `listSecurityCases`는 실 API 전환됐지만 이 다이얼로그는 `assigneeId` 조인이 필요 → 별도 mock 함수로 분리(쿼리키 `['manager-assigned-cases']`). 11번에서 정식 처리 |
 
 #### 이력 조회 (`/admin/history`, `/admin/history/:id`)
 
