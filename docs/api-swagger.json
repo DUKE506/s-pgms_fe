@@ -1364,6 +1364,40 @@
         }
       }
     },
+    "/api/v1/GuardCase/Stec/W/GetPoliceInfo": {
+      "get": {
+        "tags": ["StecGuardCase"],
+        "summary": "지방청 - 경찰서 목록",
+        "description": "지방청(2계층)마다 그 밑 경찰서(3계층)를 붙여 2단으로 내려준다 (GRP-002). 목록 화면의 지방청·경찰서 필터를 채우는 용도다. 삭제된 조직은 빠지고, 경찰서가 없는 지방청은 childPoliceInfo 가 빈 배열이다. 조직은 거의 바뀌지 않으니 화면에서 들고 있어도 된다.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/GuardCase/Stec/W/GetDeployDetail": {
+      "get": {
+        "tags": ["StecGuardCase"],
+        "summary": "배치요구서 상세",
+        "description": "배치요청·연장신청·단축신청 목록에서 고른 건의 배치요구서 원본을 준다 (REQ-006). 목록이 내려준 deploySeq 를 그대로 쓰며, 경호건이 아직 없는 배정 전 건도 열린다. deployStatus 는 배정 뒤에는 경호건 상태를 쓰고 연장·단축 신청이 올라와 있으면 그쪽이 우선이다. 피의자 실명·생년·주소가 들어 있다 (BR-007) - 본부관리자는 자기한테 배정된 건만 볼 수 있다.",
+        "parameters": [
+          {
+            "name": "deployReqSeq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/GuardCase/Stec/W/GetGuardCaseDetail": {
       "get": {
         "tags": ["StecGuardCase"],
