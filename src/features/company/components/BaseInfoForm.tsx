@@ -203,6 +203,12 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
   const queryClient = useQueryClient()
   const showToast = useToastStore((state) => state.show)
 
+  const isNew = !securityCase.baseInfo
+  // 신규 등록(AddGuardCaseInfo)은 배치기간이 필수인데, 배정·미등록 상태에선 백엔드가
+  // 그 값을 조회로 주지 않는다(issues #10, blockers). 기간이 비어 있으면 등록 자체가
+  // 서버 400이므로 버튼을 막고 안내한다. 수정(PatchCaseInfo)은 기간이 필요 없다.
+  const periodMissing = isNew && (!securityCase.startDate || !securityCase.endDate)
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
@@ -266,7 +272,7 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
       }
       // baseInfo가 없으면 등록(AddGuardCaseInfo, 배치기간 필수), 있으면 수정(PatchCaseInfo).
       return registerBaseInfo(securityCase.id, input, securityCase.subject.nameInitial, {
-        isNew: !securityCase.baseInfo,
+        isNew,
         period: { start: securityCase.startDate, end: securityCase.endDate },
       })
     },
@@ -536,6 +542,12 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
         )}
       </FormSection>
 
+      {periodMissing && (
+        <p className="text-xs text-destructive xl:text-right">
+          배치기간 정보를 불러올 수 없어 경호계획을 등록할 수 없습니다. (백엔드 연동 대기)
+        </p>
+      )}
+
       <div className="flex gap-2.5 xl:justify-end">
         <Button
           type="button"
@@ -547,11 +559,11 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
         </Button>
         <Button
           type="button"
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || periodMissing}
           onClick={() => mutation.mutate()}
           className="flex-1 px-6 xl:flex-none"
         >
-          등록
+          {isNew ? '등록' : '수정'}
         </Button>
       </div>
 

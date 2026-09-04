@@ -39,14 +39,15 @@ function SecurityCaseDetailPage() {
   const [cancelOpen, setCancelOpen] = useState(false)
   const [groupDialog, setGroupDialog] = useState<GroupDialogState | null>(null)
   // ScheduleGroupDialog는 상시 마운트된 채 open만 토글되므로, 그 내부 useState(특이사항/
-  // 근무자 목록)가 대상 그룹이 바뀔 때 새로 초기화되도록 key로 강제 리마운트시킨다. 닫힐 때는
-  // (openGroupDialog 호출 없이 onOpenChange(false)만 오므로) key를 그대로 둬서 Radix의
+  // 근무자 목록)가 매번 새로 초기화되도록 key로 강제 리마운트시킨다. **열 때마다** key를
+  // 새로 발급한다 — 같은 그룹을 수정하다 취소 후 다시 열어도 저장 안 한 내용이 남지 않도록.
+  // 닫힐 때는(openGroupDialog 호출 없이 onOpenChange(false)만 옴) key를 그대로 둬서 Radix의
   // 닫힘 애니메이션이 끊기지 않게 한다.
   const [groupDialogKey, setGroupDialogKey] = useState('none-new')
 
   function openGroupDialog(next: GroupDialogState) {
     setGroupDialog(next)
-    setGroupDialogKey(`${next.date}-${next.group?.id ?? 'new'}`)
+    setGroupDialogKey(`${next.date}-${next.group?.id ?? 'new'}-${Date.now()}`)
   }
 
   if (caseQuery.isLoading || workersQuery.isLoading) {

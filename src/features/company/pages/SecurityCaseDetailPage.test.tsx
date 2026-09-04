@@ -111,6 +111,30 @@ describe('SecurityCaseDetailPage', () => {
       const saved = securityCases.find((c) => c.id === caseId)!
       expect(saved.workSchedule!.days[0].groups[0].assignments[0].startTime).toBe('10:00')
     })
+
+    // 4) 첫 일자에 그룹을 추가했다가 삭제 — 그룹1은 삭제 버튼이 없고, 추가된 그룹2만 삭제된다
+    fireEvent.click(screen.getAllByRole('button', { name: '그룹 추가' })[0])
+    await screen.findByText('그룹 추가/수정')
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => {
+      const twoGroups = securityCases.find((c) => c.id === caseId)!
+      expect(twoGroups.workSchedule!.days[0].groups).toHaveLength(2)
+    })
+
+    // 그룹1 수정 모달엔 삭제 버튼이 없다
+    fireEvent.click(screen.getAllByRole('button', { name: '수정' })[1])
+    await screen.findByText('그룹 추가/수정')
+    expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '취소' }))
+
+    // 그룹2 수정 모달에서 삭제
+    fireEvent.click(screen.getAllByRole('button', { name: '수정' })[2])
+    await screen.findByText('그룹 추가/수정')
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }))
+    await waitFor(() => {
+      const oneGroup = securityCases.find((c) => c.id === caseId)!
+      expect(oneGroup.workSchedule!.days[0].groups).toHaveLength(1)
+    })
   })
 
   it('본부관리자는 본인이 담당하는 건은 상세를 조회할 수 있다', async () => {

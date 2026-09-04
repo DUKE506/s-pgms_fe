@@ -410,6 +410,18 @@
 - **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / `GetCaseGuardList`(또는
   `guardUserList`)에 `isRepresentative`/`guardSeq` 포함 시 — issues #12.
 
+#### 경호풀(기본 근무자) 명단을 `GetCaseGuardList.isAssigned`로 대체
+- **왜 제외했는지**: 경호계획에 등록한 근무자 명단(`AddGuardCaseInfoDto.guards`)을 그대로
+  돌려주는 조회가 없다. `toBaseInfo`가 `GetCaseGuardList`에서 `isAssigned:true`인 근무자를
+  `baseInfo.defaultWorkers`로 쓴다. 실측상 `isAssigned`는 경호계획 `guards`로 등록된
+  근무자와 일치하는 것으로 보인다(caseSeq 29: 풀 {13} = `isAssigned` {13}).
+- **사용자가 잃는 것**: 현재까진 없음. 단 `isAssigned`의 의미가 "경호계획 풀"이 아니라
+  "이 건에 어떤 형태로든 배정됨"으로 넓어지면(예: 스케줄 그룹 배정만으로 `isAssigned`가
+  서면) "기본정보 수정" 저장 시 그 근무자가 풀에 편입될 수 있다. 현재 "수정" 저장은
+  화면에 보이는 근무자 목록을 그대로 `guards`로 재전송한다.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / `GetGuardCaseDetail`에 등록된 풀
+  명단(guardSeq 배열)을 반환하거나 issues #12에 함께 요청.
+
 ### PUT GuardCase/Stec/W/PatchScheduleGroup — 근무조 저장
 
 #### 그룹 메모(특이사항, `ScheduleGroup.note`)가 재조회 시 안 보임
@@ -437,6 +449,33 @@
   `"stalking"` 같은 영문. 신규 접수분은 `"스토킹"` 정상.
 - **사용자가 잃는 것**: 옛 건의 사건유형이 영문 그대로 표시.
 - **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 백엔드 데이터 정규화 시.
+
+### (없는 API) 본사 경호계획 등록 폼 — 프리필/등록 전용 조회 API 부재
+
+#### 등록 폼이 상세 조회 API(`GetGuardCaseDetail` 등 5종)를 그대로 재사용
+- **왜 제외하는지**: 경호계획 등록(`BaseInfoForm`)에 들어가도 별도 호출이 없다 — 페이지
+  진입 시 받은 `getSecurityCase` 결과(상세 조회용 5종 GET)를 폼이 그대로 쓴다. 경찰
+  배치요구서 수정(화면5)은 전용 프리필 EP(`GET Deploy/Police/W/GetDeployDetailUpdate`)를
+  받았지만, 본사 경호계획 등록에는 그 대칭 API가 없다.
+- **사용자가 잃는 것**:
+  - **배치기간(폼 2번 섹션)이 빈 값** — 등록(`AddGuardCaseInfo`)에 `startDt`/`endDt`가
+    필수인데 `GetGuardCaseDetail`이 배정·미등록 상태에선 기간을 null로 준다 → 배정 건에서
+    경호계획 "등록" 자체가 실동작 불가(issues #10, blockers). "수정"(`PatchCaseInfo`,
+    기간 불필요)은 정상.
+  - **"배치요구서 원본보기"(`DispatchRequestViewDialog`)가 사실상 빈 값** — 이 다이얼로그는
+    **API를 아예 호출하지 않고** props(`securityCase`)만 렌더한다. 요구자 3필드·사건개요·
+    참고사항·성별/생년월일/직업·문서 등록일이 `GetGuardCaseDetail`에 없어 전부 "-".
+    (위 "#### 접수번호·요구자… 빈 값" 항목과 같은 뿌리.)
+- **사용자 제안 검증(2026-09-04)**: `GetDeployDetailUpdate`를 본사에서 쓰면 되지 않냐 →
+  **`StecM1`(운영관리자)·`232727`(시스템관리자) 토큰 둘 다 HTTP 403**. `Deploy/Police/W/*`
+  태그 전체가 경찰 토큰 전용이라 어떤 본사 역할로도 호출 불가(`GetDeployDetail`,
+  `GetDeployGuardSchedule`도 동일). → 프론트에서 해결 불가, 백엔드 신설/권한확장 필요.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋 = 9번) / 아래 중 하나로 해소 —
+  (a) `GetGuardCaseDetail`/`GetGuardCaseList`가 미등록 상태에서도 배치기간
+  (`periodFrom`/`periodTo`) 포함(등록 블로커만), (b) 본사용 배치요구서 원본 조회 EP 신설
+  (`GuardCase/Stec/W/GetDeployRequestDetail`류 — 등록 배치기간 + 원본보기 둘 다),
+  (c) `Deploy/Police/W/GetDeployDetailUpdate` 본사 토큰 허용. issues #7·#10. #12 섹션
+  종료 시 일괄 요청.
 
 ### 후속 연동 예정 (이번 iteration 범위 밖 — 컨트롤 비활성)
 

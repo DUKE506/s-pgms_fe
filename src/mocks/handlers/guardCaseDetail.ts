@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { companyAccounts } from '../data/accounts'
 import {
   createInitialSchedule,
+  deleteScheduleGroup,
   registerBaseInfo,
   securityCases,
   upsertScheduleGroup,
@@ -291,9 +292,12 @@ export const guardCaseDetailTestHandlers = [
     if (body.groupSeq != null) {
       groupId = String(body.groupSeq)
     } else if (day?.groups[body.order - 1]) {
+      // 이미 그 순번에 그룹이 있으면(자동생성된 그룹1 등) 그 id를 유지해 in-place 교체.
       groupId = day.groups[body.order - 1].id
     } else {
-      groupId = `${record.id}-${body.workDate}-group-${Date.now()}`
+      // 신규 그룹 — 실제 백엔드가 groupSeq(정수)를 발급하는 것을 흉내내 숫자 id를 준다
+      // (재조회 후 group.id가 숫자여야 ScheduleGroupDialog의 삭제 버튼이 뜬다).
+      groupId = String(Date.now())
     }
     const group: ScheduleGroup = {
       id: groupId,
@@ -306,6 +310,23 @@ export const guardCaseDetailTestHandlers = [
       })),
     }
     upsertScheduleGroup(record.id, body.workDate, group)
+    return envelope(true)
+  }),
+
+  // 근무조 삭제 — DELETE DeleteScheduleGroup?groupSeq=&caseSeq=.
+  http.delete('/api/v1/GuardCase/Stec/W/DeleteScheduleGroup', ({ request }) => {
+    if (!stecUserFromBearer(request)) return unauthorized()
+    const url = new URL(request.url)
+    const caseSeq = url.searchParams.get('caseSeq')
+    const groupSeq = url.searchParams.get('groupSeq') ?? ''
+    const record = findCase(caseSeq)
+    const updated = record ? deleteScheduleGroup(record.id, groupSeq) : null
+    if (!updated) {
+      return HttpResponse.json(
+        { message: '삭제할 수 없는 그룹입니다.', data: false, code: 400 },
+        { status: 400 },
+      )
+    }
     return envelope(true)
   }),
 ]

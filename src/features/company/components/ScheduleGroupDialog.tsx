@@ -15,7 +15,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import HourMinuteSelect from './HourMinuteSelect'
-import { upsertScheduleGroup } from '../api/securityCaseDetail'
+import { deleteScheduleGroup, upsertScheduleGroup } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { Worker } from '../api/workers'
 import type { ScheduleAssignment, ScheduleGroup, SecurityCase } from '../../police/types/securityCase'
@@ -42,12 +42,15 @@ function ScheduleGroupDialog({
 }: ScheduleGroupDialogProps) {
   const open = date != null
   const { start, end } = defaultTimes(securityCase.baseInfo?.workHours ?? '09:00 ~ 18:00')
-  const groupLabel = (() => {
-    if (!group || !date) return null
+  const existingIndex = (() => {
+    if (!group || !date) return -1
     const day = securityCase.workSchedule?.days.find((d) => d.date === date)
-    const index = day?.groups.findIndex((g) => g.id === group.id) ?? -1
-    return index >= 0 ? `그룹 ${index + 1}` : null
+    return day?.groups.findIndex((g) => g.id === group.id) ?? -1
   })()
+  const groupLabel = existingIndex >= 0 ? `그룹 ${existingIndex + 1}` : null
+  // 그룹1(첫 조)은 삭제 불가 — 일자별로 최소 1개 그룹은 남긴다. 서버에 저장된
+  // 그룹(id가 숫자 groupSeq)만 삭제 대상.
+  const canDelete = existingIndex > 0 && /^\d+$/.test(group?.id ?? '')
 
   const [note, setNote] = useState(group?.note ?? '')
   const [assignments, setAssignments] = useState<ScheduleAssignment[]>(
@@ -89,8 +92,7 @@ function ScheduleGroupDialog({
       }
       // order = 이 일자에서의 그룹 순번(1-base). 기존 그룹이면 현재 위치, 신규면 맨 뒤.
       const day = securityCase.workSchedule?.days.find((d) => d.date === date)
-      const existingIdx = group ? (day?.groups.findIndex((g) => g.id === group.id) ?? -1) : -1
-      const order = existingIdx >= 0 ? existingIdx + 1 : (day?.groups.length ?? 0) + 1
+      const order = existingIndex >= 0 ? existingIndex + 1 : (day?.groups.length ?? 0) + 1
       return upsertScheduleGroup(securityCase.id, date!, payload, order)
     },
     onSuccess: () => {
@@ -98,8 +100,20 @@ function ScheduleGroupDialog({
       showToast('근무 그룹이 저장되었습니다', 'success')
       resetAndClose()
     },
+    onError: (error) => {
+      showToast(error instanceof Error ? error.message : '근무 그룹 저장에 실패했습니다', 'error')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteScheduleGroup(securityCase.id, group!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
+      showToast('근무 그룹이 삭제되었습니다', 'success')
+      resetAndClose()
+    },
     onError: () => {
-      showToast('근무 그룹 저장에 실패했습니다', 'error')
+      showToast('근무 그룹 삭제에 실패했습니다', 'error')
     },
   })
 
@@ -187,18 +201,33 @@ function ScheduleGroupDialog({
           </button>
         </div>
 
-        <div className="flex justify-end gap-2.5">
-          <Button type="button" variant="secondary" onClick={resetAndClose} className="px-5">
-            취소
-          </Button>
-          <Button
-            type="button"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
-            className="px-5"
-          >
-            저장
-          </Button>
+        <div className="flex items-center justify-between gap-2.5">
+          <div>
+            {canDelete && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate()}
+                className="px-5"
+              >
+                삭제
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2.5">
+            <Button type="button" variant="secondary" onClick={resetAndClose} className="px-5">
+              취소
+            </Button>
+            <Button
+              type="button"
+              disabled={mutation.isPending}
+              onClick={() => mutation.mutate()}
+              className="px-5"
+            >
+              저장
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

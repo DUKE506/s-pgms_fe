@@ -462,12 +462,40 @@ export async function upsertScheduleGroup(
   if (/^\d+$/.test(group.id)) {
     body.groupSeq = Number(group.id)
   }
-  await sendJson(
-    '/v1/GuardCase/Stec/W/PatchScheduleGroup',
-    'PUT',
-    body,
-    '근무 그룹 저장에 실패했습니다',
+  const res = await apiFetch('/v1/GuardCase/Stec/W/PatchScheduleGroup', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    // 경호풀(기본정보에 등록된 근무자) 밖 근무자를 넣으면 400 — 정상 검증이므로
+    // 사용자에게 무엇을 해야 하는지 알려준다. 그 외 서버 메시지는 그대로 노출.
+    let message = '근무 그룹 저장에 실패했습니다'
+    try {
+      const envelope = (await res.json()) as { message?: unknown }
+      const serverMessage = typeof envelope.message === 'string' ? envelope.message : ''
+      if (serverMessage.includes('경호풀')) {
+        message = '기본정보에 등록되지 않은 근무자입니다. 먼저 기본정보에서 근무자를 추가해 주세요.'
+      } else if (serverMessage) {
+        message = serverMessage
+      }
+    } catch {
+      // 응답 파싱 실패 시 기본 메시지 유지
+    }
+    throw new Error(message)
+  }
+}
+
+// 근무조 삭제 — DELETE DeleteScheduleGroup?groupSeq=&caseSeq=. 그룹1(첫 조)은
+// 삭제할 수 없다(호출부 ScheduleGroupDialog에서 버튼 자체를 숨김).
+export async function deleteScheduleGroup(id: string, groupSeq: string): Promise<void> {
+  const res = await apiFetch(
+    `/v1/GuardCase/Stec/W/DeleteScheduleGroup?groupSeq=${Number(groupSeq)}&caseSeq=${toSeq(id)}`,
+    { method: 'DELETE' },
   )
+  if (!res.ok) {
+    throw new Error('근무 그룹 삭제에 실패했습니다')
+  }
 }
 
 // ─── 후속 연동 예정 (이번 iteration 범위 밖) ────────────────────────────────

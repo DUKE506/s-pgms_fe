@@ -703,6 +703,21 @@ export function upsertScheduleGroup(
   return record
 }
 
+// 그룹 삭제 — 그룹1(첫 조)은 삭제하지 않는다(일자별 최소 1개 유지, 호출부에서 가드).
+export function deleteScheduleGroup(caseId: string, groupId: string): SecurityCase | null {
+  const record = securityCases.find((c) => c.id === caseId)
+  if (!record?.workSchedule) return null
+  for (const day of record.workSchedule.days) {
+    const idx = day.groups.findIndex((g) => g.id === groupId)
+    if (idx > 0) {
+      day.groups.splice(idx, 1)
+      persist()
+      return record
+    }
+  }
+  return null
+}
+
 export function setPreMeeting(
   caseId: string,
   preMeeting: NonNullable<SecurityCase['workSchedule']>['preMeeting'],
