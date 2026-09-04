@@ -87,7 +87,11 @@ function ScheduleGroupDialog({
         note,
         assignments,
       }
-      return upsertScheduleGroup(securityCase.id, date!, payload)
+      // order = 이 일자에서의 그룹 순번(1-base). 기존 그룹이면 현재 위치, 신규면 맨 뒤.
+      const day = securityCase.workSchedule?.days.find((d) => d.date === date)
+      const existingIdx = group ? (day?.groups.findIndex((g) => g.id === group.id) ?? -1) : -1
+      const order = existingIdx >= 0 ? existingIdx + 1 : (day?.groups.length ?? 0) + 1
+      return upsertScheduleGroup(securityCase.id, date!, payload, order)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })

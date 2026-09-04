@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCase } from '../api/securityCaseDetail'
-import { listCaseJoinWorkers } from '../api/workers'
+import { getCaseGuards } from '../api/workers'
 import BaseInfoForm from '../components/BaseInfoForm'
 import BaseInfoSummaryCard from '../components/BaseInfoSummaryCard'
 import ScheduleSection from '../components/ScheduleSection'
@@ -28,7 +28,11 @@ function SecurityCaseDetailPage() {
     queryFn: () => getSecurityCase(id!),
     enabled: Boolean(id),
   })
-  const workersQuery = useQuery({ queryKey: ['workers', 'case-join'], queryFn: listCaseJoinWorkers })
+  const workersQuery = useQuery({
+    queryKey: ['case-guards', id],
+    queryFn: () => getCaseGuards(id!),
+    enabled: Boolean(id),
+  })
 
   const [editingBaseInfo, setEditingBaseInfo] = useState(false)
   const [scheduleInitOpen, setScheduleInitOpen] = useState(false)
@@ -89,7 +93,15 @@ function SecurityCaseDetailPage() {
                 스크롤 맨 아래 전체폭 버튼으로 배치 */}
             {securityCase.status === '배정' && (
               <div className="hidden xl:flex">
-                <Button type="button" variant="destructive" onClick={() => setCancelOpen(true)}>
+                {/* 본사(Stec) 토큰으로 호출 가능한 경호취소 API가 없다(issues #9,
+                    2026-09-04 실측 403) — API가 생기면 disabled 제거. */}
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled
+                  title="경호취소 API가 아직 지원되지 않습니다"
+                  onClick={() => setCancelOpen(true)}
+                >
                   경호취소
                 </Button>
               </div>
@@ -163,6 +175,8 @@ function SecurityCaseDetailPage() {
             type="button"
             variant="destructive"
             className="w-full"
+            disabled
+            title="경호취소 API가 아직 지원되지 않습니다"
             onClick={() => setCancelOpen(true)}
           >
             경호취소

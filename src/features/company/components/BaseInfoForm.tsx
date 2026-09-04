@@ -264,7 +264,11 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
         temporaryMeasuresPeriod:
           form.temporaryMeasures.length > 0 ? form.temporaryMeasuresPeriod : null,
       }
-      return registerBaseInfo(securityCase.id, input)
+      // baseInfo가 없으면 등록(AddGuardCaseInfo, 배치기간 필수), 있으면 수정(PatchCaseInfo).
+      return registerBaseInfo(securityCase.id, input, securityCase.subject.nameInitial, {
+        isNew: !securityCase.baseInfo,
+        period: { start: securityCase.startDate, end: securityCase.endDate },
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })

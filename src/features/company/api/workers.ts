@@ -100,10 +100,9 @@ export async function deleteWorker(id: string): Promise<void> {
   }
 }
 
-// 경호 상세(#9)·이력 상세(#13)가 근무자 이름/연락처 조인용으로 아직 mock을
-// 읽는다 — 그 화면들이 각자 iteration에서 경호건별 스케줄 조회 API(issues.md #6)로
-// 대체하기 전까지 임시. admin 목록(listWorkers, ['workers'])과 함수·쿼리키를
-// 분리해 실제 GetGuardList 연동이 이 두 화면 회귀를 건드리지 않게 한다
+// 이력 상세(#13)가 근무자 이름/연락처 조인용으로 아직 mock을 읽는다 — 그 화면이
+// 자기 iteration에서 정리하기 전까지 임시. admin 목록(listWorkers, ['workers'])과
+// 함수·쿼리키를 분리해 실제 GetGuardList 연동이 이 화면 회귀를 건드리지 않게 한다
 // (2번 GuestListPage 분리와 같은 처리).
 export async function listCaseJoinWorkers(): Promise<Worker[]> {
   const res = await apiFetch('/workers')
@@ -111,4 +110,33 @@ export async function listCaseJoinWorkers(): Promise<Worker[]> {
     throw new Error('근무자 목록을 불러오지 못했습니다')
   }
   return res.json() as Promise<Worker[]>
+}
+
+// GET /api/v1/GuardCase/Stec/W/GetCaseGuardList 의 항목 형태(실측 — 화면9).
+interface CaseGuardRow {
+  guardSeq: number
+  name: string
+  sabun: string
+  deptName: string | null
+  isAssigned: boolean
+  phone: string | null
+}
+
+// 화면9(경호 상세)의 경호원 배정 드롭다운·근무자 이름 조인용. 경호건 스코프라
+// GetGuardList(본사 전체 마스터, issues #8)와 달리 부서(deptName)도 온다 —
+// 다만 이 화면은 부서를 표시하지 않아 Worker 타입엔 담지 않는다.
+export async function getCaseGuards(id: string): Promise<Worker[]> {
+  const res = await apiFetch(
+    `/v1/GuardCase/Stec/W/GetCaseGuardList?caseSeq=${encodeURIComponent(id)}`,
+  )
+  if (!res.ok) {
+    throw new Error('근무자 목록을 불러오지 못했습니다')
+  }
+  const rows = await unwrapEnvelope<CaseGuardRow[]>(res)
+  return rows.map((row) => ({
+    id: String(row.guardSeq),
+    name: row.name,
+    employeeId: row.sabun,
+    phone: row.phone ?? '',
+  }))
 }

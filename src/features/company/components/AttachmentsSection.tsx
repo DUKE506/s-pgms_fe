@@ -16,9 +16,11 @@ interface UploadedFileRowProps {
   fileName: string | null | undefined
   subtitle?: string
   onSelect: (file: File) => void
+  // 파일 업로드 3종(multipart)은 화면9 후속 작업 — 그전까지 버튼 비활성.
+  disabled?: boolean
 }
 
-function UploadedFileRow({ title, fileName, subtitle, onSelect }: UploadedFileRowProps) {
+function UploadedFileRow({ title, fileName, subtitle, onSelect, disabled }: UploadedFileRowProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const uploaded = Boolean(fileName)
 
@@ -39,8 +41,16 @@ function UploadedFileRow({ title, fileName, subtitle, onSelect }: UploadedFileRo
       </div>
       <button
         type="button"
+        disabled={disabled}
+        title={disabled ? '파일 업로드는 아직 지원되지 않습니다' : undefined}
         onClick={() => inputRef.current?.click()}
-        className={uploaded ? 'text-xs font-semibold text-green-700' : 'text-xs font-semibold text-primary'}
+        className={
+          disabled
+            ? 'text-xs font-semibold text-muted-foreground'
+            : uploaded
+              ? 'text-xs font-semibold text-green-700'
+              : 'text-xs font-semibold text-primary'
+        }
       >
         {uploaded ? '재업로드' : '업로드'}
       </button>
@@ -48,6 +58,7 @@ function UploadedFileRow({ title, fileName, subtitle, onSelect }: UploadedFileRo
         ref={inputRef}
         type="file"
         className="hidden"
+        disabled={disabled}
         onChange={(e) => {
           const file = e.target.files?.[0]
           if (file) onSelect(file)
@@ -112,6 +123,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
           title="경호계획서 파일을 업로드하세요"
           fileName={securityCase.attachments?.securityPlanFileName}
           onSelect={(file) => securityPlanMutation.mutate(file.name)}
+          disabled
         />
       </div>
 
@@ -137,6 +149,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
                 onSelect={(file) =>
                   consentMutation.mutate({ workerId: w.workerId, fileName: file.name })
                 }
+                disabled
               />
             )
           })}
@@ -187,6 +200,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
           title="파기확인서 파일을 업로드하세요"
           fileName={securityCase.attachments?.destructionCertFileName}
           onSelect={(file) => destructionCertMutation.mutate(file.name)}
+          disabled
         />
       </div>
     </div>

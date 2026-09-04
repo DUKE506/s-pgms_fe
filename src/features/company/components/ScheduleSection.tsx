@@ -144,10 +144,12 @@ function ScheduleSection({
                 </button>
               </div>
             ) : (
+              // 사전미팅 저장(SaveCaseMeeting) 연동은 화면9 후속 작업 — issues #11.
               <button
                 type="button"
-                onClick={() => setPreMeetingDialogOpen(true)}
-                className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                disabled
+                title="사전미팅 저장은 아직 지원되지 않습니다"
+                className="flex items-center gap-1 text-xs font-semibold text-muted-foreground"
                 aria-label="사전미팅 추가"
               >
                 <Plus className="size-3.5" />
