@@ -3,27 +3,37 @@ import { useAuthStore } from '../../auth/store/authStore'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderCodeToLabel } from '@/shared/lib/subject'
-import type { CaseType, ClosureReason, SecurityCase, SecurityCaseStatus } from '../types/securityCase'
+import { hhmm, parseMeasureItems, parseMeasurePeriod } from '@/shared/lib/caseMeasures'
+import type {
+  CaseBaseInfo,
+  CaseType,
+  ClosureReason,
+  SecurityCase,
+  SecurityCaseStatus,
+} from '../types/securityCase'
 
 // 화면4: [경찰서] 피전 · 경호 상세 — 백엔드 연동(matrix 4번).
 //
 // 조회는 GET Deploy/Police/W/GetDeployDetail
 // (docs/backend-integration-responses/Deploy-Police-GetDeployDetail.md 실측).
-// 이번 iteration은 **접수 상태만** 실측 검증 대상이다 — 배정 이후 상태(경호취소/
-// 연장·단축/종결)는 아직 배정된 건이 없어 matrix 12번(본사 경호 상세) 이후에
-// 재검증한다. 배정 이후 상세는 GetGuardCaseDetail(caseSeq 기반)로 갈라질
-// 가능성이 커서, 그 분기도 12번에서 확정한다.
+// 접수 상태 조회는 검증 완료. 2026-09-07 백엔드가 배정+경호계획 등록 건에 대해
+// summary1~5(조치 5개)·startTime/endTime(근무시간 명시 필드)·guardUserList(대표근무자
+// 이름)를 응답에 추가 — 이제 본사 GetGuardCaseDetail과 같은 구조다. 그 필드로 baseInfo를
+// 조립해 통합 기본정보 카드(CaseBaseInfoCard)의 조치·배치시간을 채운다(issues #13 해소).
+// 배정 이후 상태(경호취소/연장·단축/종결)는 matrix 9번 이후 재검증.
 
-// GetDeployDetail 응답 data 형태. 접수 단계에서 실제로 내려오는 필드만 명시한다.
+// GetDeployDetail 응답 data 형태.
 interface DeployDetailData {
   deployReqSeq: number
   mgmtNo: string
   statusName: string
   suspectUserName: string | null
-  // 상세 응답의 startDt/endDt는 실제 경호 개시/종료일로 추정(접수 단계엔 null).
-  // 경호기간은 periodFrom/periodTo로 온다(목록 응답의 startDt/endDt에 대응).
-  startDt: string | null
-  endDt: string | null
+  // startDate/endDate/startTime/endTime = 경호계획의 근무일자·근무시간(미등록이면 전부 null).
+  // 경호기간(일자)은 periodFrom/periodTo로 항상 온다.
+  startDate: string | null
+  endDate: string | null
+  startTime: string | null
+  endTime: string | null
   periodFrom: string | null
   periodTo: string | null
   requestedEndDate: string | null
@@ -39,12 +49,54 @@ interface DeployDetailData {
   responsibleOfficer: string | null
   crimeType: string | null
   extendCount: number
+  // 조치 5개 — 경호계획 등록 후에만 채워진다(미등록이면 전부 null). 본사
+  // GetGuardCaseDetail과 같은 손실 매핑 포맷(항목 ", " / 기간 " ~ ").
+  summary1: string | null
+  summary1Date: string | null
+  summary2: string | null
+  summary2Date: string | null
+  summary3: string | null
+  summary3Date: string | null
+  summary4: string | null
+  summary4Date: string | null
+  summary5: string | null
+  summary5Date: string | null
+  // 대표근무자 — 이름뿐(guardSeq 없음). 피전은 근무자 마스터 접근 권한이 없어
+  // (issues #6) 카드에 근무자를 그리지 않으므로 지금은 소비하지 않는다.
+  guardUserList?: { guardName: string }[]
 
   // 테스트 더블(mocks/handlers/deploy.ts)만 채우는 필드 — 실제 응답엔 없다.
   // 배정 이후 상태(baseInfo/schedule/attachments/pending·closure·cancel)까지
   // 갖춘 화면 회귀를 vitest에서 오프라인으로 검증하려고 mock 레코드 전체를
-  // 실어 보낸다. matrix 12번(GetGuardCaseDetail 실측)에서 정리한다.
+  // 실어 보낸다.
   mock?: SecurityCase
+}
+
+// 경호계획 등록 건: summary1~5 + startTime/endTime으로 조치·근무시간을 조립한다.
+// 배치장소/수사관은 GetDeployDetail의 flat 필드에서 온다. defaultWorkers는 피전
+// 응답에 배정 근무자 목록/id가 없어(guardUserList는 이름뿐) 빈 배열 — 통합 카드가
+// 근무자를 그리지 않으므로 표시에 영향 없다.
+function toBaseInfo(d: DeployDetailData): CaseBaseInfo {
+  return {
+    workHours: `${hhmm(d.startTime)} ~ ${hhmm(d.endTime)}`,
+    defaultWorkers: [],
+    investigator: d.investigator ?? '',
+    victimOfficer: d.responsibleOfficer ?? '',
+    placeResidence: d.guardHomeLoc ?? '',
+    placeWorkplace: d.guardWorkLoc ?? '',
+    placeEtc1: d.guardEtcLoc1 ?? '',
+    placeEtc2: d.guardEtcLoc2 ?? '',
+    safetyMeasures: parseMeasureItems(d.summary1),
+    emergencyMeasures: parseMeasureItems(d.summary2),
+    provisionalMeasures: parseMeasureItems(d.summary3),
+    emergencyTempMeasures: parseMeasureItems(d.summary4),
+    temporaryMeasures: parseMeasureItems(d.summary5),
+    safetyMeasuresPeriod: parseMeasurePeriod(d.summary1Date),
+    emergencyMeasuresPeriod: parseMeasurePeriod(d.summary2Date),
+    provisionalMeasuresPeriod: parseMeasurePeriod(d.summary3Date),
+    emergencyTempMeasuresPeriod: parseMeasurePeriod(d.summary4Date),
+    temporaryMeasuresPeriod: parseMeasurePeriod(d.summary5Date),
+  }
 }
 
 // GetDeployDetail 실제 응답 → SecurityCase. id는 호출부가 넘긴 값을 그대로
@@ -75,8 +127,8 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
     // caseSummary(사건개요)/additionalNotes(참고사항)도 응답에 없다 — 경찰 상세
     // 화면은 원래 이 둘을 표시하지 않으므로 영향 없음(수정 화면 #5에서 확인).
     caseSummary: '',
-    startDate: d.periodFrom ?? d.startDt ?? '',
-    endDate: d.periodTo ?? d.endDt ?? '',
+    startDate: d.periodFrom ?? d.startDate ?? '',
+    endDate: d.periodTo ?? d.endDate ?? '',
     location: {
       residence: d.guardHomeLoc ?? '',
       workplace: d.guardWorkLoc ?? '',
@@ -94,6 +146,10 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
       name: d.clientName ?? '',
     },
     createdAt: '',
+    // 경호계획 등록 건(startDate 있음)만 조치·근무시간을 조립한다. 미등록/접수 상태는
+    // baseInfo 없이 통합 카드가 "-"로 렌더(기존 동작 불변). 본사 getSecurityCase의
+    // planRegistered 판정(detail.startDate != null)과 같은 신호.
+    baseInfo: d.startDate != null ? toBaseInfo(d) : undefined,
   }
 }
 

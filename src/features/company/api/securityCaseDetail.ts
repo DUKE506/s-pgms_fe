@@ -1,12 +1,19 @@
 import { apiFetch } from '../../auth/api/client'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
+import { genderCodeToLabel } from '@/shared/lib/subject'
+import {
+  formatMeasurePeriod,
+  hhmm,
+  joinMeasureItems,
+  parseMeasureItems,
+  parseMeasurePeriod,
+} from '@/shared/lib/caseMeasures'
 import { toSeq } from '../../police/api/securityCaseDetail'
 import type {
   CaseAttachments,
   CaseBaseInfo,
   CaseType,
-  MeasurePeriod,
   PreMeeting,
   ScheduleGroup,
   SecurityCase,
@@ -53,40 +60,8 @@ async function sendJson(
   }
 }
 
-// "09:00:00" 또는 "2026-09-10T09:00:00" → "09:00"
-function hhmm(value: string | null | undefined): string {
-  if (!value) return ''
-  const time = value.includes('T') ? value.split('T')[1] : value
-  return time.slice(0, 5)
-}
-
-// 조치 섹션 ↔ summaryN 매핑(사용자 결정 2026-09-04): 폼은 섹션당 다중선택 배열 +
-// {시작일,종료일} 기간인데 백엔드는 단일 문자열 2개뿐 → 선택 항목을 ", "로 조인,
-// 기간을 "시작일 ~ 종료일" 문자열로 변환해 저장하고 읽을 때 역파싱한다.
-// 손실 매핑이라 exclusions.md에 기록, 구조화 요청은 issues.md #11.
-function parseMeasureItems(text: string | null): string[] {
-  if (!text) return []
-  return text
-    .split(',')
-    .map((t) => t.trim())
-    .filter(Boolean)
-}
-
-function parseMeasurePeriod(text: string | null): MeasurePeriod | null {
-  if (!text) return null
-  const [start, end] = text.split('~').map((t) => t.trim())
-  if (!start || !end) return null
-  return { startDate: start, endDate: end }
-}
-
-function joinMeasureItems(items: string[]): string {
-  return items.join(', ')
-}
-
-function formatMeasurePeriod(period: MeasurePeriod | null): string {
-  if (!period?.startDate || !period.endDate) return ''
-  return `${period.startDate} ~ ${period.endDate}`
-}
+// 조치 5개 ↔ summaryN 매핑 / 시각 포맷 헬퍼는 피전 상세와 공유한다
+// (@/shared/lib/caseMeasures). 손실 매핑 근거는 exclusions.md, 구조화 요청은 issues.md #11.
 
 // ─── 조회 ────────────────────────────────────────────────────────────────────
 
@@ -307,6 +282,79 @@ function toAttachments(doc: CaseDocData): CaseAttachments {
   }
 }
 
+// GET GuardCase/Stec/W/GetDeployDetail?deployReqSeq= — 본사용 배치요구서 원본
+// (2026-09-07 실측 — docs/backend-integration-responses/GuardCase-Stec-GetDeployDetail.md).
+// GetGuardCaseDetail(경호계획 뷰)이 안 주는 원본 필드(요구자 3필드·사건개요·참고사항·
+// 성별/생년/직업/거주지·배치장소·문서 등록일)를 보완하고, 경호계획 미등록 배정 건의
+// 배치기간(periodFrom/periodTo)을 준다(issues #7·#10). 경찰용 Deploy/Police/W/GetDeployDetail과
+// 경로가 겹치므로 주의. 필드명: 읽기 응답은 suspectBirth/etcLoc1/etcLoc2
+// (쓰기 DTO는 suspectBirthDate/guardEtcLoc1/guardEtcLoc2).
+interface DeployRequestDetailData {
+  deployReqSeq: number
+  suspectGender: number | null
+  suspectBirth: string | null
+  suspectJob: string | null
+  suspectAddress: string | null
+  caseSummary: string | null
+  caseMemo: string | null
+  periodFrom: string | null
+  periodTo: string | null
+  guardHomeLoc: string | null
+  guardWorkLoc: string | null
+  etcLoc1: string | null
+  etcLoc2: string | null
+  documentDt: string | null
+  clientDept: string | null
+  clientPosition: string | null
+  clientName: string | null
+}
+
+async function fetchDeployRequestDetail(
+  deploySeq: number,
+): Promise<DeployRequestDetailData | null> {
+  try {
+    return await fetchData<DeployRequestDetailData>(
+      `/v1/GuardCase/Stec/W/GetDeployDetail?deployReqSeq=${deploySeq}`,
+      '배치요구서를 불러오지 못했습니다',
+    )
+  } catch {
+    // 배치요구서 원본을 못 받아도 상세 화면 자체는 떠야 한다(요약/스케줄/첨부는 유효).
+    return null
+  }
+}
+
+// GetGuardCaseDetail이 못 주는 배치요구서 원본 필드를 채워 넣는다. 이미 값이 있는
+// 필드(경호계획 등록 후 채워지는 배치기간·배치장소)는 유지하고 빈 값만 보완한다.
+function mergeDeployRequest(sc: SecurityCase, d: DeployRequestDetailData): SecurityCase {
+  return {
+    ...sc,
+    subject: {
+      ...sc.subject,
+      gender: d.suspectGender != null ? genderCodeToLabel(d.suspectGender) : sc.subject.gender,
+      birthDate: d.suspectBirth ?? sc.subject.birthDate,
+      occupation: d.suspectJob ?? sc.subject.occupation,
+      residence: d.suspectAddress ?? sc.subject.residence,
+    },
+    caseSummary: d.caseSummary ?? sc.caseSummary,
+    additionalNotes: d.caseMemo ?? sc.additionalNotes,
+    // 경호계획 미등록이면 GetGuardCaseDetail이 기간을 null로 준다 → 배치요구서 기간으로.
+    startDate: sc.startDate || d.periodFrom || '',
+    endDate: sc.endDate || d.periodTo || '',
+    location: {
+      residence: sc.location.residence || d.guardHomeLoc || '',
+      workplace: sc.location.workplace || d.guardWorkLoc || '',
+      etc1: sc.location.etc1 || d.etcLoc1 || '',
+      etc2: sc.location.etc2 || d.etcLoc2 || '',
+    },
+    requester: {
+      dept: d.clientDept ?? '',
+      position: d.clientPosition ?? '',
+      name: d.clientName ?? '',
+    },
+    createdAt: sc.createdAt || d.documentDt || '',
+  }
+}
+
 export async function getSecurityCase(id: string): Promise<SecurityCase> {
   const caseSeq = encodeURIComponent(id)
   const detail = await fetchData<GuardCaseDetailData>(
@@ -339,13 +387,17 @@ export async function getSecurityCase(id: string): Promise<SecurityCase> {
     ),
   ])
 
+  // 배치요구서 원본(deploySeq는 GetCaseDoc이 준다 — 46→81 등).
+  const deployReq = await fetchDeployRequestDetail(doc.deploySeq)
+
   const planRegistered = detail.startDate != null
-  return {
+  const result: SecurityCase = {
     ...header,
     baseInfo: planRegistered ? toBaseInfo(detail, guards) : undefined,
     workSchedule: scheduleDays.length > 0 ? toWorkSchedule(scheduleDays, meeting) : undefined,
     attachments: toAttachments(doc),
   }
+  return deployReq ? mergeDeployRequest(result, deployReq) : result
 }
 
 // ─── 경호계획 등록/수정 ──────────────────────────────────────────────────────

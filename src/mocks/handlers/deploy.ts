@@ -92,8 +92,13 @@ function toDeployDetail(c: SecurityCase) {
     mgmtNo: mgmtNo(c.receiptNumber, c.securityCode),
     statusName: c.status,
     suspectUserName: c.subject.nameInitial,
-    startDt: null,
-    endDt: null,
+    // 근무일자·근무시간은 경호계획 등록 후에만(2026-09-07 백엔드가 startDt/endDt →
+    // startDate/endDate/startTime/endTime로 변경, 본사 GetGuardCaseDetail과 동일 구조).
+    // 배정 이후 화면 회귀는 아래 mock 레코드 전체(mock: c)로 검증하므로 여기선 null.
+    startDate: null,
+    endDate: null,
+    startTime: null,
+    endTime: null,
     periodFrom: c.startDate,
     periodTo: c.endDate,
     requestedEndDate: c.pendingPeriodRequest?.requestedEndDate ?? null,
@@ -110,6 +115,19 @@ function toDeployDetail(c: SecurityCase) {
     crimeType: c.caseType,
     extendCount: 0,
     downloadYn: null,
+    // 조치 5개·대표근무자는 경호계획 등록 후에만 실제 값이 붙는다(2026-09-07 실측).
+    // 배정 이후 화면 회귀는 아래 mock 레코드 전체로 검증하므로 여기선 null/빈 값.
+    summary1: null,
+    summary1Date: null,
+    summary2: null,
+    summary2Date: null,
+    summary3: null,
+    summary3Date: null,
+    summary4: null,
+    summary4Date: null,
+    summary5: null,
+    summary5Date: null,
+    guardUserList: [],
     docGuardDetail: null,
     docDestructionDetail: null,
     docAgreeDetail: [],
