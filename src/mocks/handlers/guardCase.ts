@@ -1,6 +1,10 @@
 import { http, HttpResponse } from 'msw'
 import { companyAccounts } from '../data/accounts'
-import { assignManager, securityCases } from '../data/securityCases'
+import {
+  assignManager,
+  approvePeriodRequest as mockApprovePeriodRequest,
+  securityCases,
+} from '../data/securityCases'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../features/police/types/securityCase'
 import type { SecurityCase } from '../../features/police/types/securityCase'
 
@@ -47,6 +51,34 @@ function nameOfAssignee(assigneeId: string | undefined) {
 
 function codeSeqOf(role: string) {
   return role === '시스템관리자' ? 1 : role === '운영관리자' ? 2 : 3
+}
+
+// GET GetExtendRequestList / GetShortenRequestList 공용. pendingPeriodRequest.type이
+// 일치하는 진행 중 건을 GetDeployRequestList와 같은 항목 형태로 반환한다. 본부관리자는
+// 본인 배정 건만(WORK-009 재현).
+function periodRequestList(request: Request, type: '연장' | '단축') {
+  const account = stecUserFromBearer(request)
+  if (!account) {
+    return HttpResponse.json(
+      { message: '인증이 필요합니다.', data: null, code: 401 },
+      { status: 401 },
+    )
+  }
+  const data = securityCases
+    .filter((c) => c.pendingPeriodRequest?.type === type)
+    .filter((c) => account.role !== '본부관리자' || c.assigneeId === account.id)
+    .map((c) => ({
+      deploySeq: deploySeqOf(c),
+      caseSeq: caseSeqOf(c),
+      mgmtNo: c.receiptNumber,
+      groupName: c.policeStation,
+      parentGroupName: c.jurisdiction,
+      createDt: c.createdAt.slice(0, 10),
+      periodFrom: c.startDate,
+      periodTo: c.endDate,
+      requestedEndDate: c.pendingPeriodRequest!.requestedEndDate,
+    }))
+  return HttpResponse.json({ message: 'ok', data, code: 200 })
 }
 
 export const guardCaseTestHandlers = [
@@ -170,6 +202,50 @@ export const guardCaseTestHandlers = [
     if (!updated) {
       return HttpResponse.json(
         { message: '배정할 수 없는 상태입니다.', data: false, code: 400 },
+        { status: 400 },
+      )
+    }
+    return HttpResponse.json({ message: 'ok', data: true, code: 200 })
+  }),
+
+  // 연장/단축 요청 목록 — GET GuardCase/Stec/W/GetExtendRequestList · GetShortenRequestList.
+  http.get('/api/v1/GuardCase/Stec/W/GetExtendRequestList', ({ request }) =>
+    periodRequestList(request, '연장'),
+  ),
+  http.get('/api/v1/GuardCase/Stec/W/GetShortenRequestList', ({ request }) =>
+    periodRequestList(request, '단축'),
+  ),
+
+  // 연장/단축 승인 — POST GuardCase/Stec/W/ConfirmCasePeriod {caseSeq}.
+  // 실제 백엔드는 배치요구서 상태로 연장/단축을 판단해 기간·스케줄에 반영하고
+  // {data:true}만 준다. 더블은 mock approvePeriodRequest(연장=일자 추가 / 단축=일자
+  // 잘라내기)로 갱신하고, 본부관리자는 본인 배정 건만 승인 가능하도록 스코프를 재현한다.
+  http.post('/api/v1/GuardCase/Stec/W/ConfirmCasePeriod', async ({ request }) => {
+    const account = stecUserFromBearer(request)
+    if (!account) {
+      return HttpResponse.json(
+        { message: '인증이 필요합니다.', data: null, code: 401 },
+        { status: 401 },
+      )
+    }
+    const { caseSeq } = (await request.json()) as { caseSeq: unknown }
+    const record = securityCases.find((c) => caseSeqOf(c) === Number(caseSeq))
+    if (!record || !record.pendingPeriodRequest) {
+      return HttpResponse.json(
+        { message: '대기 중인 요청이 없습니다.', data: false, code: 400 },
+        { status: 400 },
+      )
+    }
+    if (account.role === '본부관리자' && record.assigneeId !== account.id) {
+      return HttpResponse.json(
+        { message: '권한이 없습니다.', data: false, code: 403 },
+        { status: 403 },
+      )
+    }
+    const updated = mockApprovePeriodRequest(record.id)
+    if (!updated) {
+      return HttpResponse.json(
+        { message: '승인할 수 없는 상태입니다.', data: false, code: 400 },
         { status: 400 },
       )
     }

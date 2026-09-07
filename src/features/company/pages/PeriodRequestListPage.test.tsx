@@ -105,21 +105,19 @@ describe('PeriodRequestListPage', () => {
     expect(updated.workSchedule!.days).toHaveLength(20)
   })
 
-  it('거부하면 pendingPeriodRequest만 해제되고 배치기간은 그대로 목록에서 사라진다', async () => {
+  it('거부 메뉴는 비활성화되어 있다 (대응 API 없음, issues.md #2)', async () => {
     setPendingRequest('단축', '2026-01-15')
     loginAsAdmin()
     renderPage('단축')
     await screen.findAllByText('26-03-강남경찰서')
 
     fireEvent.pointerDown(withinTable().getByRole('button', { name: '더보기' }))
-    fireEvent.click(await screen.findByRole('menuitem', { name: '거부' }))
-    const dialog = await screen.findByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('button', { name: '거부' }))
+    const rejectItem = await screen.findByRole('menuitem', { name: '거부' })
+    expect(rejectItem).toHaveAttribute('aria-disabled', 'true')
 
-    await waitFor(() => expect(screen.queryByText('26-03-강남경찰서')).not.toBeInTheDocument())
-    const updated = securityCases.find((c) => c.id === CASE_ID)!
-    expect(updated.pendingPeriodRequest).toBeUndefined()
-    expect(updated.endDate).toBe(ORIGINAL_END_DATE)
+    // 클릭해도 다이얼로그가 열리지 않는다.
+    fireEvent.click(rejectItem)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('본부관리자는 본인이 담당하는 건만 목록에 표시된다', async () => {
@@ -145,7 +143,8 @@ describe('PeriodRequestListPage', () => {
     setPendingRequest('연장', '2026-01-24')
     loginAs('hqmanager1') // 김민수 — case-seed-7 담당자 아님
 
-    await expect(approvePeriodRequest(CASE_ID)).rejects.toThrow('승인에 실패했습니다')
+    // approvePeriodRequest는 caseSeq(정수) 문자열을 받는다 — case-seed-7 → 7.
+    await expect(approvePeriodRequest('7')).rejects.toThrow('승인에 실패했습니다')
     const updated = securityCases.find((c) => c.id === CASE_ID)!
     expect(updated.pendingPeriodRequest).toBeDefined()
   })

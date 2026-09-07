@@ -64,7 +64,6 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
   const [stationFilter, setStationFilter] = useState(ALL)
   const [search, setSearch] = useState('')
   const [approveTarget, setApproveTarget] = useState<SecurityCase | null>(null)
-  const [rejectTarget, setRejectTarget] = useState<SecurityCase | null>(null)
 
   const requests = requestsQuery.data ?? []
 
@@ -189,7 +188,8 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               variant="destructive"
-                              onSelect={() => setRejectTarget(r)}
+                              disabled
+                              title="거부 기능은 현재 지원되지 않습니다"
                             >
                               <X />
                               거부
@@ -223,7 +223,11 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
                         <Check />
                         승인
                       </DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onSelect={() => setRejectTarget(r)}>
+                      <DropdownMenuItem
+                        variant="destructive"
+                        disabled
+                        title="거부 기능은 현재 지원되지 않습니다"
+                      >
                         <X />
                         거부
                       </DropdownMenuItem>
@@ -250,11 +254,6 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
         action="approve"
         targetCase={approveTarget}
         onOpenChange={(open) => !open && setApproveTarget(null)}
-      />
-      <PeriodRequestActionDialog
-        action="reject"
-        targetCase={rejectTarget}
-        onOpenChange={(open) => !open && setRejectTarget(null)}
       />
     </main>
   )

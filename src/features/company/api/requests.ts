@@ -173,30 +173,88 @@ export async function cancelPendingRequest(caseId: string): Promise<void> {
   }
 }
 
-// [본사] 연장요청/단축요청 목록: 전용 서버 필터 없이 전체 목록을 받아 클라이언트에서
-// pendingPeriodRequest.type으로 거른다. GetGuardCaseList에는 pendingPeriodRequest가
-// 없어 아직 mock(GetExtend/ShortenRequestList 미연동) — matrix 10번에서 정식 처리.
-export async function listPeriodRequests(type: '연장' | '단축'): Promise<SecurityCase[]> {
-  const cases = await listMockSecurityCases()
-  return cases.filter((c) => c.pendingPeriodRequest?.type === type)
+// GET /api/v1/GuardCase/Stec/W/GetExtendRequestList · GetShortenRequestList 의 항목
+// 형태 (실측: docs/backend-integration-responses/GuardCase-Stec-GetExtend-GetShortenRequestList.md).
+// GetDeployRequestList와 거의 같은 구조 — caseSeq가 채워져 있고(배정된 건),
+// requestedEndDate가 신청한 새 종료일이라는 점만 다르다.
+interface PeriodRequestRow {
+  deploySeq: number
+  caseSeq: number
+  mgmtNo: string
+  groupName: string
+  parentGroupName: string
+  createDt: string
+  periodFrom: string
+  periodTo: string
+  requestedEndDate: string
 }
 
-export async function approvePeriodRequest(caseId: string): Promise<SecurityCase> {
-  const res = await apiFetch(`/security-cases/${caseId}/period-request/approve`, {
-    method: 'PUT',
+// 항목엔 연장/단축 구분 필드가 없다 — 어느 엔드포인트를 불렀는지로 type을 정한다.
+// id는 caseSeq(승인 = ConfirmCasePeriod가 caseSeq를 받음). mgmtNo는 접미사 없는
+// 접수번호만("26-09-동래경찰서")이라 그대로 쓴다.
+function periodRequestRowToSecurityCase(
+  row: PeriodRequestRow,
+  type: '연장' | '단축',
+): SecurityCase {
+  return {
+    id: String(row.caseSeq),
+    receiptNumber: row.mgmtNo,
+    policeStation: row.groupName,
+    jurisdiction: row.parentGroupName,
+    status: '경호중',
+    caseType: '사건미접수',
+    subject: { nameInitial: '', gender: '', birthDate: '', occupation: '', residence: '' },
+    caseSummary: '',
+    startDate: row.periodFrom,
+    endDate: row.periodTo,
+    location: { residence: '', workplace: '', etc1: '', etc2: '' },
+    additionalNotes: '',
+    policeContact: { victimOfficer: '', investigator: '' },
+    requester: { dept: '', position: '', name: '' },
+    createdAt: row.createDt,
+    pendingPeriodRequest: {
+      type,
+      requestedEndDate: row.requestedEndDate,
+      // 응답에 "신청 시각"이 없어 배치요구서 최초 생성일(createDt)을 화면 "요청일"
+      // 표시에 대신 쓴다(exclusions). 승인 판단엔 영향 없음.
+      requestedAt: row.createDt,
+    },
+  }
+}
+
+// [본사] 연장요청/단축요청 목록. 운영/시스템관리자는 전국, 본부관리자는 본인 배정
+// 건만(서버 스코프). 연장은 GetExtendRequestList, 단축은 GetShortenRequestList로 분리.
+export async function listPeriodRequests(type: '연장' | '단축'): Promise<SecurityCase[]> {
+  const path =
+    type === '연장'
+      ? '/v1/GuardCase/Stec/W/GetExtendRequestList'
+      : '/v1/GuardCase/Stec/W/GetShortenRequestList'
+  const res = await apiFetch(path)
+  if (!res.ok) {
+    throw new Error('연장/단축 요청 목록을 불러오지 못했습니다')
+  }
+  const rows = await unwrapEnvelope<PeriodRequestRow[]>(res)
+  return rows.map((r) => periodRequestRowToSecurityCase(r, type))
+}
+
+// 승인 — POST GuardCase/Stec/W/AddGuardCase 와 같은 계열. body는 caseSeq 하나뿐이고
+// 서버가 배치요구서 상태(2:연장 / 3:단축)를 읽어 배치기간·근무스케줄에 반영한다.
+// 성공 {data:true}. caseId = SecurityCase.id = caseSeq(문자열).
+export async function approvePeriodRequest(caseId: string): Promise<void> {
+  const res = await apiFetch('/v1/GuardCase/Stec/W/ConfirmCasePeriod', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ caseSeq: Number(caseId) }),
   })
   if (!res.ok) {
     throw new Error('승인에 실패했습니다')
   }
-  return res.json() as Promise<SecurityCase>
 }
 
-export async function rejectPeriodRequest(caseId: string): Promise<SecurityCase> {
-  const res = await apiFetch(`/security-cases/${caseId}/period-request/reject`, {
-    method: 'PUT',
-  })
-  if (!res.ok) {
-    throw new Error('거부에 실패했습니다')
-  }
-  return res.json() as Promise<SecurityCase>
+// ⚠️ 연장/단축 "거부"에 대응하는 백엔드 EP가 없다(issues.md #2 — 승인만 있고 거부
+// 경로 자체가 없음). PeriodRequestListPage에서 거부 메뉴를 비활성화하므로 이 함수는
+// 호출되지 않는다 — 방어적으로 throw. EP가 생기면 여기에 연결한다.
+export async function rejectPeriodRequest(_caseId: string): Promise<void> {
+  void _caseId
+  throw new Error('연장/단축 거부 기능은 현재 사용할 수 없습니다')
 }

@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth/store/authStore'
-import { listPendingRequests, listSecurityCases } from '../api/requests'
+import { listPendingRequests, listPeriodRequests, listSecurityCases } from '../api/requests'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
 
 // 경호관리 관련 화면(배치요청/경호목록/연장요청/단축요청) 공통 탭 바.
@@ -45,17 +45,22 @@ function SecurityCaseTabs({ active }: SecurityCaseTabsProps) {
     queryFn: listPendingRequests,
     enabled: canSeeRequests,
   })
+  // 연장/단축 배지는 각 요청 목록 EP(GetExtend/ShortenRequestList)로 직접 센다 —
+  // 쿼리키를 PeriodRequestListPage와 공유해 화면 진입 시 캐시를 재사용하고 승인
+  // 후 무효화가 탭/목록 양쪽에 반영되게 한다.
+  const extensionRequestsQuery = useQuery({
+    queryKey: ['period-requests', '연장'],
+    queryFn: () => listPeriodRequests('연장'),
+  })
+  const shortenRequestsQuery = useQuery({
+    queryKey: ['period-requests', '단축'],
+    queryFn: () => listPeriodRequests('단축'),
+  })
   const activeCasesCount = casesQuery.data?.filter((c) =>
     ACTIVE_SECURITY_CASE_STATUSES.includes(c.status),
   ).length
-  // GetGuardCaseList에는 pendingPeriodRequest가 없어 연장/단축 배지는 matrix 10번
-  // 연동 전까지 항상 0으로 나온다(실제 대기 건은 그 화면에서 조회).
-  const extensionCount = casesQuery.data?.filter(
-    (c) => c.pendingPeriodRequest?.type === '연장',
-  ).length
-  const shortenCount = casesQuery.data?.filter(
-    (c) => c.pendingPeriodRequest?.type === '단축',
-  ).length
+  const extensionCount = extensionRequestsQuery.data?.length
+  const shortenCount = shortenRequestsQuery.data?.length
 
   return (
     <div className="flex gap-2 overflow-x-auto">
