@@ -38,7 +38,7 @@
 | 7 | B | [본사] 운영/시스템관리자 | 배치요청 목록(+본부 배정) | 완료 | (이번 커밋) | `GetDeployRequestList`/`GetStecUserList`(담당자 필터)/`AddGuardCase` 3종. deploySeq 81 실배정 → **GuardCase 최초 생성 검증**(caseSeq 46, `ST0002`). 담당자 목록 본부(#1)·배정건수 필드 없어 표시 축소. "취소" API 없어 메뉴 비활성화(**issues #9 신규**). 조인용 `listCaseAssignees` 분리(#8 회귀 차단). **함께 수정**: `client.ts` refresh single-flight(동시 401 → 1회용 RefreshToken 회전 → 강제 로그아웃되던 문제) |
 | 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 완료 | `59bcd5b` | `GetGuardCaseList` 실 API 전환. 응답 이중 래핑 `{meta,data:[...]}`, `pageSize` 상한 100 → `meta.totalPages`까지 클라이언트 순회. `caseSeq`→id, `mgmtNo` 완성형 `splitMgmtNo`, `statusName` 라벨 그대로, `userName`→`assigneeName`(담당자 id 없음 — managers 조인 제거). 7번 배정 건(caseSeq 46~48) 렌더 확인. **실백엔드 계정으로 이 화면 진입 시 나던 RefreshToken 폭풍 해소**(mock 호출 0). 회귀 차단: `listManagerAssignedCases`(#11)·`listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` + `handlers/managers.ts` 제거. 지역청·담당자 소속 본부 열 축소(exclusions) |
 | 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 부분완료(△) | `6aeac40`·`f738723`·`0040d59`·`f4ab7df`·`92a7802` (+이번 커밋) | **조회 5종 조립** + 경호계획 수정(`PatchCaseInfo`) + 스케줄(`AutoAddSchedule`/`PatchScheduleGroup`/`DeleteScheduleGroup` — 그룹1 보호) + **사전미팅 저장/삭제**(`SaveCaseMeeting`) + **파일 업로드 3종**(`PatchGuardPlanDoc`/`PatchConsentDoc`/`PatchDestroyDoc`, multipart) + 파기확인서 다운로드 연동·브라우저 검증. **블록**: 경호계획 등록(`AddGuardCaseInfo`) — 배치기간 조회 경로 없음(blockers, issues #10) → 등록 버튼 비활성 + 안내. 경호취소 — 본사 API 없음(issues #9) → 버튼 비활성. 손실 매핑: 조치 5섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11). 대표근무자·그룹 메모 조회 갭(issues #12). 테스트 더블 `guardCaseDetail.ts`. 기본정보 조회 카드 피전/본사 통일(`CaseBaseInfoCard`, `f738723`). **→ 섹션 B-1(#6~#9) 종료, 백엔드 일괄 요청**(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`). **2026-09-07 B-1 응답 반영**: 신규 `GuardCase/Stec/W/GetDeployDetail` 연동 — `getSecurityCase`가 `GetCaseDoc.deploySeq`로 호출해 배치요구서 원본 병합(`mergeDeployRequest`) → "배치요구서 원본보기" 다이얼로그 전체 필드, 경호계획 미등록 건 배치기간 채움 → **경호계획 "등록" 버튼 활성화**(blockers/issues #10 종료), 첨부 "등록일". 브라우저 검증(caseSeq 48·46). 경호취소(issues #9)·화면7 다이얼로그·조치 구조화(#11)는 여전히 미해결. **4·2번 재검증**: caseSeq 46 데이터 보유 |
-| 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 대기 | | 4번(재검증)에서 경찰이 신청한 데이터 필요. 거부 API 이슈(issues.md #2) 방향 확정 후 |
+| 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 부분완료(△) | (이번 커밋) | `GetExtendRequestList`/`GetShortenRequestList`(조회)·`ConfirmCasePeriod`(승인) 실 API 전환, `SecurityCaseTabs` 연장/단축 배지 실카운트 배선. 거부는 EP 없어 UI 차단(issues #2, B-2 종료 시 요청). **테스트 데이터로만 검증** — 실백엔드에 경호중 건이 없어 배정 건에 연장/단축 요청을 만들어 승인 왕복 실측(원복 완료). **연장/단축 신청은 업무상 경호중 상태만 대상**이고, 피전이 경호상세에서 직접 신청하는 부분(matrix #4 `requestPeriodChange`, △)이 개발·검증돼야 실제 요청 데이터가 생긴다 → **피전 요청 영역 개발 이후 재검증**(4번 "배정 이후 재검증"과 함께). 완료 표시 보류 |
 | 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 대기 | | 8번 이후. 본부 이슈(issues.md #1) 방향 확정 후 |
 | 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 대기 | | 새 API 연동 아님 — 6~11 화면을 본부관리자로 재확인("본인 배정 건만"). 이력 스코프는 그룹 C 후 꼬리 확인. **여기까지 = 메인 워크플로우 검증 완료**, **섹션 B-2 종료 → 백엔드 일괄 요청** |
 | 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 대기 | | 4·9의 종결·취소가 실제 터미널 데이터를 만들어야 의미 있음 |
@@ -51,6 +51,35 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-07: 10번([본사] 운영/시스템관리자 · 연장/단축 요청 목록) — **부분완료(△)**.
+  섹션 B-2 첫 화면. 사용자 결정: **승인만 연결, 거부는 UI 차단**(대응 EP 없음, issues #2).
+  - **연동**: `listPeriodRequests(type)` → `GET GetExtend/ShortenRequestList` 분기
+    (항목이 `GetDeployRequestList`와 유사, `caseSeq` 채워짐 + `requestedEndDate`;
+    연장/단축 구분 필드 없어 EP로 구분). `id←caseSeq`. `approvePeriodRequest` →
+    `POST ConfirmCasePeriod {caseSeq}`(반환 void). `rejectPeriodRequest`는 throw로 두고
+    `PeriodRequestListPage` ⋮ "거부" `disabled`. `SecurityCaseTabs` 연장/단축 배지를
+    실카운트로 배선(쿼리키 `['period-requests', type]` 목록 화면과 공유 → 승인 시 동시 갱신,
+    기존 "항상 0" 주석 제거). `listMockSecurityCases`는 이제 `listManagerAssignedCases`(#11)만 사용.
+  - **테스트 더블**: `guardCase.ts`에 `GetExtend/ShortenRequestList` + `ConfirmCasePeriod`
+    (본부관리자 "본인 배정 건만" 스코프 재현). `PeriodRequestListPage.test.tsx` 거부 테스트를
+    "메뉴 비활성 단언"으로 교체, 승인 API 직접호출 스코프 테스트는 `approvePeriodRequest('7')`로 정정.
+  - **△ 이유 — 테스트 데이터로만 검증**: **연장/단축 신청은 업무상 경호중 상태만 대상**
+    (경찰 경호상세가 경호중에서만 신청 버튼을 연다). 실백엔드에 경호중 건이 하나도 없어
+    (모든 경호시작일이 미래) 배정 건(deploySeq 81·82·86·89)에 연장/단축 요청을 주입해
+    본사 승인 왕복만 실측(승인 후 `endDate` 이동 확인 → 원복, `extendCount`만 0→1 잔류).
+    피전이 경호상세에서 직접 신청하는 부분(#4 `requestPeriodChange`, 코드만 교체·△)이
+    개발·검증돼야 실제 요청 데이터가 생긴다 → **#4 "배정 이후 재검증"과 함께 재확인**. 완료 표시 보류.
+  - **부수 실측**: `PATCH ExtendDeployPeriod`/`ShortenDeployPeriod`가 배정 상태도 기술적으로
+    받아줌(하드 검증 없음) — 단축은 새 종료일이 현재보다 앞이어야 400 아님. 정상 흐름은 경호중.
+  - 검증: `npm run test` 125/125(기존과 동일 수, 테스트 1건 성격 변경) · lint(기존 warning 2) ·
+    build 통과. 실백엔드 `run-s-pgms`(StecM1): 연장/단축 목록 렌더·탭 배지 실카운트·⋮ 거부
+    비활성·승인 다이얼로그→토스트→행 제거, 콘솔 에러 0. 데스크톱 스크린샷.
+  - 응답 샘플: `GuardCase-Stec-GetExtend-GetShortenRequestList.md`, `-ConfirmCasePeriod.md`,
+    `Deploy-Police-Extend-ShortenDeployPeriod.md`. exclusions: 요청일=`createDt` 대체 / 거부 UI 차단.
+  - 인프라: 실백엔드 curl은 `.claude/loop-backend/_probe-*.sh`(gitignore)로 실행 —
+    `.claude/settings.local.json`에 probe/curl allow 규칙 추가(사용자 직접, 분류기가 모델 편집 차단).
+  - **다음**: 커밋 후 사용자 승인 → B-2 #11(관리자 계정 관리) 착수.
 
 - 2026-09-07: **섹션 B-1 백엔드 응답 반영**(다음 화면 착수 전 단계, #10 착수 아님).
   백엔드가 대화 중 스웨거·응답을 반복 수정 — EP 2개 신설(커밋 `a9b3cec`) + 경찰용

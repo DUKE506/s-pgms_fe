@@ -16,6 +16,7 @@ dist-ssr
 .claude/settings.local.json
 .claude/skills/run-s-pgms/shots/
 .claude/loop-backend/test-accounts.local.md
+.claude/loop-backend/_probe-*.sh
 
 # Editor directories and files
 .vscode/*

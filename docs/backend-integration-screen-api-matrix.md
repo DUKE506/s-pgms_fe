@@ -99,7 +99,12 @@
    (`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`). 이후 **4번·2번의
    배정 이후 상태 표시를 재검증**(caseSeq 46에 경호계획+스케줄+미팅+첨부 데이터 생성됨)
 10. **[본사] 운영/시스템관리자 — 연장/단축요청 목록 (+승인/거부)** — *섹션 B-2 시작.*
-    4번 재검증에서 경찰이 신청한 데이터 필요. 거부 API 이슈(issues #2) 방향 확정 후
+    △ **부분 연동 (2026-09-07)**: 조회 2종(`GetExtend/ShortenRequestList`)·승인
+    (`ConfirmCasePeriod`) 실 API 전환, 탭 배지 실카운트. 거부는 EP 없어 UI 차단
+    (issues #2). **테스트 데이터로만 검증** — 실백엔드에 경호중 건이 없어 배정 건에
+    연장/단축 요청을 주입해 승인 왕복 실측(원복). **연장/단축 신청은 업무상 경호중 상태만
+    대상**이므로, 피전이 경호상세에서 직접 신청하는 부분(#4 `requestPeriodChange`, △)이
+    개발·검증돼 실제 요청 데이터가 생긴 뒤 재검증 필요 → **#4 "배정 이후 재검증"과 함께**.
 11. **[본사] 운영/시스템관리자 — 관리자 계정 관리** — 8 이후(담당경호 조회가 경호목록
     API 재사용). 본부 이슈(issues #1) 방향 확정 후
 12. **[본사] 본부관리자 — 스코프 재검증** (경호목록/상세/연장단축/관리자계정/근무자) —
@@ -293,9 +298,14 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listPeriodRequests` | `GET GetExtendRequestList` / `GetShortenRequestList` | 경찰 쪽에서 신청한 데이터 필요(위 재검증 단계에서 만들어짐) |
-| 승인 | `approvePeriodRequest` | `POST ConfirmCasePeriod` | |
-| 거부 | `rejectPeriodRequest` | ⚠️ **없음** | issues.md #2 — 방향 확정 전까지 블로커 후보 |
+| 목록 조회 | `listPeriodRequests` | `GET GetExtendRequestList` / `GetShortenRequestList` | ✅ 실 API 전환(2026-09-07). type으로 EP 분기, `caseSeq`→id 매핑. 항목 구조는 `GetDeployRequestList`와 유사(`caseSeq` 채워짐 + `requestedEndDate`). 응답 샘플 `GuardCase-Stec-GetExtend-GetShortenRequestList.md` |
+| 승인 | `approvePeriodRequest` | `POST ConfirmCasePeriod` | ✅ 실 API 전환. body `{caseSeq}` 하나, 서버가 배치기간·스케줄 반영. 응답 샘플 `GuardCase-Stec-ConfirmCasePeriod.md` |
+| 거부 | `rejectPeriodRequest` | ⚠️ **없음** | issues.md #2 — **처리 방향 확정**: 승인만 연결, 거부는 UI에서 `disabled`. `rejectPeriodRequest`는 throw. B-2 종료 시 거부 EP 신설 일괄 요청 |
+
+**△ 부분완료 — 재검증 필요**: 실백엔드에 경호중 건이 없어 배정 건에 연장/단축 요청을
+주입해 승인 왕복만 실측(원복 완료). 연장/단축 신청은 업무상 경호중 상태만 대상 —
+피전이 경호상세에서 직접 신청하는 부분(#4 `requestPeriodChange`, △)이 개발·검증돼야
+실제 요청 데이터가 생긴다. **#4 "배정 이후 재검증"과 함께 재확인.**
 
 #### 관리자 계정 관리 (`/admin/managers`)
 

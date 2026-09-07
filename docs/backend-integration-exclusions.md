@@ -511,3 +511,21 @@
   (`guardDeployDocDto`)는 `{docSeq, fileName, fileExt}`만. 프론트는 파일명 표시 +
   `GetDestroyDocDownload`로 받으므로 영향 없음.
 - **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 필요 시 응답에 `filePath` 추가 요청.
+
+### GET GetExtendRequestList / GetShortenRequestList — 연장/단축 요청 목록
+
+#### 항목에 "신청 시각" 필드가 없어 "요청일" 컬럼을 `createDt`로 대체
+- **왜 제외**: 응답 항목에 연장/단축을 *언제 신청했는지* 타임스탬프가 없다. `createDt`는
+  배치요구서(`AddDeployRequest`) 최초 생성일이라 신청일과 다르다. 화면의 "요청일" 컬럼은
+  `pendingPeriodRequest.requestedAt`을 표시하는데, 여기에 `createDt`를 넣어 대신 보여준다.
+- **사용자가 잃는 것**: "요청일"이 실제 연장/단축 신청일이 아니라 배치요구서 접수일로
+  보인다(대개 더 이른 날짜). 승인 판단에는 영향 없음(요청 종료일은 정확).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 응답 항목에 신청일 필드 추가 요청
+  시(B-2 일괄 요청에 포함 검토).
+
+#### 거부(reject) 기능 UI 차단
+- **왜 기록**: 제외가 아니라 의도된 비활성 — 연장/단축 "거부"에 대응하는 백엔드 EP가
+  없다(issues.md #2). `PeriodRequestListPage`의 ⋮ 메뉴에서 "거부"를 `disabled` +
+  title 안내로 두고, `rejectPeriodRequest`는 throw로 유지(호출 안 됨).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #2에 거부 EP 신설 요청
+  (B-2 섹션 종료 시 일괄) → 회신 오면 연결.

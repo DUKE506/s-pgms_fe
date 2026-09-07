@@ -77,8 +77,15 @@ childGroupName}]}]`). 이건 **경찰 조직(지방청/경찰서) 축**이라 �
 2. 별도 엔드포인트 없이 신청 자체를 "취소"하는 걸로 처리해도 된다면, 그 방법(예: 경찰
    쪽에 신청 취소 API를 만들어 본사가 대신 호출하게 하는 방식)이 있는지 확인.
 
-**영향받는 화면/코드**: `PeriodRequestActionDialog.tsx`, `features/company/api/requests.ts`
-의 `rejectPeriodRequest`.
+**처리 방향 확정(2026-09-07, matrix #10 연동 시 사용자 결정)**: 이번 연동에서는 **승인만
+연결하고 거부는 UI에서 차단**한다. `PeriodRequestListPage`의 ⋮ 메뉴에서 "거부"를
+`disabled` + title 안내로 두고, `rejectPeriodRequest`는 throw로 유지(호출 안 됨).
+거부 EP 신설(위 1안)은 **B-2 섹션 종료 시 일괄 요청**에 포함. 회신이 오면 그때 연결한다.
+(`exclusions.md` [본사] 연장/단축 요청 목록 항목에도 기록.)
+
+**영향받는 화면/코드**: `PeriodRequestListPage.tsx`(거부 메뉴 비활성),
+`PeriodRequestActionDialog.tsx`(거부 분기 dormant), `features/company/api/requests.ts`
+의 `rejectPeriodRequest`(throw).
 
 ---
 

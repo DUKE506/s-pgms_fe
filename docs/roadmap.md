@@ -249,6 +249,16 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         일괄 요청**(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md` —
         요청 9건). 이후 4·2번 배정 이후 상태 재검증(caseSeq 46에 경호계획+스케줄+미팅+
         첨부 데이터 생성됨).
+      - [~] 연장/단축요청 목록 — **부분 연동(2026-09-07, △)**. *섹션 B-2 시작.*
+        조회 2종(`GET GetExtendRequestList` / `GetShortenRequestList` — type으로 EP 분기,
+        항목이 `GetDeployRequestList`와 유사 + `caseSeq`·`requestedEndDate`) + 승인
+        (`POST ConfirmCasePeriod {caseSeq}`) 실 API 전환. `SecurityCaseTabs` 연장/단축
+        배지 실카운트 배선(쿼리키 목록 화면과 공유). **거부는 대응 EP가 없어 UI에서
+        `disabled`**(issues #2 — 승인만 연결하고 B-2 종료 시 거부 EP 일괄 요청, 사용자 결정).
+        **△ 이유**: 연장/단축 신청은 업무상 경호중 상태만 대상인데 실백엔드에 경호중 건이
+        없어, 배정 건에 요청을 주입해 본사 승인 왕복만 실측(원복). 피전이 경호상세에서
+        직접 신청하는 부분(#4 `requestPeriodChange`, △)이 개발·검증돼야 실제 요청
+        데이터가 생김 → **#4 "배정 이후 재검증"과 함께 재확인**.
 - [ ] **그룹 C — 이력** (본사 이력 → 경찰서 이력 → 본청/지역청 이력 + 진행중 건 상세
       조회전용). 그룹 B의 종결·취소가 터미널 데이터를 만든 뒤라야 의미 있음.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).
