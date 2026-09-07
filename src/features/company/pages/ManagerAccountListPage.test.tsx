@@ -44,19 +44,30 @@ describe('ManagerAccountListPage', () => {
   it.each([
     ['sysadmin', '시스템관리자'],
     ['opadmin', '운영관리자'],
-    ['hqmanager1', '본부관리자'],
-  ])('%s(%s)로 로그인해도 전체 계정(6개)을 조회할 수 있다', async (id) => {
+  ])('%s(%s)로 로그인하면 전체 계정(6개)을 조회할 수 있다', async (id) => {
     loginAs(id)
     renderPage()
 
     // 로그인 계정 자신의 이름이 아닌 다른 계정(이영희)로 대기해야 한다 — 상단
-    // breadcrumb이 로그인한 계정 이름을 즉시(쿼리 로딩 전에) 표시하는데,
-    // hqmanager1의 이름이 "김민수"라 그걸로 기다리면 로딩 완료를 보장 못 함.
+    // breadcrumb이 로그인한 계정 이름을 즉시(쿼리 로딩 전에) 표시한다.
     await screen.findAllByText('이영희')
     expect(withinTable().getByText('시스템 관리자')).toBeInTheDocument()
     expect(withinTable().getByText('운영 관리자')).toBeInTheDocument()
     expect(withinTable().getByText('김민수')).toBeInTheDocument()
     expect(withinTable().getAllByRole('row')).toHaveLength(7)
+  })
+
+  // 실서버 GetStecUserList는 본부관리자 토큰에 403 — 이 화면은 운영/시스템관리자
+  // 전용이다. 본부관리자가 이 화면에 들어와야 하는지(route/메뉴 제외 vs 백엔드가
+  // 본인 행만 반환) 자체는 matrix #12에서 결정. 지금은 안내 문구만.
+  it('본부관리자로 로그인하면 목록 대신 접근 제한 안내가 뜬다', async () => {
+    loginAs('hqmanager1')
+    renderPage()
+
+    expect(
+      await screen.findByText('이 화면은 운영·시스템관리자만 이용할 수 있습니다'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 
   it('시스템관리자는 운영관리자의 정보수정 메뉴가 없고 비밀번호 초기화만 가능하다', async () => {
@@ -69,40 +80,6 @@ describe('ManagerAccountListPage', () => {
 
     expect(screen.queryByRole('menuitem', { name: '정보수정' })).not.toBeInTheDocument()
     expect(await screen.findByRole('menuitem', { name: '비밀번호 초기화' })).toBeInTheDocument()
-  })
-
-  it('본부관리자는 본인 정보수정·비밀번호초기화가 가능하다', async () => {
-    loginAs('hqmanager1')
-    renderPage()
-    // 본인(김민수) 이름은 breadcrumb에도 즉시 뜨므로 로딩 대기 기준으로 못 씀 —
-    // 다른 계정 이름으로 대기.
-    await screen.findAllByText('이영희')
-
-    const ownRow = withinTable().getByText('김민수').closest('tr')!
-    fireEvent.pointerDown(within(ownRow).getByRole('button', { name: '더보기' }))
-    expect(await screen.findByRole('menuitem', { name: '정보수정' })).toBeInTheDocument()
-    expect(screen.getByRole('menuitem', { name: '비밀번호 초기화' })).toBeInTheDocument()
-  })
-
-  it('본부관리자에겐 시스템관리자 행에 액션 메뉴 자체가 없다', async () => {
-    loginAs('hqmanager1')
-    renderPage()
-    await screen.findAllByText('시스템 관리자')
-
-    const sysadminRow = withinTable().getByText('시스템 관리자').closest('tr')!
-    expect(within(sysadminRow).queryByRole('button', { name: '더보기' })).not.toBeInTheDocument()
-  })
-
-  it('본부관리자에겐 다른 본부관리자 행에도 액션 버튼 자체가 없다(배정건수는 보임)', async () => {
-    loginAs('hqmanager1')
-    renderPage()
-    await screen.findAllByText('이영희')
-
-    const otherManagerRow = withinTable().getByText('이영희').closest('tr')!
-    expect(within(otherManagerRow).queryByRole('button', { name: '더보기' })).not.toBeInTheDocument()
-    // 이영희(hqmanager2)는 경호중 건(case-seed-7) 1건을 실제로 담당 중 — 뷰어가
-    // 본부관리자여도 이 숫자는 정확해야 한다(위 assignedCountFor 서버 계산 버그 수정 확인).
-    expect(within(otherManagerRow).getByText('1')).toBeInTheDocument()
   })
 
   it('운영관리자는 본부관리자 정보수정 메뉴가 없고 비밀번호 초기화만 가능하다', async () => {

@@ -20,11 +20,11 @@ function ManagerAssignedCasesDialog({
   cases,
   onOpenChange,
 }: ManagerAssignedCasesDialogProps) {
-  // 종결/취소 건은 제외 — 목록 화면의 배정건수 카운트 기준과 동일.
+  // GetGuardCaseList에 담당자 id가 없어 담당자명으로 매칭한다(동명이인 취약,
+  // exclusions.md / issues.md #1). 응답 자체가 진행중(배정·경호중·경호완료) 건만
+  // 담고 있어 종결/취소는 이미 빠져 있다 — 목록 화면 배정건수 기준과 동일.
   const assignedCases = target
-    ? cases.filter(
-        (c) => c.assigneeId === target.id && c.status !== '종결' && c.status !== '취소',
-      )
+    ? cases.filter((c) => c.assigneeName === target.name)
     : []
 
   return (

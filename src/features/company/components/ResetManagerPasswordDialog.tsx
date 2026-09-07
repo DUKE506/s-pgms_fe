@@ -14,7 +14,7 @@ function ResetManagerPasswordDialog({ target, onOpenChange }: ResetManagerPasswo
   const showToast = useToastStore((s) => s.show)
 
   const mutation = useMutation({
-    mutationFn: () => resetManagerAccountPassword(target!.id),
+    mutationFn: () => resetManagerAccountPassword(target!.userSeq, target!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manager-accounts'] })
       showToast('비밀번호가 초기화되었습니다', 'success')

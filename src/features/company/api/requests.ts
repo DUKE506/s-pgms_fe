@@ -130,23 +130,6 @@ export async function listSecurityCases(): Promise<SecurityCase[]> {
   return rows.map(guardCaseRowToSecurityCase)
 }
 
-// 아직 mock인 화면 전용 — listSecurityCases를 실 API로 바꾸면 pendingPeriodRequest·
-// assigneeId 조인에 의존하는 화면들이 깨진다. 해당 화면들이 각자 연동될 때까지
-// (연장/단축요청=matrix 10번, 관리자 계정 담당경호=11번) 기존 mock 경로를 유지한다.
-async function listMockSecurityCases(): Promise<SecurityCase[]> {
-  const res = await apiFetch('/security-cases')
-  if (!res.ok) {
-    throw new Error('경호목록을 불러오지 못했습니다')
-  }
-  return res.json() as Promise<SecurityCase[]>
-}
-
-// 관리자 계정 관리(matrix 11번)의 "담당경호" 다이얼로그 — assigneeId로 필터하므로
-// GetGuardCaseList(담당자 id 없음)로는 대체 불가. 11번 연동 때 정식 처리.
-export function listManagerAssignedCases(): Promise<SecurityCase[]> {
-  return listMockSecurityCases()
-}
-
 // 본부 배정 — POST GuardCase/Stec/W/AddGuardCase {deploySeq, userSeq}.
 // 여기서 GuardCase(경호건)가 처음 생성된다. 성공 응답은 {data:true}뿐이라 호출부는
 // 목록을 재조회해 확인한다(반환값 없음). caseId=SecurityCase.id=deploySeq(문자열),

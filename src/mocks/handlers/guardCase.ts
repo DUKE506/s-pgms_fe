@@ -1,5 +1,9 @@
 import { http, HttpResponse } from 'msw'
-import { companyAccounts } from '../data/accounts'
+import {
+  companyAccounts,
+  resetCompanyAccountPassword,
+  updateCompanyAccountInfo,
+} from '../data/accounts'
 import {
   assignManager,
   approvePeriodRequest as mockApprovePeriodRequest,
@@ -9,8 +13,9 @@ import { ACTIVE_SECURITY_CASE_STATUSES } from '../../features/police/types/secur
 import type { SecurityCase } from '../../features/police/types/securityCase'
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — [본사] 배치요청
-// 목록·본부 배정·경호목록은 실제 백엔드(GuardCase/Stec/W/GetDeployRequestList·
-// AddGuardCase·GetGuardCaseList, User/Stec/W/GetStecUserList)로 연동 완료됐다
+// 목록·본부 배정·경호목록·연장단축·관리자 계정 관리는 실제 백엔드(GuardCase/Stec/W/
+// GetDeployRequestList·AddGuardCase·GetGuardCaseList·GetExtend/ShortenRequestList·
+// ConfirmCasePeriod, User/Stec/W/GetStecUserList·UpdateUser)로 연동 완료됐다
 // (docs/backend-integration-responses/GuardCase-Stec-*.md, User-Stec-GetStecUserList.md).
 // 브라우저 dev에서는 이 경로들을 MSW 미등록으로 두고 vite 프록시가 실제 백엔드로
 // 보낸다. 여기서는 실제 응답 envelope({message,data,code})와 항목 필드를 흉내내
@@ -35,9 +40,11 @@ function deploySeqOf(c: SecurityCase) {
   return Number(c.id.replace(/\D/g, '')) || 0
 }
 
-// companyAccounts.id('hqmanager1') → 실제 백엔드의 userSeq(정수) 자리.
+// companyAccounts.id('hqmanager1') → 실제 백엔드의 userSeq(정수) 자리. 숫자가 없는
+// 관리자 계정(sysadmin/opadmin)은 서로 0으로 겹치므로 고정값을 준다.
+const FIXED_USER_SEQ: Record<string, number> = { sysadmin: 901, opadmin: 902 }
 function userSeqOf(accountId: string) {
-  return Number(accountId.replace(/\D/g, '')) || 0
+  return FIXED_USER_SEQ[accountId] ?? (Number(accountId.replace(/\D/g, '')) || 0)
 }
 
 // mock SecurityCase.id('case-seed-6') → 실제 백엔드의 caseSeq(정수) 자리.
@@ -158,11 +165,16 @@ export const guardCaseTestHandlers = [
     })
   }),
 
-  // 담당자 선택 목록 — GET User/Stec/W/GetStecUserList.
+  // 담당자 선택 목록 / 관리자 계정 관리 목록 — GET User/Stec/W/GetStecUserList.
   // 전용 엔드포인트가 없어 본사 사용자 전체를 반환, 프론트가 본부관리자만 필터한다.
+  // 실서버는 본부관리자 토큰에 403(운영/시스템관리자 전용) — 그대로 재현한다.
   http.get('/api/v1/User/Stec/W/GetStecUserList', ({ request }) => {
     const denied = requireStec(request)
     if (denied) return denied
+    const actor = stecUserFromBearer(request)
+    if (actor?.role === '본부관리자') {
+      return HttpResponse.json({ message: '권한이 없습니다.', data: null, code: 403 }, { status: 403 })
+    }
     const data = companyAccounts.map((a) => ({
       userSeq: userSeqOf(a.id),
       codeSeq: codeSeqOf(a.role),
@@ -176,6 +188,39 @@ export const guardCaseTestHandlers = [
       pwChangedYn: !a.mustChangePassword,
     }))
     return HttpResponse.json({ message: 'ok', data, code: 200 })
+  }),
+
+  // 정보수정 / 비밀번호 초기화 — PATCH User/Stec/W/UpdateUser.
+  // 실제 백엔드는 userSeq로 대상을 찾아 넘어온 필드만 부분 갱신한다. 더블은
+  // companyAccounts(인메모리)를 갱신해 뒤이은 GetStecUserList가 반영하게 한다.
+  // name이 오면 정보수정(name+phone), loginPw가 오면 비번초기화로 갈라 처리한다.
+  http.patch('/api/v1/User/Stec/W/UpdateUser', async ({ request }) => {
+    const denied = requireStec(request)
+    if (denied) return denied
+    const body = (await request.json()) as {
+      userSeq: number
+      name?: string
+      phone?: string | null
+      loginPw?: string
+      pwChangedYn?: boolean
+    }
+    const account = companyAccounts.find((a) => userSeqOf(a.id) === Number(body.userSeq))
+    if (!account) {
+      return HttpResponse.json(
+        { message: '계정을 찾을 수 없습니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    if (body.name !== undefined) {
+      updateCompanyAccountInfo(account.id, {
+        name: body.name,
+        phone: body.phone ?? undefined,
+      })
+    }
+    if (body.loginPw !== undefined) {
+      resetCompanyAccountPassword(account.id)
+    }
+    return HttpResponse.json({ message: 'ok', data: true, code: 200 })
   }),
 
   // 본부 배정 — POST GuardCase/Stec/W/AddGuardCase {deploySeq, userSeq}.

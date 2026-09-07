@@ -1,7 +1,6 @@
 import { securityCaseHandlers } from './securityCases'
 import { workerHandlers } from './workers'
 import { guestHandlers } from './guests'
-import { companyAccountHandlers } from './companyAccounts'
 import { authHandlers } from './auth'
 import { deployTestHandlers } from './deploy'
 import { guardTestHandlers } from './guard'
@@ -9,12 +8,7 @@ import { guardCaseTestHandlers } from './guardCase'
 import { guardCaseDetailTestHandlers } from './guardCaseDetail'
 
 // 아직 mock인 화면들 — 브라우저(dev)와 테스트(vitest) 둘 다 이 배열을 쓴다.
-export const handlers = [
-  ...securityCaseHandlers,
-  ...workerHandlers,
-  ...guestHandlers,
-  ...companyAccountHandlers,
-]
+export const handlers = [...securityCaseHandlers, ...workerHandlers, ...guestHandlers]
 
 // 실제 백엔드로 연동 완료된 화면(로그인, 경찰서 경호목록) — 테스트(vitest)에서만
 // 등록한다. 브라우저에 등록하면 실제 백엔드로 나가야 할 요청을 MSW가 가로채

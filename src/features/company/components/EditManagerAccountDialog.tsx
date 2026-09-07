@@ -25,7 +25,11 @@ function EditManagerAccountForm({
   const showToast = useToastStore((s) => s.show)
 
   const mutation = useMutation({
-    mutationFn: () => updateManagerAccountInfo(target.id, { name: name.trim(), phone: phone.trim() || undefined }),
+    mutationFn: () =>
+      updateManagerAccountInfo(target.userSeq, {
+        name: name.trim(),
+        phone: phone.trim() || undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manager-accounts'] })
       showToast('계정 정보가 수정되었습니다', 'success')

@@ -18,8 +18,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useAuthStore } from '../../auth/store/authStore'
-import { listManagerAssignedCases } from '../api/requests'
-import { listManagerAccounts, type ManagerAccount } from '../api/managerAccounts'
+import { listSecurityCases } from '../api/requests'
+import {
+  listManagerAccounts,
+  ManagerListForbiddenError,
+  type ManagerAccount,
+} from '../api/managerAccounts'
 import EditManagerAccountDialog from '../components/EditManagerAccountDialog'
 import ResetManagerPasswordDialog from '../components/ResetManagerPasswordDialog'
 import ManagerAssignedCasesDialog from '../components/ManagerAssignedCasesDialog'
@@ -41,12 +45,17 @@ function canResetPassword(actorId: string, actorRole: string, target: ManagerAcc
 
 function ManagerAccountListPage() {
   const user = useAuthStore((state) => state.user)
-  const accountsQuery = useQuery({ queryKey: ['manager-accounts'], queryFn: listManagerAccounts })
-  // 담당경호 다이얼로그 전용 — assigneeId 조인이 필요해 아직 mock(matrix 11번에서 정식 처리).
-  const casesQuery = useQuery({
-    queryKey: ['manager-assigned-cases'],
-    queryFn: listManagerAssignedCases,
+  const accountsQuery = useQuery({
+    queryKey: ['manager-accounts'],
+    queryFn: listManagerAccounts,
+    // 403(본부관리자)·기타 오류 모두 재시도 의미 없음 — 즉시 안내로.
+    retry: false,
   })
+  // 배정건수 열 + 담당경호 다이얼로그용. GetGuardCaseList에 담당자 id가 없어
+  // 담당자명(assigneeName === 관리자 userName)으로 매칭한다 — 동명이인 취약
+  // (exclusions.md, issues.md #1). GetGuardCaseList는 진행중(배정·경호중·경호완료)
+  // 건만 주므로 종결/취소 제외는 자동으로 맞는다. 본사 경호목록 화면과 캐시 공유.
+  const casesQuery = useQuery({ queryKey: ['security-cases-all'], queryFn: listSecurityCases })
 
   const [search, setSearch] = useState('')
   const [editTarget, setEditTarget] = useState<ManagerAccount | null>(null)
@@ -57,6 +66,10 @@ function ManagerAccountListPage() {
   const cases = casesQuery.data ?? []
 
   const filtered = accounts.filter((a) => !search.trim() || a.name.includes(search.trim()))
+
+  function assignedCountOf(account: ManagerAccount): number {
+    return cases.filter((c) => c.assigneeName === account.name).length
+  }
 
   function menuFor(account: ManagerAccount) {
     if (!user) return null
@@ -126,7 +139,9 @@ function ManagerAccountListPage() {
       )}
       {accountsQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">
-          관리자 계정 목록을 불러오지 못했습니다
+          {accountsQuery.error instanceof ManagerListForbiddenError
+            ? '이 화면은 운영·시스템관리자만 이용할 수 있습니다'
+            : '관리자 계정 목록을 불러오지 못했습니다'}
         </p>
       )}
       {accountsQuery.isSuccess && filtered.length === 0 && (
@@ -156,7 +171,7 @@ function ManagerAccountListPage() {
                     <TableCell>{a.role}</TableCell>
                     <TableCell>{a.branch ?? '-'}</TableCell>
                     <TableCell>{a.phone ?? '-'}</TableCell>
-                    <TableCell>{a.role === '본부관리자' ? (a.assignedCount ?? 0) : '-'}</TableCell>
+                    <TableCell>{a.role === '본부관리자' ? assignedCountOf(a) : '-'}</TableCell>
                     <TableCell>
                       <div className="flex justify-end">{menuFor(a)}</div>
                     </TableCell>
@@ -185,7 +200,7 @@ function ManagerAccountListPage() {
                 <div className="text-xs text-muted-foreground">연락처 {a.phone ?? '-'}</div>
                 {a.role === '본부관리자' && (
                   <div className="text-xs text-muted-foreground">
-                    배정건수 {a.assignedCount ?? 0}건
+                    배정건수 {assignedCountOf(a)}건
                   </div>
                 )}
               </div>
