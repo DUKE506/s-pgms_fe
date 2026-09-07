@@ -91,6 +91,11 @@ GetDeployDetail*`(배치요구서 기간 보유)을 부르면 **403**(2026-09-04
    기간 불필요라 완전 동작, 브라우저 검증 완료). PROGRESS #9 = 부분완료(△).
 2. 등록 폼의 배치기간을 사용자 입력 가능하게 전환 — 승인된 화면 설계("고정 적용")를
    바꿔야 하고 오입력 위험. 보류.
-**상태**: **확인 대기** — 그룹 B(#6~#12) 섹션 종료(#12) 시 issues와 함께 백엔드에 일괄
-요청. 그전까지 등록 경로 미검증 이월. (curl로 caseSeq 46에 기간을 직접 넣어 등록·스케줄
-생성은 실측 완료 — DTO 스펙 자체는 정확.)
+**상태**: **해결됨(2026-09-07) — 연동·검증 완료**. 백엔드가 섹션 B-1 요청서(요청 1·2)
+응답으로 `GET GuardCase/Stec/W/GetDeployDetail?deployReqSeq=`를 신설(접수·배정·경호계획
+미등록 무관하게 `periodFrom`/`periodTo` 반환). 화면9 `getSecurityCase`가 `GetCaseDoc`의
+`deploySeq`로 이 EP를 호출(`fetchDeployRequestDetail`) → `mergeDeployRequest`가 경호계획
+미등록 건의 `startDate`/`endDate`를 배치요구서 기간으로 채운다. 브라우저 검증(caseSeq 48,
+배정+미등록): `BaseInfoForm` 배치기간 2026-09-12 ~ 2026-09-22 표시, `periodMissing` 경고
+사라짐, "등록" 버튼 활성. issues #7·#10 → 🟢. 응답 샘플
+`docs/backend-integration-responses/GuardCase-Stec-GetDeployDetail.md`.

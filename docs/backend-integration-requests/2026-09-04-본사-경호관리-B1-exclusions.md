@@ -23,7 +23,7 @@
 
 | | 항목 | 현재 프론트 처리 |
 |---|---|---|
-| 🔴 | 배치요구서 **원본을 볼 API가 없음** | "배치요구서 원본보기" 다이얼로그가 관리번호·경찰서·지역청·요청일·배치기간만 표시, 대상자 성별/생년월일/직업·사건개요·배치장소 4필드·수사관/요구자는 "-" — issues #7 (요청서 요청 2) |
+| ✅ | 배치요구서 **원본을 볼 API가 없음** → **해결(2026-09-04)** | 신규 `GET GuardCase/Stec/W/GetDeployDetail?deployReqSeq=`가 원본 전 필드 반환. "배치요구서 원본보기" 다이얼로그 전체 필드 연결 예정(반영 단계) — issues #7 |
 | 🔴 | 미배정 배치요구서 **"취소" API 없음** | ⋮ 메뉴 "취소" 비활성. `Deploy/Police/W/CancelGuardCase`는 본사 토큰 403 — issues #9 (요청서 요청 3) |
 | 🟠 | `GetDeployRequestList` 응답에 `suspectUserName`(대상자명) 없음 | 목록에 "대상자명" 열 없음 |
 | 🟠 | `GetStecUserList` 응답에 담당자 소속 **본부** 없음 | 배정 다이얼로그에서 "본부" 배지 생략 — issues #1 |
@@ -49,7 +49,7 @@
 
 | | 항목 | 현재 프론트 처리 |
 |---|---|---|
-| 🔴 | `GetGuardCaseDetail`에 **배치요구서 원본 필드** 없음 (요구자 3필드·사건개요·참고사항·문서 등록일·성별/생년월일/직업) | "배치요구서 원본보기" 및 첨부 카드 "등록일" 빈 값 — issues #7 |
+| ✅ | `GetGuardCaseDetail`에 **배치요구서 원본 필드** 없음 → **해결(2026-09-04, 별도 EP)** | 신규 `GetDeployDetail`(Stec)이 요구자 3필드·사건개요·참고사항·`documentDt`·성별/생년/직업을 반환. `GetCaseDoc.deploySeq`로 호출. 첨부 카드 "등록일"도 채움(반영 단계) — issues #7 |
 | 🟠 | `GetCaseGuardList`에 **`isRepresentative`(대표근무자)** 및 등록된 **경호풀 명단** 없음 | 대표 여부를 `guardUserList`(대표만·이름만)와 이름 매칭으로 추정. 경호풀은 `isAssigned`로 대체 추정 — issues #12 |
 | 🟠 | `GetCaseSchedule` 그룹 항목에 **`memo`(특이사항)** 없음 | `PatchScheduleGroup`으로 저장은 되나(200) 조회에 안 와서 재조회 시 "특이사항 · 없음" — issues #12 |
 | 🟠 | `GetCaseDoc.guardDeployDocDto`에 `filePath` 없음 | 다른 문서엔 있음. 파일명 표시 + `GetDestroyDocDownload`로 받아 영향은 없음 |
@@ -60,7 +60,7 @@
 
 | | 항목 | 현재 프론트 처리 |
 |---|---|---|
-| 🔴 | 경호계획 **등록에 필요한 배치기간**을 본사 조회로 못 얻음 (`GetGuardCaseDetail`은 null, `Deploy/Police/W/GetDeployDetail*` 본사·시스템관리자 토큰 403) | 배정 건에서 "등록" 버튼 비활성 + 안내문. "수정"(`PatchCaseInfo`, 기간 불필요)은 정상 — issues #10, blockers |
+| ✅ | 경호계획 **등록에 필요한 배치기간**을 본사 조회로 못 얻음 → **해결(2026-09-04)** | 신규 `GetDeployDetail`(Stec)이 `periodFrom`/`periodTo`를 경호계획 미등록 배정 건에서도 반환. "등록" 버튼 활성화 + 폼 배치기간 prefill 예정(반영 단계) — issues #10, blockers |
 | 🟠 | 조치 5섹션(안전/긴급응급/잠정/긴급임시/임시) ↔ `summary1~5`·`summaryNDate` 단일 문자열 2개뿐 | 선택 항목 `", "` 조인 / 기간 `"시작 ~ 종료"` 문자열로 직렬화, 읽을 때 역파싱. 프론트 규칙이라 타 클라이언트와 호환 불가 — issues #11 |
 
 ### 스케줄 — `AutoAddSchedule` / `PatchScheduleGroup` / `DeleteScheduleGroup`

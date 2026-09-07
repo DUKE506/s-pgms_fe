@@ -32,12 +32,12 @@
 | 1 | 전제 | 공통 | 로그인 | 완료 | `008383a` | 경찰/본사 실제로는 같은 엔드포인트 — 유일하게 역할보다 먼저 |
 | 2 | A | [경찰서] 피전 | 경찰서 경호목록 | 완료 | `2679751` | 스코프는 서버가 403으로 강제(analysis.md 4-6 해소). 3번 직후 재검증 완료(새 접수 반영·mgmtNo 조합형태 확인). **7번 배정 직후 부분 재검증(2026-09-03)**: 배정 건이 `statusName:"배정"`(프론트 라벨과 일치)·`mgmtNo:"…동래경찰서 ST0002"`(경호코드 조합)로 반환됨 확인. 경호중/경호완료/종결/취소는 **9번 이후 재검증** |
 | 3 | A | [경찰서] 피전 | 접수/배치요구서 작성 | 완료 | `5074920` (+배치장소 4필드 보정: 이번 커밋) | `POST AddDeployRequest`. 폼: 요구자 3필드 분리 + 생년월일 입력(+ `DateField` yearGrid). **2026-09-03**: 배치장소를 백엔드 수정에 맞춰 `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드 전송(공유 `toDeployRequestDto`, D-2 제거, issues #5 해결 — 쓰기 테스트 deploySeq 87 왕복) |
-| 4 | A | [경찰서] 피전 | 경호 상세 | 부분완료(△) | `19786c4` | **접수 상태만 실측 검증**(2026-09-03). 상세 조회·접수취소 정상. 배정 이후 4종은 코드만 교체·**미검증** → 9번 이후 재검증. **근무 스케줄은 `GetDeployGuardSchedule`(issues #6 해결) 있음** — 화면 9 이후 데이터로 재연결. `GetDeployDetail`이 배치장소를 null로 줘서 상세 배치장소 표시는 빈 값(`GetDeployDetailUpdate` 전환 검토). **완료 표시 보류** |
+| 4 | A | [경찰서] 피전 | 경호 상세 | 부분완료(△) | `19786c4` (+B-1 반영 커밋) | 접수 상태 실측 검증(2026-09-03). **2026-09-07 B-1 반영**: 백엔드가 `GetDeployDetail` shape 변경(`startDt`/`endDt` → `startDate`/`endDate`+`startTime`/`endTime`, `summary1~5`, `guardUserList`) → 배정+경호계획 등록 건의 조치 5개·배치시간·배치장소가 통합 카드에 채워짐(issues #13 해소, 브라우저 검증 deployReqSeq 81). 배정 이후 취소/연장/단축/종결 액션은 여전히 미검증 → 9번 이후 재검증. **완료 표시 보류** |
 | 5 | A | [경찰서] 피전 | 배치요구서 수정 | 완료 | (이번 커밋) | 블로커 해소 — 백엔드가 `GET GetDeployDetailUpdate` 응답 구현(배치요구서 원본 필드 전부 반환, issues #7 해결). prefill = `getDeployRequestForEdit`(`getSecurityCase`에서 분리, 쿼리키 분리) / 저장 = `PUT UpdateDeployRequest`(공유 `toDeployRequestDto`). 읽기/쓰기 필드명 비대칭 매핑. **저장 후 재진입 stale 캐시 버그 수정**(`removeQueries` — 아래 로그). 브라우저 SPA 플로우 검증. `mgmtNo` 없어 breadcrumb 축소·레거시 crimeType 영문 → exclusions. **피전 경호관리 섹션 종료** |
 | 6 | B | [본사] 운영/시스템관리자 | 근무자 목록/등록 | 완료 | `b5f5738` | `GetGuardList`/`AddGuardInfo`/`PatchGuardInfo`/`DeleteGuardInfo` 4종 실측(생성→수정→삭제 원상복구). 수정/삭제 mock에 없던 기능 → 행별 `⋮` 메뉴 UI 신규. 부서 열 제거(GetGuardList 응답에 `DEPT_NM` 누락 — DB엔 있음, issues #8 신규, 섹션 #12에서 일괄 요청). 조인용 `listCaseJoinWorkers` 분리(#9·#13 회귀 차단) |
 | 7 | B | [본사] 운영/시스템관리자 | 배치요청 목록(+본부 배정) | 완료 | (이번 커밋) | `GetDeployRequestList`/`GetStecUserList`(담당자 필터)/`AddGuardCase` 3종. deploySeq 81 실배정 → **GuardCase 최초 생성 검증**(caseSeq 46, `ST0002`). 담당자 목록 본부(#1)·배정건수 필드 없어 표시 축소. "취소" API 없어 메뉴 비활성화(**issues #9 신규**). 조인용 `listCaseAssignees` 분리(#8 회귀 차단). **함께 수정**: `client.ts` refresh single-flight(동시 401 → 1회용 RefreshToken 회전 → 강제 로그아웃되던 문제) |
 | 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 완료 | `59bcd5b` | `GetGuardCaseList` 실 API 전환. 응답 이중 래핑 `{meta,data:[...]}`, `pageSize` 상한 100 → `meta.totalPages`까지 클라이언트 순회. `caseSeq`→id, `mgmtNo` 완성형 `splitMgmtNo`, `statusName` 라벨 그대로, `userName`→`assigneeName`(담당자 id 없음 — managers 조인 제거). 7번 배정 건(caseSeq 46~48) 렌더 확인. **실백엔드 계정으로 이 화면 진입 시 나던 RefreshToken 폭풍 해소**(mock 호출 0). 회귀 차단: `listManagerAssignedCases`(#11)·`listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` + `handlers/managers.ts` 제거. 지역청·담당자 소속 본부 열 축소(exclusions) |
-| 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 부분완료(△) | `6aeac40`·`f738723`·`0040d59`·`f4ab7df`·`92a7802` (+이번 커밋) | **조회 5종 조립** + 경호계획 수정(`PatchCaseInfo`) + 스케줄(`AutoAddSchedule`/`PatchScheduleGroup`/`DeleteScheduleGroup` — 그룹1 보호) + **사전미팅 저장/삭제**(`SaveCaseMeeting`) + **파일 업로드 3종**(`PatchGuardPlanDoc`/`PatchConsentDoc`/`PatchDestroyDoc`, multipart) + 파기확인서 다운로드 연동·브라우저 검증. **블록**: 경호계획 등록(`AddGuardCaseInfo`) — 배치기간 조회 경로 없음(blockers, issues #10) → 등록 버튼 비활성 + 안내. 경호취소 — 본사 API 없음(issues #9) → 버튼 비활성. 손실 매핑: 조치 5섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11). 대표근무자·그룹 메모 조회 갭(issues #12). 테스트 더블 `guardCaseDetail.ts`. 기본정보 조회 카드 피전/본사 통일(`CaseBaseInfoCard`, `f738723`). **→ 섹션 B-1(#6~#9) 종료, 백엔드 일괄 요청**(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`). **4·2번 재검증**: caseSeq 46에 경호계획+스케줄+미팅+첨부 데이터 있음 — 다음 |
+| 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 부분완료(△) | `6aeac40`·`f738723`·`0040d59`·`f4ab7df`·`92a7802` (+이번 커밋) | **조회 5종 조립** + 경호계획 수정(`PatchCaseInfo`) + 스케줄(`AutoAddSchedule`/`PatchScheduleGroup`/`DeleteScheduleGroup` — 그룹1 보호) + **사전미팅 저장/삭제**(`SaveCaseMeeting`) + **파일 업로드 3종**(`PatchGuardPlanDoc`/`PatchConsentDoc`/`PatchDestroyDoc`, multipart) + 파기확인서 다운로드 연동·브라우저 검증. **블록**: 경호계획 등록(`AddGuardCaseInfo`) — 배치기간 조회 경로 없음(blockers, issues #10) → 등록 버튼 비활성 + 안내. 경호취소 — 본사 API 없음(issues #9) → 버튼 비활성. 손실 매핑: 조치 5섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11). 대표근무자·그룹 메모 조회 갭(issues #12). 테스트 더블 `guardCaseDetail.ts`. 기본정보 조회 카드 피전/본사 통일(`CaseBaseInfoCard`, `f738723`). **→ 섹션 B-1(#6~#9) 종료, 백엔드 일괄 요청**(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`). **2026-09-07 B-1 응답 반영**: 신규 `GuardCase/Stec/W/GetDeployDetail` 연동 — `getSecurityCase`가 `GetCaseDoc.deploySeq`로 호출해 배치요구서 원본 병합(`mergeDeployRequest`) → "배치요구서 원본보기" 다이얼로그 전체 필드, 경호계획 미등록 건 배치기간 채움 → **경호계획 "등록" 버튼 활성화**(blockers/issues #10 종료), 첨부 "등록일". 브라우저 검증(caseSeq 48·46). 경호취소(issues #9)·화면7 다이얼로그·조치 구조화(#11)는 여전히 미해결. **4·2번 재검증**: caseSeq 46 데이터 보유 |
 | 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 대기 | | 4번(재검증)에서 경찰이 신청한 데이터 필요. 거부 API 이슈(issues.md #2) 방향 확정 후 |
 | 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 대기 | | 8번 이후. 본부 이슈(issues.md #1) 방향 확정 후 |
 | 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 대기 | | 새 API 연동 아님 — 6~11 화면을 본부관리자로 재확인("본인 배정 건만"). 이력 스코프는 그룹 C 후 꼬리 확인. **여기까지 = 메인 워크플로우 검증 완료**, **섹션 B-2 종료 → 백엔드 일괄 요청** |
@@ -51,6 +51,42 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-07: **섹션 B-1 백엔드 응답 반영**(다음 화면 착수 전 단계, #10 착수 아님).
+  백엔드가 대화 중 스웨거·응답을 반복 수정 — EP 2개 신설(커밋 `a9b3cec`) + 경찰용
+  `Deploy/Police/W/GetDeployDetail` 응답 shape 변경. 실측 후 프론트 반영·브라우저 검증.
+  - **issues #13 → 🟢 (해결·연동)**: 백엔드가 경찰용 `Deploy/Police/W/GetDeployDetail`을
+    본사 `GetGuardCaseDetail`과 같은 구조로 변경 — `startDt`/`endDt` 제거 →
+    `startDate`/`endDate` + **`startTime`/`endTime`(근무시간 명시)**, `summary1~5`/
+    `summary1~5Date`(조치 5개), `guardUserList` 추가. `features/police/api/securityCaseDetail.ts`
+    `toSecurityCase`가 `startDate != null`이면 `baseInfo` 조립. 공유 헬퍼
+    `@/shared/lib/caseMeasures`(parse/join/format/hhmm) 신설 — 본사 쪽 로컬 헬퍼도
+    이걸로 교체. 브라우저(SPoliceM5, deployReqSeq 81): 배치시간 "매일 09:00 ~ 18:00" /
+    안전조치 "맞춤형 순찰, CCTV" / 잠정조치 "1호" 렌더. `suspectUserName` 마스킹("홍**")
+    — 실명 비노출 정책, 프론트는 `nameInitial`로 취급(대응 불필요).
+  - **issues #7·#10 → 🟢 (해결·연동, 화면9)**: 신규 `GuardCase/Stec/W/GetDeployDetail`
+    (본사용 배치요구서 원본). `features/company/api/securityCaseDetail.ts` `getSecurityCase`가
+    `GetCaseDoc.deploySeq`로 이 EP 호출(`fetchDeployRequestDetail`) → `mergeDeployRequest`로
+    `GetGuardCaseDetail`이 안 주는 원본 필드(성별/생년/직업/거주지·사건개요·참고사항·
+    요구자 3필드·`documentDt`) 병합, 경호계획 미등록 건은 `periodFrom`/`periodTo`로
+    `startDate`/`endDate` 채움. 브라우저(StecM1, caseSeq 48 배정+미등록): "배치요구서
+    원본보기" 다이얼로그 전체 필드 표시, `BaseInfoForm` 배치기간 2026-09-12~22 채워짐,
+    `periodMissing` 경고 사라짐·"등록" 버튼 활성. caseSeq 46(등록됨): 첨부 "등록일 ·
+    2026-09-02" 채워짐. `blockers.md` "경호계획 등록…배치기간" 종료.
+    배치장소 4필드는 deploySeq 88·89(정상 데이터) 반환, 82는 옛 D-2 데이터라 null(EP
+    갭 아님). **화면7 `RequestListPage` 배치요구서 다이얼로그는 목록 필드만 유지 — 후속.**
+  - **issues #1 부분**: `GetPoliceInfo`(지방청→경찰서 트리)로 화면8 지역청 필터 옵션
+    가능하나 행↔지방청 매칭·본부 열은 미해소 → **화면8 지역청 필터 복원은 후속(선택)**.
+  - 미해결 5건(#3 케이스취소·#4 deptName·#5 조치구조화·#6 대표근무자/memo·#8 사전미팅
+    시간) → 🟡 유지, B-2 종료 시 재요청.
+  - 인프라: 공유 헬퍼 `@/shared/lib/caseMeasures` + 단위 테스트(`caseMeasures.test.ts`,
+    8건). `mocks/handlers/deploy.ts` 더블 `toDeployDetail` shape 갱신(startDate/endDate/
+    startTime/endTime + summary null + guardUserList). 회사 detail 테스트 경로는
+    `d.mock` 조기 반환이라 신규 EP 더블 불필요.
+  - 검증: `npm run test` 125/125(117→125) · lint(기존 warning 2) · build 통과. 실백엔드
+    `run-s-pgms` 3화면 검증(피전 상세 81 / 본사 상세 48·46), 콘솔 에러 0. 응답 샘플
+    갱신: `Deploy-Police-GetDeployDetail.md`(09-07 새 shape 섹션).
+  - **다음**: 커밋 후 사용자 승인 → B-2 #10(연장/단축 요청 목록) 착수.
 
 - 2026-09-04: 9번 마무리 — **사전미팅 + 파일 업로드 3종 연동, 섹션 B-1 종료**.
   (앞선 9번 "조회+계획+스케줄" 커밋들 `6aeac40`·`f738723`·`0040d59`·`f4ab7df`에 이어)

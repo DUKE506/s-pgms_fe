@@ -123,30 +123,25 @@
 - **연동 커밋 / 해소 예정**: `19786c4` / issues #7(배치요구서 원본 상세조회 API) 반영 시
   화면5 조회+저장 연동과 함께 해소.
 
-#### `GetDeployDetail` 응답의 배치장소 4필드(`guardHomeLoc` 등)가 항상 null
-- **왜 제외하는지**: 배치장소는 이제 4필드로 정상 저장되지만(issues #5 해결), 그 값을
-  **`GetDeployDetail`(상세 화면용) 응답은 여전히 null로 준다** — `GetDeployDetailUpdate`
-  (수정 화면용)만 실제 값을 반환한다.
-- **사용자가 잃는 것**: 경찰 경호 상세(화면4)의 "배치장소" 칸이 비어 보인다.
-- **연동 커밋 / 해소 예정**: (화면5 iteration 커밋) / 화면4 재방문 시 `GetDeployDetailUpdate`
-  소스로 전환하거나, `GetDeployDetail` 응답에 배치장소를 실어달라고 섹션 종료 시 요청
-  (issues #5 "남은 것").
+#### `GetDeployDetail` 응답의 배치장소 4필드(`guardHomeLoc` 등) → **대체로 해소(2026-09-07)**
+- **현재**: 경찰용 `GetDeployDetail`은 **경호계획 등록된 건**에서 배치장소 4필드
+  (`guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2`)를 정상 반환한다
+  (브라우저 검증 deployReqSeq 81: "부산 동래구 낙민동 100 (수정됨)" 등). 경호계획
+  미등록 건은 null(경호계획이 없으니 정상). 옛 D-2 시절 생성분(deploySeq 82 등)은
+  원본에 배치장소가 없어 null 유지 — EP 갭이 아니라 데이터 문제.
+- **연동 커밋**: (이번 iteration) — 화면4 통합 카드에 배치장소 4필드가 채워짐.
 
-#### 5개 조치(안전/긴급응급/잠정/긴급임시/임시) + 배치시간(근무시간)이 빈 값
-- **왜 제외하는지**: 근무시간·조치 5개(+적용기간)는 본사가 배정 후 등록하는 "경호계획"의
-  일부인데, 경찰용 `GetDeployDetail`은 배정·경호계획 등록 이후에도 이 필드들을 응답에
-  싣지 않는다(실측: deploySeq 81 응답에 `summary1~5` 자체가 없음). 본사용
-  `GetGuardCaseDetail`에는 `startTime`/`endTime` + `summary1~5`로 들어있다(화면9 연동).
-  → 피전 `securityCaseDetail.ts`는 `baseInfo`를 아예 만들지 않아, 통합 카드
-  (`CaseBaseInfoCard`)의 조치 5칸·배치시간 칸이 전부 `-`.
-- **사용자가 잃는 것**: 피전이 자기 경호 대상 건의 경호계획(적용 조치·기간, 근무시간)을
-  상세에서 볼 수 없다. 배치장소 4필드·경호기간·담당 경찰관은 정상 표시. **회귀 아님** —
-  기존 `BaseInfoReadCard`도 `baseInfo` 없으면 조치를 `-`로 표시했고, 화면4는 원래 "접수
-  상태만 검증"이라 배정 이후 경호계획 표시는 미검증/이월이었음. 기본정보 카드 통일로
-  본사 화면과 나란히 보이면서 공백이 드러난 것.
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋 — 카드 통일) / **issues #13**
-  (`GetDeployDetail`에 `summary1~5`(+Date) + 근무시간 추가) 반영 + **화면4 "배정 이후
-  재검증"**(matrix 9번 완료 후) 시점에 함께 해소.
+#### 5개 조치(안전/긴급응급/잠정/긴급임시/임시) + 배치시간(근무시간)이 빈 값 → **해소(2026-09-07)**
+- **해소**: 백엔드가 경찰용 `Deploy/Police/W/GetDeployDetail`을 본사 `GetGuardCaseDetail`과
+  같은 구조로 변경 — `startDt`/`endDt` → `startDate`/`endDate` + **`startTime`/`endTime`**
+  (근무시간 명시 필드), `summary1~5`/`summary1~5Date`(조치 5개), `guardUserList` 추가.
+  피전 `securityCaseDetail.ts`가 `startDate != null`이면 이 필드들로 `baseInfo`를 조립
+  (공유 헬퍼 `@/shared/lib/caseMeasures`) → 통합 카드의 조치 5칸·배치시간이 채워진다.
+  브라우저 검증(deployReqSeq 81): "배치시간 매일 09:00 ~ 18:00 / 안전조치 맞춤형 순찰,
+  CCTV / 잠정조치 1호". **issues #13 → 🟢.**
+- (경위) 근무시간·조치 5개는 본사가 배정 후 등록하는 "경호계획"의 일부라 애초에 경찰용
+  응답에 없었고, 기본정보 카드 통일(2026-09-04)로 본사 화면과 나란히 보이면서 공백이
+  드러났던 것. 회귀 아님(기존 `BaseInfoReadCard`도 `baseInfo` 없으면 `-`였음).
 
 #### `jurisdiction`(관할 지방청) — 목록 연동과 동일
 - **왜 제외했는지**: `GetDeployDetail` 응답에 관할 정보 없음. 세션 `groupName`으로 상단

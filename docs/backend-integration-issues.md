@@ -42,6 +42,14 @@
 3. 위 변경이 부담되면 최소한 "본부 소속"만이라도 자유텍스트가 아니라 FK로 구조화하는 것을
    우선 요청 (1번만 먼저).
 
+**부분 진전(2026-09-04)**: B-1 섹션 응답으로 `GET GuardCase/Stec/W/GetPoliceInfo` 신설
+(지방청→경찰서 2단 트리, `[{groupSeq, groupName, childPoliceInfo:[{childGroupSeq,
+childGroupName}]}]`). 이건 **경찰 조직(지방청/경찰서) 축**이라 본사 경호목록의 "지역청
+필터 옵션"은 이걸로 채울 수 있다(단 `GetGuardCaseList` 행에 상위 지방청이 없어 행↔지방청
+매칭은 경찰서명 문자열 역탐색 — 취약, `GetGuardCaseList`에 `parentGroupName` 추가 필요).
+**담당자(본부관리자) 소속 "본부" 축은 여전히 미해소** — B-2(관리자 계정 관리)에서 재요청.
+응답 샘플: `docs/backend-integration-responses/GuardCase-Stec-GetPoliceInfo.md`.
+
 **영향받는 화면/코드**: `ManagerAccountListPage.tsx`, `EditManagerAccountDialog.tsx`,
 `ManagerAssignedCasesDialog.tsx`, `AssignManagerDialog.tsx`, `mocks/data/accounts.ts`
 (`branch`/`phone` 필드), `SecurityCaseListPage.tsx`(본사 경호목록 본부 컬럼/필터).
@@ -252,6 +260,31 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 breadcrumb만 영향, 경미) / 읽기·쓰기 필드명 비대칭(`suspectBirth`↔`suspectBirthDate`,
 `etcLoc1/2`↔`guardEtcLoc1/2` — 프론트에서 매핑 처리).
 
+**해결(2026-09-04) — 본사 측(위 요청/제안 3항)**: 백엔드가 섹션 B-1 요청서(요청 2)
+응답으로 `GET GuardCase/Stec/W/GetDeployDetail?deployReqSeq=`를 신설. 운영관리자(`StecM1`)
+토큰으로 실측(2026-09-04) — 접수·배정 모두 200(없는 seq는 404), 배치요구서 원본 전 필드
+반환: 요구자 3필드·`caseSummary`·`caseMemo`·`suspectGender`(0남/1여)·`suspectBirth`·
+`suspectJob`·`suspectAddress`·`investigator`/`responsibleOfficer`·`documentDt`(문서 등록일)
++ **배치장소 4필드**(`guardHomeLoc`/`guardWorkLoc`/`etcLoc1`/`etcLoc2`, deploySeq 88·89
+정상 데이터 기준 — 81·82가 null이던 건 4필드 쓰기 수정 전(2026-09-02) 생성분이라 원본에
+없던 것, EP 갭 아님) + `periodFrom`/`periodTo`. 읽기·쓰기 필드명 비대칭은 위와 동일
+(`suspectBirth`↔`suspectBirthDate`, `etcLoc1/2`↔`guardEtcLoc1/2`). `mgmtNo` 없음(목록에서
+받은 값 사용). 응답 샘플: `docs/backend-integration-responses/GuardCase-Stec-GetDeployDetail.md`.
+경로·이름이 경찰용 `Deploy/Police/W/GetDeployDetail`과 겹치므로 프론트 api 레이어에서 구분
+필요. → `DispatchRequestViewDialog`(화면7·9) 전체 필드 표시, 경호계획 등록 배치기간(#10)에도
+사용.
+
+**연동·검증 완료(2026-09-07) — 화면9**: `features/company/api/securityCaseDetail.ts`의
+`getSecurityCase`가 `GetCaseDoc.deploySeq`로 이 EP를 호출해(`fetchDeployRequestDetail`),
+`GetGuardCaseDetail`이 안 주는 원본 필드를 `mergeDeployRequest`로 병합 — 성별/생년/직업/
+거주지·사건개요·참고사항·요구자 3필드·문서 등록일. 브라우저 검증(caseSeq 48):
+경호계획 등록 폼의 "배치요구서 원본보기" 다이얼로그에 성별 여·생년월일 1992-01-01·
+직업 회사원·거주지·사건개요·요구자(여성청소년과 여성청소년계/경사/홍길동)·작성일
+2026-09-02 전부 표시. 배치장소는 deploySeq 82가 옛 데이터(D-2 시절)라 여전히 "-"(88·89
+같은 정상 데이터는 채워짐 — EP 갭 아님). 첨부 카드 "등록일 · 2026-09-02"(`documentDt`)도
+채워짐(exclusions 화면9 항목 해소). **화면7(`RequestListPage`)의 같은 다이얼로그는
+목록 필드만 표시 유지 — 후속.**
+
 **발견 경위**: 화면5([경찰서] 피전 · 배치요구서 수정) 연동 착수(2026-09-03), prefill
 소스 확인 중. 사용자 설명으로 데이터 모델 확정.
 
@@ -379,7 +412,21 @@ API 오면 `disabled`만 제거하면 됨.
 `features/company/components/CancelPendingCaseDialog.tsx`,
 `features/company/api/requests.ts`(`cancelPendingRequest`).
 
-## 10. 🟡 [본사] 경호계획 등록 — 배정 건의 "배치기간"을 본사 조회로 얻을 수 없음
+## 10. 🟢 [본사] 경호계획 등록 — 배정 건의 "배치기간" 조회 → **해결(신규 EP)**
+
+**해결(2026-09-04)**: 백엔드가 섹션 B-1 요청서(요청 1·2) 응답으로 신설한
+`GET GuardCase/Stec/W/GetDeployDetail?deployReqSeq=`가 **접수·배정·경호계획 미등록 무관하게
+`periodFrom`/`periodTo`를 항상 반환**한다(운영관리자 토큰 실측 2026-09-04, deploySeq
+70·71·81·82·86·88·89). 화면9는 이미 `GetCaseDoc` 응답으로 `deploySeq`를 갖고 있으므로
+(46→81, 47→86, 48→82) 그 값으로 이 EP를 호출해 경호계획 등록 폼 배치기간을 채운다.
+
+**연동·검증 완료(2026-09-07)**: `getSecurityCase` → `fetchDeployRequestDetail` →
+`mergeDeployRequest`가 경호계획 미등록 배정 건의 `startDate`/`endDate`를 이 EP의
+`periodFrom`/`periodTo`로 채운다 → `BaseInfoForm`의 `periodMissing`이 false가 되어
+"등록" 버튼 활성화. 브라우저 검증(caseSeq 48, 배정+미등록): 배치기간 2026-09-12 ~
+2026-09-22 표시, "배치기간 정보를 불러올 수 없어…" 경고 사라짐, 등록 버튼 활성.
+`blockers.md` 해당 항목 종료. 응답 샘플:
+`docs/backend-integration-responses/GuardCase-Stec-GetDeployDetail.md`. (아래는 발견 당시 기록.)
 
 **발견 경위**: 화면9([본사] 운영/시스템관리자 · 경호 상세) 연동(2026-09-04),
 `AddGuardCaseInfo` 실측 중. 상세는 `docs/backend-integration-blockers.md` "경호계획
@@ -444,7 +491,11 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 
 **임시 처리(D-형)**: 위 손실 매핑으로 연동 진행(`exclusions.md` [본사] 경호 상세).
 
-**전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`)로 정리 — 백엔드 전달 예정, 답변 대기.
+**전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`)로 정리.
+**백엔드에 전달 완료(2026-09-04, 사용자가 #13과 함께 별도로 요청)** — `summaryN` 항목
+구조화 + `summaryNDate` → from/to 2필드. 답변 대기(🟡 유지). 실측 근거:
+`GetGuardCaseDetail?caseSeq=46` 응답에 `summary1:"맞춤형 순찰, CCTV"` /
+`summary1Date:"2026-09-10 ~ 2026-09-20"`처럼 프론트 손실 매핑이 그대로 저장돼 있는 것 확인.
 
 **영향받는 화면/코드**: `features/company/components/BaseInfoForm.tsx`(7~11번 섹션),
 `features/company/api/securityCaseDetail.ts`(`toBaseInfo`/`toCaseInfoBody`,
@@ -483,7 +534,19 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 **영향받는 화면/코드**: `features/company/api/securityCaseDetail.ts`(`toBaseInfo`·
 `toWorkSchedule`), `features/company/components/ScheduleSection.tsx`(그룹 특이사항 표시).
 
-## 13. 🟡 [경찰서] 경호 상세 — `GetDeployDetail`에 경호계획의 "조치 5개"·"근무시간"이 없음
+## 13. 🟢 [경찰서] 경호 상세 — `GetDeployDetail`에 조치 5개·근무시간 → **해결(백엔드 수정 + 연동 완료)**
+
+**해결(2026-09-07)**: 백엔드가 경찰용 `Deploy/Police/W/GetDeployDetail` 응답을 본사
+`GetGuardCaseDetail`과 같은 구조로 맞췄다 — `startDt`/`endDt` 제거 →
+`startDate`/`endDate` + **`startTime`/`endTime`(근무시간 명시 필드)**, `summary1~5` /
+`summary1~5Date`(조치 5개), `guardUserList`(대표근무자 이름) 추가. 경호계획 미등록이면
+전부 null. 프론트 `features/police/api/securityCaseDetail.ts`가 `startDate != null`일 때
+`summary1~5`+`startTime`/`endTime`으로 `baseInfo`를 조립(공유 헬퍼
+`@/shared/lib/caseMeasures`) → 통합 기본정보 카드의 조치·배치시간이 채워진다.
+브라우저 검증(deployReqSeq 81): "배치시간 매일 09:00 ~ 18:00 / 안전조치 맞춤형 순찰,
+CCTV / 잠정조치 1호" 렌더 확인. 응답 샘플: `Deploy-Police-GetDeployDetail.md`.
+남은 것: `suspectUserName`은 마스킹("홍**") — 실명 비노출 정책(프론트는 `nameInitial`로
+취급, 대응 불필요). (아래는 발견 당시 기록.)
 
 **발견 경위**: 화면9 연동 후 기본정보 카드를 피전/본사 공유(`CaseBaseInfoCard`, 2026-09-04)
 하면서, 같은 건(deploySeq 81 = caseSeq 46)을 두 화면이 나란히 볼 때 피전 쪽만 조치·
@@ -496,10 +559,17 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
   `GetGuardCaseDetail`은 이를 `startTime`/`endTime` + `summary1~5`/`summary1~5Date`로
   반환한다(화면9에서 연동).
 - 경찰용 `GetDeployDetail`은 배정·경호계획 등록 이후에도 이 필드들을 **응답에 싣지
-  않는다**. 실측(deploySeq 81, 배정+경호계획 등록됨) 응답에 `summary*`가 아예 없고,
-  근무시간은 `startDt`/`endDt`의 시각부로 유추만 가능(조치는 유추 불가).
+  않는다**. 실측(deploySeq 81, 배정+경호계획 등록됨, 2026-09-04) 응답에 `summary1~5`/
+  `summary1~5Date`가 **아예 없고**, `startTime`/`endTime` **명시 필드도 없다** —
+  근무시간은 `startDt`/`endDt`(datetime, 예 `"2026-09-10T09:00:00"` ~ `"...T18:00:00"`)의
+  시각부로 유추만 가능(조치는 유추 불가). 경호계획 미등록 건(82·86)은 `startDt`/`endDt`도
+  null이라 그마저 없음.
 - 배치장소 4필드(`guardHomeLoc` 등)·경호기간·담당 경찰관은 `GetDeployDetail`에도 있어
-  정상 표시된다 — 조치·근무시간만 공백.
+  (경호계획 등록 후) 정상 표시된다 — 조치·근무시간만 공백.
+- **데이터는 백엔드에 있다(2026-09-04 재확인)**: 같은 건을 본사용
+  `GetGuardCaseDetail?caseSeq=46`으로 보면 `startTime:"09:00:00"` / `endTime:"18:00:00"` +
+  `summary1`/`summary1Date`/`summary3`/`summary3Date`가 전부 채워져 있다. 즉 "데이터 부재"가
+  아니라 **경찰용 EP의 select/DTO 누락**이다(issues #8 `deptName`과 같은 성격).
 
 **왜 문제인가**: 피전(경찰)이 자기 경호 대상 건의 경호계획(어떤 안전조치가 어느 기간
 적용되는지, 근무시간이 몇 시부터인지)을 상세 화면에서 볼 수 없다. 이미 승인된 화면
@@ -521,7 +591,11 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 
 **전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/
 2026-09-04-본사-경호관리-B1.md` 요청 7)로 정리 — 화면4가 피전 섹션(2~5번)이지만
-그땐 배정 데이터가 없어 못 잡은 항목이라 본사 B-1에 함께 실었다. 백엔드 전달 예정.
+그땐 배정 데이터가 없어 못 잡은 항목이라 본사 B-1에 함께 실었다.
+**백엔드에 전달 완료(2026-09-04, 사용자가 #11 `summaryN` 구조화와 함께 별도로 요청)** —
+경찰용 `GetDeployDetail`에 `summary1~5`/`summary1~5Date` + `startTime`/`endTime` 명시 필드
+추가(본사 `GetGuardCaseDetail`엔 이미 있음, 같은 컬럼). 답변 대기(🟡 유지). B-1 섹션
+응답으로 온 신규 EP 2개는 둘 다 본사용이라 이 건은 손대지 않았다 — B-2 재요청 목록에 이월.
 
 **영향받는 화면/코드**: `features/police/api/securityCaseDetail.ts`(`toSecurityCase` —
 현재 `baseInfo` 자체를 만들지 않음), `shared/components/CaseBaseInfoCard.tsx`,

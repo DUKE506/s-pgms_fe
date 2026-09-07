@@ -1,10 +1,84 @@
 # Deploy/Police/W/GetDeployDetail
 
-- 테스트 날짜: 2026-09-02
+- 테스트 날짜: 2026-09-02 (최초) / **2026-09-07 재실측 — 응답 shape 변경**
 - 사용한 테스트 계정/데이터: `SPoliceM5`(경찰, 동래경찰서 · 피전, `groupSeq=32`),
-  `deployReqSeq` 81·82(#3 검증 때 생성된 실접수건) + 84(이번에 만들고 접수취소로 삭제한 임시건)
+  `deployReqSeq` 81(배정+경호계획 등록)·82·86(배정+미등록)·71(접수)
 - 엔드포인트: `GET /api/v1/Deploy/Police/W/GetDeployDetail`
 - 파라미터: `deployReqSeq`(int, 필수) — 목록(`GetDeployList`)의 `deploySeq`와 동일 값
+
+## 2026-09-07 변경 — 조치 5개 + 근무시간 명시 필드 추가 (issues #13 해소)
+
+백엔드가 응답을 본사 `GetGuardCaseDetail`과 같은 구조로 맞췄다:
+
+- **`startDt`/`endDt` 제거** → **`startDate`/`endDate`(근무일자) + `startTime`/`endTime`
+  (근무시간 **명시 필드**)** 로 대체. 경호계획 미등록이면 4개 다 `null`(경호기간은
+  `periodFrom`/`periodTo`로 계속 옴).
+- **`summary1`~`summary5` / `summary1Date`~`summary5Date` 추가** — 조치 5개. 본사와
+  같은 손실 매핑 포맷(항목 `", "` 조인 / 기간 `"시작 ~ 종료"`). 미등록이면 전부 `null`.
+- **`guardUserList: [{ guardName }]` 추가** — 대표근무자(이름만, `guardSeq` 없음).
+
+### 응답 (실제) — 배정 + 경호계획 등록됨 (deployReqSeq 81 = caseSeq 46)
+
+```json
+{
+  "deployReqSeq": 81,
+  "mgmtNo": "26-09-동래경찰서 ST0002",
+  "statusName": "배정",
+  "suspectUserName": "홍**",
+  "startDate": "2026-09-10",
+  "endDate": "2026-09-20",
+  "startTime": "09:00:00",
+  "endTime": "18:00:00",
+  "periodFrom": "2026-09-10",
+  "periodTo": "2026-09-20",
+  "requestedEndDate": null,
+  "clientName": "홍길동",
+  "clientDept": "여성청소년과 여성청소년계",
+  "clientPosition": "경사",
+  "suspectAddress": "부산 동래구 온천천로 123",
+  "guardHomeLoc": "부산 동래구 낙민동 100 (수정됨)",
+  "guardWorkLoc": "부산 동래구 온천동 200",
+  "guardEtcLoc1": "이동경로 A",
+  "guardEtcLoc2": null,
+  "investigator": "이형사 / 경위 / 01033334444",
+  "responsibleOfficer": "김경사 / 경사 / 01011112222",
+  "crimeType": "스토킹",
+  "extendCount": 0,
+  "downloadYn": false,
+  "summary1": "맞춤형 순찰, CCTV",
+  "summary1Date": "2026-09-10 ~ 2026-09-20",
+  "summary2": null, "summary2Date": null,
+  "summary3": "1호",
+  "summary3Date": "2026-09-10 ~ 2026-09-20",
+  "summary4": null, "summary4Date": null,
+  "summary5": null, "summary5Date": null,
+  "guardUserList": [{ "guardName": "김가드" }],
+  "docGuardDetail": { "docSeq": 30, "docType": 0, "docPath": "...", "fileName": "consent2.pdf", "fileExt": ".pdf" },
+  "docDestructionDetail": null,
+  "docAgreeDetail": [
+    { "agreePath": "...", "agreeFileName": "consent2.pdf", "agreeFileExt": ".pdf", "guardName": "김가드" }
+  ]
+}
+```
+
+### 응답 (실제) — 배정 + 경호계획 미등록 (82·86) / 접수 (71)
+
+`startDate`/`endDate`/`startTime`/`endTime` = `null`, `summary1~5`/`summary1~5Date` = `null`,
+`guardUserList` = `[]`. 나머지(요구자·수사관·`periodFrom`/`periodTo`·`suspectAddress` 등)는
+동일하게 옴. `suspectUserName`은 **마스킹**("홍**" / "이**") — 실명 비노출이 의도된 정책
+(프론트는 이 값을 `nameInitial`로 취급, 별도 처리 없음).
+
+### 프론트 반영 (2026-09-07)
+
+`features/police/api/securityCaseDetail.ts` — `startDate != null`이면 `summary1~5` +
+`startTime`/`endTime`으로 `baseInfo`를 조립(공유 헬퍼 `@/shared/lib/caseMeasures`).
+통합 기본정보 카드(`CaseBaseInfoCard`)의 조치 5개·배치시간이 채워짐. 브라우저 검증:
+deployReqSeq 81에서 "배치시간 매일 09:00 ~ 18:00 / 안전조치 맞춤형 순찰, CCTV / 잠정조치
+1호" 렌더 확인. **issues #13 해소.**
+
+---
+
+## (이하 2026-09-02 최초 실측 — 접수 상태, 구 shape)
 
 ## 요청
 
