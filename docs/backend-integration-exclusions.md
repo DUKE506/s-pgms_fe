@@ -529,3 +529,31 @@
   title 안내로 두고, `rejectPeriodRequest`는 throw로 유지(호출 안 됨).
 - **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #2에 거부 EP 신설 요청
   (B-2 섹션 종료 시 일괄) → 회신 오면 연결.
+
+### GET User/Stec/W/GetStecUserList — 관리자 계정 관리 (matrix 11번)
+
+#### "본부" 열이 항상 "-"
+- **왜 제외**: 응답에 관리자의 소속 본부를 나타내는 필드가 없다(`groupSeq`/`groupName`
+  전부 `null`, 본부명은 `userName`에 자유텍스트로 섞임 — "HS2본부" 등). issues.md #1.
+- **사용자가 잃는 것**: 목록·모바일 카드의 "본부" 열/접미사가 전부 "-". 본부별 필터도 불가.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #1(본부 소속 구조화) 반영 시.
+  B-2 섹션 종료 시 일괄 재요청.
+
+#### "배정건수" 열 · "담당경호" 다이얼로그 — 담당자명으로 매칭
+- **왜 제외**: `GetGuardCaseList` 행에 담당자 식별자가 없다(`userSeq`/`managerName`
+  필드는 스키마에 있으나 백엔드가 `null`로 내려줌 — issues.md #8 `deptName`과 같은 성격).
+  담당자명(`userName`, 예 "HS2본부")은 `GetStecUserList`의 `userName`과 같은 값이라,
+  `SecurityCase.assigneeName === ManagerAccount.name` 문자열 매칭으로 건수/목록을 계산한다.
+  진행중(배정·경호중·경호완료) 건만 반환하므로 종결/취소 제외는 자동으로 맞다.
+- **사용자가 잃는 것**: 관리자 `userName`이 겹치는 동명이인이 생기면 두 사람의 배정건이
+  섞여 보인다(현재 실서버 계정은 전부 유니크). 본부관리자 토큰으로는 서버가 본인 배정
+  건만 내려줘 다른 관리자 건수가 0으로 보임 → matrix #12 스코프 재검증 대상.
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / `GetGuardCaseList` 행에 담당자
+  `userSeq` 채워주면 id 매칭으로 전환(issues #1에 함께 기록, B-2 일괄 요청).
+
+#### 연락처(phone) — "대표번호" 의미 / `null`로는 못 지움
+- **왜 기록**: `USER_INFO.PHONE`은 스키마상 "대표번호" 용도라(issues.md #1) 정보수정의
+  "연락처"가 담당자 개인 번호라는 화면 전제와 어긋난다 — 화면 문구는 그대로 두고 값만
+  왕복. 또한 `UpdateUser`는 `null` 필드를 "변경 안 함"으로 무시하므로, 빈 연락처는
+  `""`(빈 문자열)로 전송해야 지워진다(`updateManagerAccountInfo` 반영, 실측 확인).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #1(개인정보 컬럼 분리) 논의 시.

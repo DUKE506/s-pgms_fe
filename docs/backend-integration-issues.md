@@ -50,6 +50,17 @@ childGroupName}]}]`). 이건 **경찰 조직(지방청/경찰서) 축**이라 �
 **담당자(본부관리자) 소속 "본부" 축은 여전히 미해소** — B-2(관리자 계정 관리)에서 재요청.
 응답 샘플: `docs/backend-integration-responses/GuardCase-Stec-GetPoliceInfo.md`.
 
+**재확인(2026-09-07, matrix #11 관리자 계정 관리 연동)**: `GET User/Stec/W/GetStecUserList`
+실측에서도 `groupSeq`/`groupName` 전부 `null` — 본부 소속을 구조화해 조회할 방법 여전히
+없음. `UpdateUser` DTO에도 본부(그룹) 필드 없음. → 화면의 "본부" 열은 "-" 고정
+(`exclusions.md`). **B-2 섹션 종료 시 일괄 요청에 포함**할 항목:
+1. `USER_INFO`에 본부(`BASIC_CODE` 8~14) FK 컬럼 신설 + `GetStecUserList`·`UpdateUser`
+   응답/입력에 반영 (위 요청/제안 1·3항 그대로).
+2. **`GetGuardCaseList` 행에 담당자 `userSeq` 채워달라** — 필드(`userSeq`, `managerName`)는
+   응답 스키마에 이미 있는데 값이 `null`이다. 지금은 담당자명(`userName`) 문자열 매칭으로
+   배정건수·담당경호 목록을 계산 중(동명이인 취약, `exclusions.md`). id를 주면 정확한
+   조인으로 전환. issues #8(`deptName`)과 같은 "select/DTO 매핑 한 줄" 수준으로 보임.
+
 **영향받는 화면/코드**: `ManagerAccountListPage.tsx`, `EditManagerAccountDialog.tsx`,
 `ManagerAssignedCasesDialog.tsx`, `AssignManagerDialog.tsx`, `mocks/data/accounts.ts`
 (`branch`/`phone` 필드), `SecurityCaseListPage.tsx`(본사 경호목록 본부 컬럼/필터).

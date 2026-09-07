@@ -259,6 +259,15 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         없어, 배정 건에 요청을 주입해 본사 승인 왕복만 실측(원복). 피전이 경호상세에서
         직접 신청하는 부분(#4 `requestPeriodChange`, △)이 개발·검증돼야 실제 요청
         데이터가 생김 → **#4 "배정 이후 재검증"과 함께 재확인**.
+      - [x] 관리자 계정 관리 — `GET User/Stec/W/GetStecUserList`(목록) /
+        `PATCH User/Stec/W/UpdateUser`(정보수정·비번초기화) 실 API 전환(2026-09-07).
+        `loginId→id`·`userSeq` 신규. 빈 연락처는 `""`로 전송(`null`은 백엔드가 무시).
+        배정건수·담당경호는 `GetGuardCaseList`(실 API)를 담당자명으로 매칭(mock
+        `listManagerAssignedCases` 제거, 동명이인 취약 — issues #1에 `userSeq` 요청).
+        **본부관리자는 `GetStecUserList` 403** → "운영·시스템관리자만 이용" 안내(B).
+        본부관리자 접근 자체(route/메뉴 제외 vs 백엔드가 본인 행만 반환)는 #12에서 결정.
+        "본부" 열은 `groupName` null이라 "-"(issues #1). 계정 정지/재활성화(`useYn`)는
+        UI 없어 범위 밖(백로그).
 - [ ] **그룹 C — 이력** (본사 이력 → 경찰서 이력 → 본청/지역청 이력 + 진행중 건 상세
       조회전용). 그룹 B의 종결·취소가 터미널 데이터를 만든 뒤라야 의미 있음.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).

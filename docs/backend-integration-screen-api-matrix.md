@@ -307,15 +307,15 @@
 피전이 경호상세에서 직접 신청하는 부분(#4 `requestPeriodChange`, △)이 개발·검증돼야
 실제 요청 데이터가 생긴다. **#4 "배정 이후 재검증"과 함께 재확인.**
 
-#### 관리자 계정 관리 (`/admin/managers`)
+#### 관리자 계정 관리 (`/admin/managers`) — ✅ 연동 완료(2026-09-07)
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listManagerAccounts` | `GET User/Stec/W/GetStecUserList` | "본부" 컬럼/필터는 issues.md #1 방향 확정 전까지 보류 대상 |
-| 정보수정 | `updateManagerAccountInfo` | `PATCH User/Stec/W/UpdateUser` | |
-| 비밀번호 초기화 | `resetManagerAccountPassword` | `PATCH User/Stec/W/UpdateUser` | 정보수정과 동일 엔드포인트, 파라미터만 다름 |
-| 계정 정지/재활성화 | (mock에 없음) | `PATCH UpdateUser`의 `useYn` | 반대 방향 공백 — 연동하면 새로 얻는 기능 |
-| 담당경호 조회 | `listManagerAssignedCases`(mock 유지) | `GET GetGuardCaseList` | 8번에서 `listSecurityCases`는 실 API 전환됐지만 이 다이얼로그는 `assigneeId` 조인이 필요 → 별도 mock 함수로 분리(쿼리키 `['manager-assigned-cases']`). 11번에서 정식 처리 |
+| 목록 조회 | `listManagerAccounts` | `GET User/Stec/W/GetStecUserList` | ✅ `loginId→id`(아이디 열·본인매칭)·`userSeq` 신규(쓰기 대상)·`codeSeq→roleFromCodeSeq`. **본부관리자는 403** → 화면이 "운영·시스템관리자만 이용" 안내(B, 2026-09-07 사용자 확인). "본부" 열은 `groupName` null이라 "-"(issues #1). 응답 샘플 `User-Stec-GetStecUserList.md` |
+| 정보수정 | `updateManagerAccountInfo` | `PATCH User/Stec/W/UpdateUser` | ✅ `{userSeq,name,phone}`. **빈 연락처는 `""` 전송** — `null`은 백엔드가 "변경 안 함"으로 무시(실측). StecM1 왕복 검증. 응답 샘플 `User-Stec-UpdateUser.md` |
+| 비밀번호 초기화 | `resetManagerAccountPassword` | `PATCH User/Stec/W/UpdateUser` | ✅ `{userSeq, loginPw:loginId, pwChangedYn:true}`. StecM4(폐기용)에서 `pwChangedYn false→true` 확인 |
+| 계정 정지/재활성화 | — | `PATCH UpdateUser`의 `useYn` | 스키마상 가능하나 대응 UI 없음 → 이번 범위 밖(roadmap 백로그) |
+| 담당경호 조회 · 배정건수 | (mock 제거) | `GET GetGuardCaseList`(실 API, 8번) | ✅ mock `listManagerAssignedCases` 제거, `listSecurityCases`로 통일(쿼리키 `['security-cases-all']` 공유). 담당자 id 없어 **담당자명 매칭**(`assigneeName === userName`, 동명이인 취약 — issues #1에 `userSeq` 요청). 진행중 건만 반환 → 종결/취소 제외 자동 |
 
 #### 이력 조회 (`/admin/history`, `/admin/history/:id`)
 

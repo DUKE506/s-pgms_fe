@@ -39,7 +39,7 @@
 | 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 완료 | `59bcd5b` | `GetGuardCaseList` 실 API 전환. 응답 이중 래핑 `{meta,data:[...]}`, `pageSize` 상한 100 → `meta.totalPages`까지 클라이언트 순회. `caseSeq`→id, `mgmtNo` 완성형 `splitMgmtNo`, `statusName` 라벨 그대로, `userName`→`assigneeName`(담당자 id 없음 — managers 조인 제거). 7번 배정 건(caseSeq 46~48) 렌더 확인. **실백엔드 계정으로 이 화면 진입 시 나던 RefreshToken 폭풍 해소**(mock 호출 0). 회귀 차단: `listManagerAssignedCases`(#11)·`listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` + `handlers/managers.ts` 제거. 지역청·담당자 소속 본부 열 축소(exclusions) |
 | 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 부분완료(△) | `6aeac40`·`f738723`·`0040d59`·`f4ab7df`·`92a7802` (+이번 커밋) | **조회 5종 조립** + 경호계획 수정(`PatchCaseInfo`) + 스케줄(`AutoAddSchedule`/`PatchScheduleGroup`/`DeleteScheduleGroup` — 그룹1 보호) + **사전미팅 저장/삭제**(`SaveCaseMeeting`) + **파일 업로드 3종**(`PatchGuardPlanDoc`/`PatchConsentDoc`/`PatchDestroyDoc`, multipart) + 파기확인서 다운로드 연동·브라우저 검증. **블록**: 경호계획 등록(`AddGuardCaseInfo`) — 배치기간 조회 경로 없음(blockers, issues #10) → 등록 버튼 비활성 + 안내. 경호취소 — 본사 API 없음(issues #9) → 버튼 비활성. 손실 매핑: 조치 5섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11). 대표근무자·그룹 메모 조회 갭(issues #12). 테스트 더블 `guardCaseDetail.ts`. 기본정보 조회 카드 피전/본사 통일(`CaseBaseInfoCard`, `f738723`). **→ 섹션 B-1(#6~#9) 종료, 백엔드 일괄 요청**(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`). **2026-09-07 B-1 응답 반영**: 신규 `GuardCase/Stec/W/GetDeployDetail` 연동 — `getSecurityCase`가 `GetCaseDoc.deploySeq`로 호출해 배치요구서 원본 병합(`mergeDeployRequest`) → "배치요구서 원본보기" 다이얼로그 전체 필드, 경호계획 미등록 건 배치기간 채움 → **경호계획 "등록" 버튼 활성화**(blockers/issues #10 종료), 첨부 "등록일". 브라우저 검증(caseSeq 48·46). 경호취소(issues #9)·화면7 다이얼로그·조치 구조화(#11)는 여전히 미해결. **4·2번 재검증**: caseSeq 46 데이터 보유 |
 | 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 부분완료(△) | (이번 커밋) | `GetExtendRequestList`/`GetShortenRequestList`(조회)·`ConfirmCasePeriod`(승인) 실 API 전환, `SecurityCaseTabs` 연장/단축 배지 실카운트 배선. 거부는 EP 없어 UI 차단(issues #2, B-2 종료 시 요청). **테스트 데이터로만 검증** — 실백엔드에 경호중 건이 없어 배정 건에 연장/단축 요청을 만들어 승인 왕복 실측(원복 완료). **연장/단축 신청은 업무상 경호중 상태만 대상**이고, 피전이 경호상세에서 직접 신청하는 부분(matrix #4 `requestPeriodChange`, △)이 개발·검증돼야 실제 요청 데이터가 생긴다 → **피전 요청 영역 개발 이후 재검증**(4번 "배정 이후 재검증"과 함께). 완료 표시 보류 |
-| 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 대기 | | 8번 이후. 본부 이슈(issues.md #1) 방향 확정 후 |
+| 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 완료 | (이번 커밋) | `GetStecUserList`(목록)·`UpdateUser`(정보수정·비번초기화) 실 API 전환. `loginId→id`·`userSeq` 신규. 빈 연락처는 `""` 전송(`null`은 백엔드가 무시 — 실측). 배정건수·담당경호는 `GetGuardCaseList`(실 API) 담당자명 매칭 — mock `listManagerAssignedCases`/`listMockSecurityCases` 제거, `handlers/companyAccounts.ts` 삭제. **본부관리자는 `GetStecUserList` 403** → "운영·시스템관리자만 이용" 안내(B, 사용자 확인). 접근 자체(route/메뉴 제외 vs 백엔드가 본인 행만)는 **#12에서 결정**. "본부" 열 "-"(issues #1). 실백엔드 검증: StecM1 목록·정보수정 왕복·비번초기화(StecM4)·담당경호(HS2본부→caseSeq 51·29), StecM2 403 안내. 응답 샘플 `User-Stec-UpdateUser.md` |
 | 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 대기 | | 새 API 연동 아님 — 6~11 화면을 본부관리자로 재확인("본인 배정 건만"). 이력 스코프는 그룹 C 후 꼬리 확인. **여기까지 = 메인 워크플로우 검증 완료**, **섹션 B-2 종료 → 백엔드 일괄 요청** |
 | 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 대기 | | 4·9의 종결·취소가 실제 터미널 데이터를 만들어야 의미 있음 |
 | 14 | C | [경찰서] 피전 | 이력 조회 | 대기 | | 접수취소 + (그룹 B 이후) 종결 데이터 확인 |
@@ -51,6 +51,51 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-07: 11번([본사] 운영/시스템관리자 · 관리자 계정 관리) — **완료**. 섹션 B-2 두 번째.
+  - **연동**: `api/managerAccounts.ts` 3함수를 실 EP로 교체. `listManagerAccounts` →
+    `GET User/Stec/W/GetStecUserList`(managers.ts의 `listManagers`가 이미 쓰는 EP,
+    `StecUserRow` 타입 공유는 안 하고 각자 정의). `ManagerAccount`에 `userSeq` 추가
+    (`id`는 `loginId` 유지 — 아이디 열 표시 + `authStore.user.id`와 본인매칭).
+    `updateManagerAccountInfo(userSeq,{name,phone})` / `resetManagerAccountPassword(userSeq,loginId)`
+    → `PATCH User/Stec/W/UpdateUser`. 반환은 `{data:true}`뿐이라 `['manager-accounts']`
+    invalidate로 재조회.
+  - **배정건수 열 + 담당경호 다이얼로그**: mock `listManagerAssignedCases` 제거, 실
+    `listSecurityCases`(`GetGuardCaseList`, 8번)로 통일(쿼리키 `['security-cases-all']`
+    본사 경호목록 화면과 공유). `GetGuardCaseList` 행에 담당자 id가 없어(`userSeq`/
+    `managerName` 필드는 스키마에 있으나 백엔드가 null) **담당자명 매칭**
+    (`SecurityCase.assigneeName === ManagerAccount.name`). 진행중 건만 반환 →
+    종결/취소 제외 자동. `requests.ts`의 `listMockSecurityCases`도 제거(마지막 사용처였음).
+  - **본부관리자 403(B)**: 실서버 `GetStecUserList`는 본부관리자 토큰에 403(운영/시스템
+    전용). `listManagerAccounts`가 `ManagerListForbiddenError`를 던지고 화면이 빨간
+    일반 에러 대신 "이 화면은 운영·시스템관리자만 이용할 수 있습니다" 안내(`retry:false`).
+    **사용자 결정(2026-09-07): 이번엔 문구만.** 본부관리자를 route/메뉴에서 뺄지(A) vs
+    백엔드가 본인 행만 반환하게 할지(C)는 **#12에서 논의**. Phase 3.6은 "본부관리자도
+    이 화면에서 자가수정" 전제였는데 실서버가 목록을 통째로 막아 충돌.
+  - **UpdateUser 실측 특이사항**: `null` 필드는 "변경 안 함"으로 무시된다 — 연락처를
+    비우려면 `""`(빈 문자열)을 보내야 함(`updateManagerAccountInfo` 반영). StecM1로
+    없음→설정→`""`로 원복 왕복 확인.
+  - **인프라**: `handlers/companyAccounts.ts`(`/company-accounts` mock 3종) 삭제 —
+    더는 안 쓰임. 테스트 전용 더블 `handlers/guardCase.ts`에 `PATCH UpdateUser` 추가
+    (정보수정·비번초기화 분기, `companyAccounts` 인메모리 갱신 → 재조회 반영) +
+    `GetStecUserList` 더블이 본부관리자 토큰에 403 반환하도록 실서버와 일치.
+    `userSeqOf` 더블 헬퍼가 sysadmin/opadmin을 0으로 겹치던 것 → 고정값(901/902).
+    `ManagerAccountListPage.test.tsx` 재작성(더블 기반, 본부관리자 테이블 테스트
+    3건 → "접근 제한 안내" 1건). 테스트 125→122.
+  - **검증**: `npm run test` 122/122 · lint(기존 warning 2) · build 통과. 실백엔드
+    `run-s-pgms`: StecM1(운영) → 목록 5행(본부 열 "-", 배정건수 HS2본부=2)·본인
+    정보수정 왕복(설정→반영→`""` 원복, `GetStecUserList`로 `null` 확인)·비번초기화
+    StecM4(`pwChangedYn false→true`)·담당경호(HS2본부 → `26-09-동래경찰서 ST0007` 경호중
+    + `26-08-강남경찰서 ST0001` 경호완료). StecM2(본부관리자, 사용자 직접 로그인) →
+    "이 화면은 운영·시스템관리자만 이용할 수 있습니다" 확인. 콘솔 에러 0.
+  - 응답 샘플: `User-Stec-UpdateUser.md` 신규, `User-Stec-GetStecUserList.md` 보강.
+    exclusions: 본부 열 "-" / 배정건수·담당경호 이름 매칭(동명이인) / phone 대표번호
+    의미·`null` 미삭제. issues #1: 관리자 계정 관리 재확인 + B-2 일괄 요청 항목 2개
+    (본부 FK 컬럼 / `GetGuardCaseList`에 담당자 `userSeq`).
+  - **부수**: 공유 개발 백엔드에서 StecM2 비밀번호가 세션 중 `StecM2`→`StecM1`로 바뀜
+    (내 쓰기는 StecM1·StecM4만 대상 — 다른 사용자 소행 추정). `test-accounts.local.md` 갱신.
+  - **다음**: B-2 #12(본부관리자 스코프 재검증) — 새 API 연동 아님. #11의 본부관리자
+    접근(A/C) 결정도 여기서.
 
 - 2026-09-07: 10번([본사] 운영/시스템관리자 · 연장/단축 요청 목록) — **부분완료(△)**.
   섹션 B-2 첫 화면. 사용자 결정: **승인만 연결, 거부는 UI 차단**(대응 EP 없음, issues #2).

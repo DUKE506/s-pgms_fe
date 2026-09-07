@@ -46,5 +46,11 @@ HTTP 200
 - **필드 대응**: `userSeq`(→ `Manager.id`, 배정 시 `AddGuardCaseDto.userSeq`),
   `userName`(→ `Manager.name`), `codeName`(→ 역할 필터), `useYn`(→ 비활성 계정 제외).
 - `codeSeq` 1=시스템관리자 / 2=운영관리자 / 3=본부관리자 (`features/auth/lib/roleMapping.ts`와 일치).
-- 이 응답은 matrix 11번(관리자 계정 관리, `listManagerAccounts`)에서도 재사용될 목록이다 —
-  거기서 필요한 `phone`/`pwChangedYn`/`useYn`도 이미 포함돼 있다.
+- 이 응답은 matrix 11번(관리자 계정 관리, `listManagerAccounts`)에서도 재사용된다
+  (2026-09-07 연동). `phone`/`pwChangedYn`/`useYn`도 포함. 필드 대응: `loginId`(→
+  `ManagerAccount.id`, 화면 "아이디" 열 + 본인 매칭) / `userSeq`(→ `UpdateUser` 대상
+  식별) / `userName`(→ 이름, 배정건수·담당경호 매칭 키) / `codeSeq`(→ `roleFromCodeSeq`) /
+  `phone`(빈 문자열은 `undefined` 취급) / `useYn`.
+- **본부관리자 토큰은 403** — 이 화면은 실서버에서 운영/시스템관리자 전용. 본부관리자의
+  이 화면 스코프(본인 행만? 403?)는 matrix #12에서 재검증.
+- 쓰기(정보수정·비번초기화)는 `User/Stec/W/UpdateUser` — `docs/backend-integration-responses/User-Stec-UpdateUser.md`.
