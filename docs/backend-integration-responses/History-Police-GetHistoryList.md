@@ -66,3 +66,24 @@
   → 목록량 작아 화면의 기존 클라이언트 필터로 충분(exclusions).
 - **지역청/본청 스코프**: `SPoliceM3`(부산청, groupSeq 24)·`SPoliceM1`(본청, groupSeq 22)를
   파라미터 없이 부르면 0건. 부모 `groupSeq` 캐스케이드(관할 이하 전체) 여부는 미검증 → #15.
+
+## #15 관찰 (2026-09-08, `_probe-15.sh`·`_probe-15b.sh`)
+
+본청(`SPoliceM1`)/지역청(`SPoliceM3`) 토큰으로 재실측:
+
+- **캐스케이드 없음**: `groupSeq` 없음 / 부모 노드(본청 22·부산청 24) → 전부 **0건**.
+  `groupSeq=32`(동래 = leaf 경찰서) 넣어야 취소 5건. 즉 `GetHistoryList`는 **경찰서
+  단위로만** 조회되고 지방청·본청 노드로 관할 전체를 한 번에 못 받는다.
+- **역할 스코프는 서버가 검다(부분)**: 경찰서 토큰(`SPoliceM5`)은 자기 `groupSeq`만
+  허용(다른 경찰서 groupSeq → 403, `GetDeployList` 문서 참고). 본청/지역청 토큰은 자기
+  서브트리 하위 경찰서 groupSeq면 200. → leaf 단위 팬아웃은 스코프 안전.
+- **진행중 나오는 모드 없음**: `status=0~3`, `includeActive=true`, `all=true`, `isEnd=false`
+  전부 무시 — 항상 종결·취소만. 본청/지역청 이력 화면은 진행중 건도 보여야 하는데
+  (2026-08-27 결정 · #15에서도 "유지") `GetHistoryList` 하나로는 불가.
+- **진행중 목록**: `Deploy/Police/W/GetDeployList?groupSeq=<leaf>`가 본청/지역청 토큰에도
+  200(배정/경호중/경호완료 반환). 이력 화면의 "진행중" 부분은 이걸로 채워야 한다.
+- **상세 스코프 미검**: `GetHistoryDetail?caseSeq=46`(동래 취소건) → `SPoliceM1`·`SPoliceM3`
+  둘 다 200. 타 관할 차단 로직 없음(#14와 동일). 응답에 `guardWorkLoc`/`guardHomeLoc`
+  포함(#14 exclusions "배치장소 없음"과 배치 — 재확인 필요, #15 이월 메모).
+- → #15는 **부분완료(△)**, 본청/지역청 이력은 mock 유지. 백엔드 요청:
+  `docs/backend-integration-requests/2026-09-08-이력-C.md` (issues #14·#15).

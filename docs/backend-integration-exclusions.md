@@ -609,3 +609,18 @@
 - **왜 기록**: 제외가 아니라 설계 그대로 — 접수단계(배정 전) 취소는 DB에서 완전 삭제
   (hard-delete)라 이력에 흔적이 없다. 이력엔 배정 이후 취소(`경호취소`)만 나온다.
 - **사용자가 잃는 것**: 없음(설계 의도).
+
+### [본청]/[지역청] 이력 조회 — mock 유지 (matrix 5번, #15 부분완료 △)
+
+#### 본청/지역청 이력 목록·상세·진행중 상세를 이번엔 전환하지 않음
+- **왜 제외(보류)**: 착수 프로브(2026-09-08)에서 `GetHistoryList`·`Deploy/Police/GetDeployList`가
+  경찰서(leaf) `groupSeq` 단위라 본청/지역청이 관할 전체를 한 번에 못 받고(캐스케이드 없음),
+  `GetHistoryList`는 진행중 건을 안 준다. `Login/W/GetGroupTree`로 leaf 팬아웃은 가능하나
+  임시방편이라 미채택(사용자 결정). 경찰서 경로(#14)는 실 API 그대로, 본청/지역청 경로만
+  mock(`listSecurityCaseHistory`/`getSecurityCaseHistoryDetail`) 유지.
+- **사용자가 잃는 것**: 없음 — 화면 동작은 mock 데이터로 승인된 그대로. 실서버 데이터로는
+  본청/지역청 계정이 이력 화면에서 아직 실데이터를 못 봄(백엔드 회신 전까지).
+- **연동 커밋 / 해소 예정**: (이번 iteration 커밋 — 문서만) / 백엔드가 부모 groupSeq
+  캐스케이드 또는 통합 조회 EP 제공 시 전환(`requests/2026-09-08-이력-C.md`, issues #15).
+  진행중 상세(`GetDeployDetail`)·상세(`GetHistoryDetail`) EP는 본청/지역청 토큰에 이미
+  200이라, 목록만 전환되면 상세는 코드 변경 최소로 따라온다.

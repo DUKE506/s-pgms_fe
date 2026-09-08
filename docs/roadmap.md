@@ -285,6 +285,14 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         배정 이력 표. `caseType`·5개 조치·배치장소는 응답에 없어 축소(exclusions). 브라우저
         검증(SPoliceM5 동래, 취소 5건 + 상세). 종결 건 재검증 보류(#13과 동일). 본청·지역청
         `groupSeq` 캐스케이드·진행중 EP는 #15.
+      - [~] [본청]/[지역청] 이력 조회 + 진행중 건 상세 — **부분 연동(2026-09-08, △)** —
+        본청/지역청 경로는 **mock 유지**. 착수 프로브에서 전환 불가 확정: `GetHistoryList`·
+        `Deploy/Police/GetDeployList` 둘 다 `groupSeq`가 경찰서(leaf)일 때만 데이터(부모 노드
+        → 0건, 캐스케이드 없음), `GetHistoryList`는 종결·취소만(진행중 토글 없음). `Login/W/
+        GetGroupTree`(3역할 공통 200, 서브트리)로 클라 팬아웃은 가능하나 임시방편이라
+        미채택(사용자 결정). 진행중 건 상세 EP(`GetDeployDetail`)는 본청/지역청 토큰에 200 —
+        목록 전환 시 코드 변경 최소. 백엔드 요청서 전달 → `docs/backend-integration-requests/
+        2026-09-08-이력-C.md`(issues #14·#15). 그룹 C 섹션 종료.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).
       부가 기능이라 가장 뒤.
 
@@ -313,7 +321,12 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
 14. [본사] 이력 조회 상세 API 없음(2026-09-08) — `History/Stec/W/GetHistoryDetail`은 404,
     `History/Police/W/GetHistoryDetail`은 본사 토큰에 403(피전 토큰만 200). 목록
     (`GetHistoryList`)만 연동, `/admin/history/:id`는 "준비 중" 안내. 본사용 상세 EP
-    신설/권한확장 요청 예정(그룹 C 섹션 종료 시 일괄)
+    신설/권한확장 요청 → 전달됨(`requests/2026-09-08-이력-C.md`)
+15. [본청]/[지역청] 이력 조회 — 관할 전체·진행중 조회 경로 없음(2026-09-08) —
+    `GetHistoryList`·`Deploy/Police/GetDeployList`가 경찰서(leaf) `groupSeq` 단위라 부모
+    노드(본청·지방청)로 관할 전체를 못 받음(캐스케이드 없음) + `GetHistoryList`는 종결·취소만.
+    본청/지역청 이력은 mock 유지, #15 부분완료(△). 부모 groupSeq 캐스케이드/통합 EP 요청 →
+    전달됨(`requests/2026-09-08-이력-C.md`)
 
 **발견된 후속 항목 (이번 범위 밖, 별도 진행 예정)**:
 

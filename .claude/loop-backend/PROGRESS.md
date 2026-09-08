@@ -43,7 +43,7 @@
 | 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 검증완료·문서보류 | `a570869` (더블만) | **API 레벨 스코프 검증 완료(2026-09-08, StecM2·StecM3)**. 완료 표시·issues 전달상태 갱신·지역청 필터 프론트 후속은 **B-2 백엔드 회신 후** 재검증과 함께 처리. B-2 요청서 전달(`docs/backend-integration-requests/2026-09-08-본사-경호관리-B2.md`/`.xlsx`). 아래 로그 참고 |
 | 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Stec/W/GetHistoryList` 실 API 전환(`company/api/history.ts` 신규 분리 — 경찰 이력 #14·#15는 mock 유지). 이중 래핑·행 축소 매핑, `statusName`("경호취소"→'취소'), `totalMin`→`totalGuardMinutes`. **본부관리자 스코프(HIST-003) 실제 적용 확인**(StecM3 배정 0건→이력 0건, StecM2 동래 담당→5건). 실서버에 취소 건 5개 존재 → 브라우저 검증(StecM1 5건/StecM2 5건, 콘솔 에러 0). **상세 보류** — `History/Stec/W/GetHistoryDetail` 404, Police EP 본사 토큰 403(issues #14 신규, blockers) → `/admin/history/:id` "준비 중" 안내. **종결 건 재검증 보류** — 사용자가 오늘 날짜 경호건 생성→종결 후 status 코드 매핑·`totalMin` 실값 재확인. 안 되면 △ 유지. 응답 샘플 `History-Stec-GetHistoryList.md` |
 | 14 | C | [경찰서] 피전 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Police/W/GetHistoryList` + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail` 신규 — 본청·지역청 #15는 mock, `role === '경찰서'` 분기). `groupSeq`(세션) 필수·끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드. `caseType`·5개 조치·배치장소 응답에 없음→축소(exclusions). 브라우저 검증(SPoliceM5 동래: 목록 취소 5건, 상세 대상자 마스킹·근무자 4명 투입실적·취소일/사유), 콘솔 에러 0. **종결 건 재검증 보류**(#13과 동일 — 사용자 종결 데이터 생성 후 종결코드·`totalGuardMinutes` 실값). 응답 샘플 `History-Police-GetHistoryList.md`·`-GetHistoryDetail.md` |
-| 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 대기 | | 4·9 데이터 필요. 진행중 건은 경호 상세 화면을 조회 전용 재사용. + 본부관리자 이력 스코프 꼬리 확인. **이력 섹션 종료 → 백엔드 일괄 요청** |
+| 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 부분완료(△) | (이번 커밋 — 문서만) | **프로브 결과 전환 불가 → 본청/지역청 이력은 mock 유지.** `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq` 경찰서(leaf) 단위 — 부모 노드(본청 22·지방청 24) → 0건, 캐스케이드 없음. `GetHistoryList`는 종결·취소만(status/includeActive/all/isEnd 무시), 진행중은 `GetDeployList?groupSeq=<leaf>`(본청/지역청 토큰도 200). 관할 전체 = `Login/W/GetGroupTree`(3역할 공통 200, 역할 서브트리)로 leaf 뽑아 팬아웃 가능하나 **임시방편이라 미채택(사용자 결정)**. 진행중 상세 `GetDeployDetail?deployReqSeq=`는 본청/지역청 토큰에 200(deployReqSeq 90) — 목록 전환 시 코드 변경 최소. `GetHistoryDetail`도 본청/지역청 200(스코프 미검, `guardWorkLoc`/`guardHomeLoc` 포함 — #14 exclusions와 배치, 논의항목). **그룹 C 섹션 종료 → 백엔드 일괄 요청서 전달**(`docs/backend-integration-requests/2026-09-08-이력-C.md`, issues #14·#15). 종결 건 재검증(#13·#14 공통)·본부관리자 이력 스코프 꼬리는 회신·데이터 후 |
 | 16 | D | [경찰서] 피전 | 게스트 계정 관리 | 대기 | | 아이디 미리보기 이슈(issues.md #3) |
 | 17 | D | [경찰서] 게스트 | 경호목록 + 상세(조회전용) | 대기 | | 16·2 완료 후 |
 | — | 보류 | [본사]/[본청]/[지역청] | 대시보드 | 보류 | | Phase 4 자체가 보류 중 |
@@ -51,6 +51,42 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-08: 15번([본청]/[지역청] · 이력 조회 + 진행중 건 상세) — **부분완료(△)**.
+  그룹 C 마지막 화면 = 섹션 경계. **이번 iteration은 코드 변경 없음(문서만)** — 프로브에서
+  실 API 전환이 불가함을 확인, 사용자 결정으로 백엔드 요청만 하고 mock 유지.
+  - **프로브**(`_probe-15.sh`·`_probe-15b.sh`): 역할 확인 — `SPoliceM1`=본청관리자(codeSeq 4,
+    groupSeq 22), `SPoliceM3`=지방청관리자(codeSeq 5, groupSeq 24), `SPoliceM5`=피전(6, 32).
+    - `GetHistoryList`: `groupSeq` **경찰서(leaf)일 때만** 데이터. 파라미터 없음·부모 노드
+      (22·24) → 0건. `groupSeq=32`(동래) → 취소 5건. **캐스케이드 없음.** `status`/
+      `includeActive`/`all`/`isEnd` 전부 무시 → 항상 종결·취소만.
+    - `Deploy/Police/W/GetDeployList?groupSeq=32`: 본청·지역청 토큰도 **200**(caseSeq 51
+      경호중 반환). 역시 leaf 단위, 부모 groupSeq·무파라미터 → 빈 배열/400. = 진행중 목록.
+    - `Login/W/GetGroupTree`: 3역할 공통 200, **토큰 역할의 서브트리** 반환(본청=전국,
+      지방청=자기+산하 경찰서, 경찰서=자기만). `{groupSeq,level,levelName,parentGroupSeq,
+      children}`. leaf(level 3 "경찰서") groupSeq를 여기서 뽑을 수 있음. → 응답 샘플
+      `Login-GetGroupTree.md` 신규.
+    - `GetHistoryDetail?caseSeq=46`: 본청·지역청 토큰 **200**(스코프 미검, 타 관할 차단 없음).
+      응답에 `guardWorkLoc`/`guardHomeLoc` 포함 — #14가 "배치장소 없음"으로 exclusions
+      처리한 것과 배치. issues #14·#15 논의 항목으로.
+    - `GetDeployDetail?deployReqSeq=90`: 본청·지역청 토큰 **200**(1차에서 deployReqSeq=81로
+      404 났던 건 81이 없는 값이라서 — deploySeq=90이 정답, id는 `deploySeq`). 진행중 건
+      상세(`/security-cases/:id`) 재사용은 EP 자체는 열려 있음.
+    - `GuardCase/Stec/*`·`GetPoliceInfo`(Stec)·`Group/Stec/GetGroupTree` → 전부 403(본사 태그).
+  - **결정(사용자, AskUserQuestion 2026-09-08)**: ① 클라 팬아웃(`GetGroupTree`+leaf별 호출)은
+    임시방편이라 **안 함** — 백엔드에 부모 groupSeq 캐스케이드/통합 EP 요청, 회신까지 #15는
+    부분완료(△), 본청/지역청 이력은 mock 유지. ② 진행중 건은 이력 목록에 **계속 표시**
+    (현행 mock과 동일 — 이 역할은 대시보드가 없어 이력 화면이 전체 현황 겸함).
+  - **문서 갱신**: issues.md #15 신규. `requests/2026-09-08-이력-C.md` 신규(그룹 C 섹션
+    종료 일괄 요청 — #14 본사 상세 EP + #15 캐스케이드/진행중 + 상세 스코프·배치장소 논의).
+    blockers.md #15 항목. matrix(1번 이력 조회 · 5번 본청/지역청 섹션), roadmap(그룹 C
+    체크박스 + 설계이슈 #15), 응답 샘플 `Login-GetGroupTree.md` + `History-Police-GetHistoryList.md`
+    "#15 관찰" 섹션.
+  - 코드·테스트 무변경 → `npm run test`/`lint`/`build` 회귀 없음(문서 커밋). 실백엔드
+    프로브만 실행.
+  - **이월**: 종결 건 재검증(#13·#14와 공통, 사용자 종결 데이터 생성 후) · 본부관리자 이력
+    스코프 꼬리(#12) — 백엔드 회신 + 데이터 후 #15 재개 시 함께.
+  - **다음**: 커밋(문서만) → 사용자 승인 → **그룹 D #16**([경찰서] 게스트 계정 관리).
 
 - 2026-09-08: 14번([경찰서] 피전 · 이력 조회) — **부분완료(△)**. 그룹 C 두 번째 화면.
   - **1단계 프로브**(`_probe-14.sh`): `GetHistoryList`는 `groupSeq`(로그인 경찰서 조직번호,

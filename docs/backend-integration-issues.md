@@ -653,4 +653,55 @@ CCTV / 잠정조치 1호" 렌더 확인. 응답 샘플: `Deploy-Police-GetDeploy
 **영향받는 화면/코드**: `features/company/api/history.ts`(`getCompanyHistoryDetail`),
 `features/company/pages/HistoryDetailPage.tsx`.
 
+## 15. 🔴 [본청]/[지역청] 이력 조회 — 관할 전체를 한 번에 못 받고, 진행중 건이 안 나옴
+
+**발견 경위**: 화면15([본청]/[지역청] 이력 조회 + 진행중 건 상세) 착수 프로브(2026-09-08,
+`_probe-15.sh`·`_probe-15b.sh`). 이 화면은 경찰서·본청·지역청이 role로 갈라 쓰고, #14에서
+경찰서 경로만 실 API(`listPoliceStationHistory`)로 전환했다. 본청/지역청 경로를 전환하려
+했으나 아래 두 벽에 막힘.
+
+**현재 상태**(2026-09-08 실측, `SPoliceM1` 본청 groupSeq 22 · `SPoliceM3` 지방청 groupSeq 24):
+
+1. **관할 캐스케이드 없음** — `GET History/Police/W/GetHistoryList`는 `groupSeq`가 **경찰서
+   (leaf) 노드일 때만** 데이터를 준다. 파라미터 없음 / 부모 노드(`groupSeq=22` 본청,
+   `groupSeq=24` 지방청) → 전부 0건. `groupSeq=32`(동래) 넣어야 5건. 지방청·본청이
+   관할 전체를 한 번에 조회할 방법이 없다. `Deploy/Police/W/GetDeployList`(진행중 목록)도
+   동일하게 leaf `groupSeq` 필수.
+2. **진행중 건이 이력 목록에 안 나옴** — 본청/지역청은 대시보드(Phase 4)가 아직 없어
+   이력 화면이 전체 현황(배정·경호중·경호완료 + 종결·취소)을 겸한다(2026-08-27 결정,
+   `roadmap.md` Phase 3-1). 그러나 `GetHistoryList`는 종결·취소만 주고, `status`·
+   `includeActive`·`all`·`isEnd` 파라미터를 다 무시한다. 진행중은 `GetDeployList`를
+   경찰서마다 따로 불러 합쳐야 나온다.
+
+**참고로 확인된 것**:
+- `GET Login/W/GetGroupTree`는 경찰 3역할 공통으로 200, **토큰 역할의 서브트리**를 준다
+  (본청=전국, 지방청=자기 지방청+산하 경찰서, 경찰서=자기 노드). leaf `groupSeq` 목록을
+  여기서 뽑을 수 있다 → 클라이언트 팬아웃은 기술적으로 가능하나 임시방편(경찰서 수만큼
+  N×2 호출)이라 채택 안 함(사용자 결정 2026-09-08).
+- `GetHistoryDetail?caseSeq=`·`Deploy/Police/W/GetDeployDetail?deployReqSeq=`는 본청/지역청
+  토큰에도 200 → **진행중 건 상세 재사용(`/security-cases/:id`)은 EP 자체는 열려 있음**.
+  다만 목록이 mock인 동안은 상세로 넘길 실 id(deploySeq)가 없어 함께 보류.
+
+**요청/제안**: 아래 중 하나 (근거: 사용자가 "기존 API에 토큰으로 계정 확인해서 모든
+경호건을 달라"는 방향 선호, 2026-09-08).
+1. **(선호)** `GetHistoryList`(+ 진행중 목록 EP)가 **부모 `groupSeq`를 받으면 그 노드
+   이하 전체를 캐스케이드**로 반환. 본청 토큰 = 전국, 지방청 토큰 = 관할 이하. 역할
+   스코프는 `GetGroupTree`가 이미 서브트리로 나누므로 그 규칙 재사용.
+2. 본청/지역청 이력 화면용 **통합 조회 EP 신설** — 진행중(배정·경호중·경호완료) +
+   종결·취소를 한 응답으로, 토큰 역할 기준 스코프. 페이지네이션·정렬 포함.
+3. 최소안: `GetHistoryList`에 `groupSeq` 부모 허용 + `status` 파라미터로 진행중 포함
+   토글. 프론트가 `GetDeployList`와 합치는 부담은 남음.
+
+**임시 처리**: 본청/지역청 이력 목록·상세·진행중 상세는 **mock 유지**
+(`listSecurityCaseHistory`/`getSecurityCaseHistoryDetail`, `HistoryListPage`/`HistoryDetailPage`의
+`role !== '경찰서'` 분기). 경찰서 경로(#14)는 실 API 그대로. PROGRESS #15 = 부분완료(△).
+
+**전달**: 그룹 C(이력) 섹션 종료 일괄 요청서(`docs/backend-integration-requests/
+2026-09-08-이력-C.md`)에 #14와 함께 포함. 🔴 유지.
+
+**영향받는 화면/코드**: `features/police/api/history.ts`(`listSecurityCaseHistory`/
+`getSecurityCaseHistoryDetail`), `features/police/pages/HistoryListPage.tsx`·
+`HistoryDetailPage.tsx`, `features/police/pages/SecurityCaseDetailPage.tsx`(본청/지역청
+진행중 건 상세 재사용).
+
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
