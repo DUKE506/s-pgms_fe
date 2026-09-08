@@ -293,15 +293,18 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         미채택(사용자 결정). 진행중 건 상세 EP(`GetDeployDetail`)는 본청/지역청 토큰에 200 —
         목록 전환 시 코드 변경 최소. 백엔드 요청서 전달 → `docs/backend-integration-requests/
         2026-09-08-이력-C.md`(issues #14·#15). 그룹 C 섹션 종료.
-- [~] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).
-      부가 기능이라 가장 뒤.
+- [x] **그룹 D — 게스트** — **완료(2026-09-08, #16·#17)**. 그룹 D 섹션 종료 → 백엔드
+      일괄 요청서 `docs/backend-integration-requests/2026-09-08-게스트-D.md`.
       - [x] [경찰서] 게스트 계정 관리 — **연동 완료(2026-09-08, #16)**. `User/Police/W/`
         `GetGuestUserList`(평면 배열, `groupSeq` 필수)·`GetGuestCaseList`(발급 후보)·
         `GetGuestCaseDetail`(수정 후보, `isAccess`)·`AddGuestUser`(`{name,caseSeqs}`, 응답
         `{data:true}`)·`UpdateGuestCaseInfo`·`DeleteGuestUser` 6종. 아이디 미리보기 제거 →
         발급 후 목록 재조회(issues #3 프론트 UX로 해소). 중지 계정(`useYn`)은 화면 설계에
-        없어 숨김(exclusions, #17 종료 시 전달). `SPoliceM5` 발급→수정→삭제 왕복 실측.
-      - [ ] [경찰서] 게스트 — 경호목록 + 상세(조회전용) (#17, 16·2 이후)
+        없어 숨김(exclusions, 그룹 D 요청서에 전달). `SPoliceM5` 발급→수정→삭제 왕복 실측.
+      - [x] [경찰서] 게스트 — 경호목록 + 상세(조회전용) — **연동 완료(2026-09-08, #17)**.
+        피전 화면·API 재사용(코드 신규 없음). `GetDeployList`가 게스트 토큰에서 `groupSeq`
+        무시하고 `GUEST_CASE_ACCESS` 스코프만 적용(실측). 상세 200·읽기전용. 조회권 없는
+        건 상세 차단은 미검증(동래 활성 건 1개뿐, 이월). 게스트 쓰기/Stec/피전전용 EP 403.
 
 **발견된 설계 이슈(백엔드/기획에 변경 요청, `docs/backend-integration-issues.md` 참고)**:
 1. 본부관리자 계정에 소속 본부·담당자 개인정보 저장 공간 없음

@@ -220,19 +220,21 @@
 
 ## 2. [경찰서] 게스트
 
-6·2번(게스트 계정 관리, 경찰서 경호목록) 연동 완료 후 진행.
+**✅ 연동 완료(2026-09-08, #17)** — 피전 경호목록/상세 화면·API를 role로만 갈라 재사용,
+별도 코드 없음. 응답 샘플 `docs/backend-integration-responses/Deploy-Police-GetDeployList.md`
+"#17 관찰" 섹션.
 
 #### 경호목록 (`/security-cases`, 조회 전용)
 
-| API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
+| API 기능 | 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listSecurityCases` | `GET Deploy/Police/W/GetDeployList`(조회권 있는 건만) | 게스트 전용 필터가 이 API에 있는지, `GUEST_CASE_ACCESS` 조인을 서버가 알아서 적용하는지 확인 필요 |
+| 목록 조회 | `listSecurityCases` (피전과 공유) | `GET Deploy/Police/W/GetDeployList` | ✅ **게스트 토큰이면 서버가 `?groupSeq=` 무시하고 `GUEST_CASE_ACCESS` 스코프만 적용** — 조회권 부여된 건만 반환(실측: groupSeq 32/22/999 다 동일 1건). 프론트 role 분기는 "신규접수" 버튼 숨김뿐 |
 
 #### 경호 상세 (`/security-cases/:id`, 조회 전용)
 
-| API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
+| API 기능 | 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회 | `getSecurityCase` | `GetDeployDetail` / `GetGuardCaseDetail` | 액션 버튼 없음(화면단 처리) |
+| 조회 | `getSecurityCase` (피전과 공유) | `GET Deploy/Police/W/GetDeployDetail?deployReqSeq=` | ✅ 조회권 있는 건 200, 피전과 동일 shape. `isReadOnlyViewer`(본청/지역청/게스트) → 액션 버튼 0개·문서함 readOnly. 조회권 없는 건 상세 차단은 **미검증(이월)** — 동래에 활성 미부여 건이 없음. 게스트 토큰 쓰기·Stec·피전전용 EP는 403 확인 |
 
 #### 로그인 (`/`) — ✅ 연동 완료(1번 표와 동일 구현, 커밋 `008383a`)
 

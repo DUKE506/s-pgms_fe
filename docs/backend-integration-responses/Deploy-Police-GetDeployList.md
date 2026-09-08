@@ -80,3 +80,20 @@ HTTP 403
   미사용).
 - 응답 항목에 `jurisdiction`/`policeStation` 없음 — 화면 상단 "관할 / 이름" 표기는
   `GetMyProfile`의 `groupName`으로 대체.
+
+## #17 관찰 — 게스트 토큰 (2026-09-08)
+
+- 테스트 계정: `SPoliceGuest3`(동래, `codeName:"게스트"`, `codeSeq 7`, `groupSeq 32`).
+- **`GetDeployList`는 게스트 토큰에서 `?groupSeq=` 파라미터를 무시하고 `GUEST_CASE_ACCESS`
+  스코프만 적용한다** — `groupSeq`를 32(본인)·22(본청)·999(무효)·1로 바꿔 호출해도
+  전부 동일하게 **조회권이 부여된 건만**(deploySeq 90 / caseSeq 51, 1건) 반환. 403 아님.
+  → 프론트 `listSecurityCases`가 세션 `groupSeq`를 붙여 보내도 무해(서버가 무시).
+- `GetDeployDetail?deployReqSeq=90`(조회권 있는 건) → **200**, 피전과 동일 shape
+  (`startDate/endDate/startTime/endTime`, `summary1~5`, `guardHomeLoc`/`guardWorkLoc`,
+  `guardUserList`, `crimeType` 등).
+- 게스트 토큰 403 확인: `Deploy/Police/W/CancelGuardCase`, `GuardCase/Stec/W/GetGuardCaseList`,
+  `User/Police/W/GetGuestUserList`(피전 전용).
+- **미확인(이월)**: 동래에 게스트가 조회권 없는 *진행중* 건이 없어서(활성 1건뿐, 그건
+  게스트가 봄) "조회권 없는 건 상세 → 403/404" 양성 테스트를 못 함. `GetDeployList`의
+  groupSeq 무시 동작으로 보아 `GetDeployDetail`도 스코프를 걸 것으로 추정되나 미검증
+  → 동래에 활성 건 추가되면 재검증(그룹 D 요청서 논의 항목).

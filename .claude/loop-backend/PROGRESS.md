@@ -45,12 +45,51 @@
 | 14 | C | [경찰서] 피전 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Police/W/GetHistoryList` + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail` 신규 — 본청·지역청 #15는 mock, `role === '경찰서'` 분기). `groupSeq`(세션) 필수·끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드. `caseType`·5개 조치·배치장소 응답에 없음→축소(exclusions). 브라우저 검증(SPoliceM5 동래: 목록 취소 5건, 상세 대상자 마스킹·근무자 4명 투입실적·취소일/사유), 콘솔 에러 0. **종결 건 재검증 보류**(#13과 동일 — 사용자 종결 데이터 생성 후 종결코드·`totalGuardMinutes` 실값). 응답 샘플 `History-Police-GetHistoryList.md`·`-GetHistoryDetail.md` |
 | 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 부분완료(△) | `d236ec6` (문서만) | **프로브 결과 전환 불가 → 본청/지역청 이력은 mock 유지.** `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq` 경찰서(leaf) 단위 — 부모 노드(본청 22·지방청 24) → 0건, 캐스케이드 없음. `GetHistoryList`는 종결·취소만(status/includeActive/all/isEnd 무시), 진행중은 `GetDeployList?groupSeq=<leaf>`(본청/지역청 토큰도 200). 관할 전체 = `Login/W/GetGroupTree`(3역할 공통 200, 역할 서브트리)로 leaf 뽑아 팬아웃 가능하나 **임시방편이라 미채택(사용자 결정)**. 진행중 상세 `GetDeployDetail?deployReqSeq=`는 본청/지역청 토큰에 200(deployReqSeq 90) — 목록 전환 시 코드 변경 최소. `GetHistoryDetail`도 본청/지역청 200(스코프 미검, `guardWorkLoc`/`guardHomeLoc` 포함 — #14 exclusions와 배치, 논의항목). **그룹 C 섹션 종료 → 백엔드 일괄 요청서 전달**(`docs/backend-integration-requests/2026-09-08-이력-C.md`, issues #14·#15). 종결 건 재검증(#13·#14 공통)·본부관리자 이력 스코프 꼬리는 회신·데이터 후 |
 | 16 | D | [경찰서] 피전 | 게스트 계정 관리 | 완료 | `1a6b4e7` | `User/Police/W/` 6종 실 API 전환(`GetGuestUserList` `groupSeq` 필수·평면 배열 / `GetGuestCaseList` 발급 후보 / `GetGuestCaseDetail` 수정 후보 `isAccess` / `AddGuestUser` `{name:"게스트"(고정),caseSeqs}` 응답 `{data:true}` / `UpdateGuestCaseInfo` / `DeleteGuestUser`). **아이디 미리보기 제거**(issues #3 → 🟢, 프론트 UX 변경 — 발급 후 목록 재조회, `previewNextGuestAccount`/`previewNextGuestId` 삭제). 발급 후보 조회를 `listGuestScopeSecurityCases`(mock `/security-cases`) 대신 전용 EP 2개로 분리. `handlers/guests.ts`(`guestTestHandlers`)를 실 6종 shape로 재작성 + `testOnlyHandlers`로 이동(브라우저는 실백엔드 프록시). `mocks/data/guests.ts`에 `userSeq` 필드 추가(로그인 계정 소스는 존치 — #17용). 중지 계정(`useYn`)은 화면 설계에 없어 숨김(exclusions, #17 종료 시 전달). 실백엔드 `SPoliceM5`(동래) 발급→조회권 수정(회수)→삭제 왕복 브라우저+curl 실측, `SPoliceM3` 403. 응답 샘플 `User-Police-Guest.md` |
-| 17 | D | [경찰서] 게스트 | 경호목록 + 상세(조회전용) | 대기 | | 16·2 완료 후 |
+| 17 | D | [경찰서] 게스트 | 경호목록 + 상세(조회전용) | 완료 | `56e04e3` (테스트) + 문서 | **코드 신규 없음** — 피전 경호목록(`SecurityCaseListPage`)/상세(`SecurityCaseDetailPage`)를 role로만 갈라 재사용(이미 구현: `isReadOnlyViewer` 본청/지역청/게스트, 신규접수 버튼 `role !== '게스트'`). 프로브로 게스트 토큰 스코프 검증: `GetDeployList`가 게스트 토큰이면 **`?groupSeq=` 무시하고 `GUEST_CASE_ACCESS` 스코프만 적용**(groupSeq 32/22/999 다 동일 = 조회권 건만). `GetDeployDetail?deployReqSeq=` 조회권 건 200(피전과 동일 shape). 게스트 토큰 403: `CancelGuardCase`·`GuardCase/Stec/GetGuardCaseList`·`User/Police/GetGuestUserList`. 메뉴는 이미 `경호목록` 단일(`PoliceAppShell`). 브라우저(`SPoliceGuest3` 동래): 목록 1건→행클릭→상세(`/security-cases/90`) 기본정보/배치장소/조치5/문서함 렌더·액션버튼 0개, 콘솔 에러 0. `SecurityCaseDetailPage.test.tsx`에 게스트 읽기전용 테스트 1건 추가(122). **미검증(이월)**: 조회권 없는 활성 건 상세 차단 — 동래 활성 1건뿐. **그룹 D 섹션 종료 → 요청서 `requests/2026-09-08-게스트-D.md`**(useYn 중지 / 게스트 상세 스코프 확인 2개 논의). 응답 샘플 `Deploy-Police-GetDeployList.md` "#17 관찰" |
 | — | 보류 | [본사]/[본청]/[지역청] | 대시보드 | 보류 | | Phase 4 자체가 보류 중 |
 
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-08: 17번([경찰서] 게스트 · 경호목록 + 상세 조회전용) — **완료**. 그룹 D
+  마지막 = 섹션 경계. **코드 변경 없음(테스트 1건 + 문서만)** — 게스트는 피전 경호목록/
+  상세 화면·API(`listSecurityCases`/`getSecurityCase`)를 role 분기만으로 재사용하고,
+  분기(`isReadOnlyViewer` = 본청/지역청/게스트, "신규접수" 버튼 `role !== '게스트'`)는
+  이미 구현돼 있었다. 이번 iteration의 본질 = 게스트 토큰으로 실 API가 조회권 스코프대로
+  도는지 검증.
+  - **프로브**(`_probe-17.sh` + 후속 curl): 게스트 계정 `SPoliceGuest3`(동래, `codeName:
+    "게스트"`, `codeSeq 7`, `groupSeq 32`, `userName:"게스트"` — #16 고정값).
+    - `GetDeployList`(게스트 토큰): **`?groupSeq=` 무시**, `GUEST_CASE_ACCESS` 스코프만
+      적용. groupSeq 32(본인)·22(본청)·999(무효)·1 전부 동일 결과 = 조회권 부여된 1건
+      (deploySeq 90 / caseSeq 51 경호중). 403 아님. → 프론트가 세션 groupSeq를 붙여도 무해.
+    - `GetDeployDetail?deployReqSeq=90`(조회권 O) → 200, 피전과 동일 shape
+      (`startDate/endDate/startTime/endTime`·`summary1~5`·`guardHomeLoc/WorkLoc`·`guardUserList`).
+    - 게스트 토큰 403: `Deploy/Police/W/CancelGuardCase`, `GuardCase/Stec/W/GetGuardCaseList`,
+      `User/Police/W/GetGuestUserList`(피전 전용).
+  - **브라우저**(`run-s-pgms`, `SPoliceGuest3`): 로그인 → `/security-cases` 착지, 사이드
+    메뉴 `경호목록` 단일(`PoliceAppShell.NAV_BY_ROLE.게스트` 이미 그렇게 돼 있음 — 사용자
+    우려와 달리 수정 불필요). 목록 1건 렌더, 행 클릭 → `/security-cases/90` 상세: 기본정보
+    (대상자 이**·스토킹·배치시간)·배치장소 4필드·조치 5개·문서함(읽기전용 placeholder)·
+    "근무 일정 없음". **액션 버튼 0개**. 콘솔 에러 0. 스크린샷 `17-01`~`17-03`.
+  - **테스트**: `SecurityCaseDetailPage.test.tsx`에 `loginAsGuest` + "게스트도 조회 전용…"
+    1건 추가(본청 읽기전용 테스트와 같은 분기). 121 → 122.
+  - **미검증(이월)**: 게스트가 조회권 없는 *진행중* 건 상세를 직접 호출 시 403/404인지 —
+    동래에 활성 미부여 건이 없어(활성 1건, 게스트가 봄) 양성 테스트 불가. `GetDeployList`
+    groupSeq 무시 동작으로 보아 `GetDeployDetail`도 막을 것으로 추정하나 미검증. 동래에
+    활성 건 추가되면 재검증.
+  - 검증: `npm run test` 122/122(`--testTimeout=30000`) · lint(기존 warning 2) · build 통과.
+  - **그룹 D 섹션 종료 → 백엔드 일괄 요청서**: `docs/backend-integration-requests/
+    2026-09-08-게스트-D.md`(하드 요청 없음, 논의 2건 — ① `useYn` 게스트 계정 중지가
+    업무 요건인지 ② `GetDeployDetail` 게스트 스코프 서버 보장 확인). issues #3은 프론트
+    UX로 해소돼 제외. 응답 안 기다리고 종료.
+  - **문서**: matrix `## 2. [경찰서] 게스트` 표(✅) · roadmap 그룹 D 완료 체크 + 종료 ·
+    exclusions(게스트 상세 스코프 미검증 1건) · 응답 샘플 `Deploy-Police-GetDeployList.md`
+    "#17 관찰" 섹션 · `test-accounts.local.md`에 `SPoliceGuest3` 추가. 프로브 `_probe-17.sh`.
+  - **다음**: 커밋 후 — **연동 대상 화면은 전부 소진**. 남은 것은 (a) B-2 회신 반영(#12
+    완료 처리·issues #1/#2·지역청 필터), (b) 그룹 C 회신 반영(#14·#15 상세), (c) 그룹 D
+    회신 반영, (d) 재검증 대기(#4·#9 배정 이후 액션 / #10 피전 요청 / #13·#14·#17 종결·
+    미부여 데이터). 사용자와 다음 방향 논의.
 
 - 2026-09-08: 16번([경찰서] 피전 · 게스트 계정 관리) — **완료**. 그룹 D 첫 화면.
   - **프로브**(`_probe-16.sh` 읽기 / `_probe-16b.sh` 쓰기 왕복):
