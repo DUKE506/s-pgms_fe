@@ -124,8 +124,8 @@
 
 #### 그룹 D — 게스트 (부가, 조회 전용 스코프)
 
-16. **[경찰서] 피전 — 게스트 계정 관리** (목록 → 발급 → 수정 → 삭제) — 아이디 미리보기
-    이슈(issues #3)
+16. **[경찰서] 피전 — 게스트 계정 관리** (목록 → 발급 → 수정 → 삭제) — ✅ **연동 완료
+    (2026-09-08)**. 아이디 미리보기(issues #3)는 프론트 UX 변경으로 해소
 17. **[경찰서] 게스트 — 경호목록 + 상세** (조회 전용, 16·2 이후)
 
 #### 보류
@@ -175,15 +175,18 @@
 
 #### 게스트 계정 관리 (`/guests`)
 
-| API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
+**✅ 연동 완료(2026-09-08, #16)** — 응답 샘플 `docs/backend-integration-responses/User-Police-Guest.md`.
+`handlers/guests.ts`(`guestTestHandlers`)를 실 6종으로 재작성해 `testOnlyHandlers`로 이동.
+
+| API 기능 | mock 함수 → 실 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listGuestAccounts` | `GET User/Police/W/GetGuestUserList` | |
-| 발급 후보 조회 | (없음, `listSecurityCases` 재사용) | `GET GetGuestCaseList` | 실제 API는 발급용 후보 조회가 전용 엔드포인트로 분리돼 있음 |
-| 아이디 미리보기 | `previewNextGuestAccount`(`/guests/next-id`) | ⚠️ **없음** | issues.md #3 — 발급 시 서버가 즉시 확정해 응답으로 내려주는 구조로 보임 |
-| 발급 | `issueGuestAccount` | `POST AddGuestUser` | |
-| 수정 후보 조회 | (없음, `listSecurityCases` 재사용) | `GET GetGuestCaseDetail` | 실제 API는 수정용 후보 조회(`isAccess` 포함)도 별도 엔드포인트 |
-| 조회권 수정 | `updateGuestAccount` | `PATCH UpdateGuestCaseInfo` | |
-| 삭제 | `deleteGuestAccount` | `POST DeleteGuestUser` | |
+| 목록 조회 | `listGuestAccounts` | `GET User/Police/W/GetGuestUserList?groupSeq=` | ✅ `groupSeq` 필수(세션 값). `data` 평면 배열. `useYn=false`(중지) 행 숨김(exclusions). 행: `loginId`→아이디, `accessList[].guardCode`→"조회가능 경호건", `createDt`→발급일 |
+| 발급 후보 조회 | `listGuestCaseCandidates`(신규) | `GET GetGuestCaseList` | ✅ 서버가 소속·종결/취소 필터. `mgmtNo`에 경호코드 미포함 → `+guardCode` 재조합 |
+| 아이디 미리보기 | ~~`previewNextGuestAccount`~~ 제거 | — | ✅ issues #3 해소 — 프론트 UX 변경(발급 후 목록 재조회). EP 요청 안 함 |
+| 발급 | `issueGuestAccount` | `POST AddGuestUser` | ✅ `{name:"게스트"(고정), caseSeqs:int[]}`. 응답 `{data:true}`(아이디 미반환) |
+| 수정 후보 조회 | `getGuestCaseAccess`(신규) | `GET GetGuestCaseDetail?userSeq=` | ✅ `{caseSeq,guardCode,isAccess}` — 라벨(mgmtNo) 없어 발급 후보와 머지. 타 경찰서 403 |
+| 조회권 수정 | `updateGuestAccountAccess` | `PATCH UpdateGuestCaseInfo` | ✅ `{userSeq, accessList:[{caseSeq,guardCode,isAccess}]}`. 후보 전체를 명시적 true/false로 |
+| 삭제 | `deleteGuestAccount` | `POST DeleteGuestUser` | ✅ `{userSeq}`. 복구 불가. 타 경찰서 403 |
 
 #### 이력 조회 (`/history`, `/history/:id`)
 
@@ -391,7 +394,8 @@
 
 **mock에만 있고 실제 API엔 없음** (issues.md로 옮겨 관리):
 1. 연장/단축 거부 (`rejectPeriodRequest`) — issues.md #2
-2. 게스트 아이디 미리보기 (`previewNextGuestAccount`) — issues.md #3
+2. ~~게스트 아이디 미리보기 (`previewNextGuestAccount`)~~ — issues.md #3 **해소(2026-09-08)**:
+   프론트 UX 변경(발급 후 목록 재조회)으로 흡수, 함수 제거
 
 **실제 API에만 있고 mock엔 없음** (이슈 아님 — 연동하면서 새로 구현할 기능, `.claude/loop-backend/PROGRESS.md`에서 화면 단위로 자연 처리):
 3. 경호계획 부분수정(`PatchCaseInfo`)

@@ -44,13 +44,58 @@
 | 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Stec/W/GetHistoryList` 실 API 전환(`company/api/history.ts` 신규 분리 — 경찰 이력 #14·#15는 mock 유지). 이중 래핑·행 축소 매핑, `statusName`("경호취소"→'취소'), `totalMin`→`totalGuardMinutes`. **본부관리자 스코프(HIST-003) 실제 적용 확인**(StecM3 배정 0건→이력 0건, StecM2 동래 담당→5건). 실서버에 취소 건 5개 존재 → 브라우저 검증(StecM1 5건/StecM2 5건, 콘솔 에러 0). **상세 보류** — `History/Stec/W/GetHistoryDetail` 404, Police EP 본사 토큰 403(issues #14 신규, blockers) → `/admin/history/:id` "준비 중" 안내. **종결 건 재검증 보류** — 사용자가 오늘 날짜 경호건 생성→종결 후 status 코드 매핑·`totalMin` 실값 재확인. 안 되면 △ 유지. 응답 샘플 `History-Stec-GetHistoryList.md` |
 | 14 | C | [경찰서] 피전 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Police/W/GetHistoryList` + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail` 신규 — 본청·지역청 #15는 mock, `role === '경찰서'` 분기). `groupSeq`(세션) 필수·끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드. `caseType`·5개 조치·배치장소 응답에 없음→축소(exclusions). 브라우저 검증(SPoliceM5 동래: 목록 취소 5건, 상세 대상자 마스킹·근무자 4명 투입실적·취소일/사유), 콘솔 에러 0. **종결 건 재검증 보류**(#13과 동일 — 사용자 종결 데이터 생성 후 종결코드·`totalGuardMinutes` 실값). 응답 샘플 `History-Police-GetHistoryList.md`·`-GetHistoryDetail.md` |
 | 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 부분완료(△) | `d236ec6` (문서만) | **프로브 결과 전환 불가 → 본청/지역청 이력은 mock 유지.** `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq` 경찰서(leaf) 단위 — 부모 노드(본청 22·지방청 24) → 0건, 캐스케이드 없음. `GetHistoryList`는 종결·취소만(status/includeActive/all/isEnd 무시), 진행중은 `GetDeployList?groupSeq=<leaf>`(본청/지역청 토큰도 200). 관할 전체 = `Login/W/GetGroupTree`(3역할 공통 200, 역할 서브트리)로 leaf 뽑아 팬아웃 가능하나 **임시방편이라 미채택(사용자 결정)**. 진행중 상세 `GetDeployDetail?deployReqSeq=`는 본청/지역청 토큰에 200(deployReqSeq 90) — 목록 전환 시 코드 변경 최소. `GetHistoryDetail`도 본청/지역청 200(스코프 미검, `guardWorkLoc`/`guardHomeLoc` 포함 — #14 exclusions와 배치, 논의항목). **그룹 C 섹션 종료 → 백엔드 일괄 요청서 전달**(`docs/backend-integration-requests/2026-09-08-이력-C.md`, issues #14·#15). 종결 건 재검증(#13·#14 공통)·본부관리자 이력 스코프 꼬리는 회신·데이터 후 |
-| 16 | D | [경찰서] 피전 | 게스트 계정 관리 | 대기 | | 아이디 미리보기 이슈(issues.md #3) |
+| 16 | D | [경찰서] 피전 | 게스트 계정 관리 | 완료 | (이번 커밋) | `User/Police/W/` 6종 실 API 전환(`GetGuestUserList` `groupSeq` 필수·평면 배열 / `GetGuestCaseList` 발급 후보 / `GetGuestCaseDetail` 수정 후보 `isAccess` / `AddGuestUser` `{name:"게스트"(고정),caseSeqs}` 응답 `{data:true}` / `UpdateGuestCaseInfo` / `DeleteGuestUser`). **아이디 미리보기 제거**(issues #3 → 🟢, 프론트 UX 변경 — 발급 후 목록 재조회, `previewNextGuestAccount`/`previewNextGuestId` 삭제). 발급 후보 조회를 `listGuestScopeSecurityCases`(mock `/security-cases`) 대신 전용 EP 2개로 분리. `handlers/guests.ts`(`guestTestHandlers`)를 실 6종 shape로 재작성 + `testOnlyHandlers`로 이동(브라우저는 실백엔드 프록시). `mocks/data/guests.ts`에 `userSeq` 필드 추가(로그인 계정 소스는 존치 — #17용). 중지 계정(`useYn`)은 화면 설계에 없어 숨김(exclusions, #17 종료 시 전달). 실백엔드 `SPoliceM5`(동래) 발급→조회권 수정(회수)→삭제 왕복 브라우저+curl 실측, `SPoliceM3` 403. 응답 샘플 `User-Police-Guest.md` |
 | 17 | D | [경찰서] 게스트 | 경호목록 + 상세(조회전용) | 대기 | | 16·2 완료 후 |
 | — | 보류 | [본사]/[본청]/[지역청] | 대시보드 | 보류 | | Phase 4 자체가 보류 중 |
 
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-08: 16번([경찰서] 피전 · 게스트 계정 관리) — **완료**. 그룹 D 첫 화면.
+  - **프로브**(`_probe-16.sh` 읽기 / `_probe-16b.sh` 쓰기 왕복):
+    - `GetGuestUserList` — `groupSeq`(세션) **필수**(없으면 400 "경찰서를 선택해주세요").
+      `data` **평면 배열**(경호목록·이력의 `{meta,data}` 이중 래핑 아님, 페이징 없음).
+      행 `{userSeq, loginId(서버자동생성), userName, useYn, createDt, accessList:[{caseSeq,guardCode}]}`.
+      지역청 토큰으로 산하 경찰서 groupSeq 넣어도 200.
+    - `GetGuestCaseList`(발급 후보, isAccess 없음) `{caseSeq,groupSeq,groupName,
+      mgmtNo:"26-09-동래경찰서",guardCode:"ST0007",status,statusName}` — `mgmtNo`에 경호코드
+      미포함. 서버가 소속·종결/취소 필터.
+    - `GetGuestCaseDetail?userSeq=`(수정 후보) `{userSeq, accessList:[{caseSeq,guardCode,isAccess}]}`
+      — 관리번호 라벨 없음 → 발급 후보와 caseSeq로 머지. 타 경찰서/없는 userSeq → 403.
+    - `AddGuestUser` `{name(필수), caseSeqs:int[]}` → `{data:true}`(**발급된 아이디 미반환**).
+      `UpdateGuestCaseInfo` `{userSeq, accessList[]}` / `DeleteGuestUser` `{userSeq}` → `{data:true}`, 타 경찰서 403.
+    - ⚠️ **오진 주의**: curl `-d`로 한글 `name` 전송 시 인코딩 깨져 `AddGuestUser` 500.
+      `--data-binary @file`(UTF-8)면 정상. 프론트 fetch는 무관.
+  - **결정(사용자)**: ① 아이디 미리보기 제거 — 발급 후 목록 재조회(issues #3 → 🟢, 신규
+    EP 요청 안 함). ② `AddGuestUser.name`은 화면에 입력칸 안 만들고 **고정값 `"게스트"`**
+    전송(A안 — 목록은 loginId만 씀). ③ 테스트 게스트 생성·삭제 무방.
+  - **연동**: `features/police/api/guests.ts` 전면 재작성 —
+    `listGuestAccounts`(`GetGuestUserList`, `useYn=false` 숨김), `listGuestCaseCandidates`
+    (신규, `GetGuestCaseList`), `getGuestCaseAccess`(신규, `GetGuestCaseDetail`),
+    `issueGuestAccount(caseSeqs:number[])`, `updateGuestAccountAccess(userSeq,accessList)`,
+    `deleteGuestAccount(userSeq)`. `GuestAccount` = `{id,userSeq,name,accessCodes,issuedAt}`.
+    `previewNextGuestAccount` + `securityCases.ts::listGuestScopeSecurityCases`(mock
+    `/security-cases` 재사용) 제거. `IssueGuestAccountDialog`는 `cases` prop 대신 후보를
+    직접 쿼리(발급=candidates만, 수정=candidates+access 머지). `GuestListPage`에서
+    `casesQuery`/`codeById` 삭제, `visibleCases`는 `accessCodes` 사용, 빈 값 라벨 `경호건 없음`.
+    `DeleteGuestAccountDialog`는 `userSeq`로 삭제.
+  - **테스트 더블**: `handlers/guests.ts` → `guestTestHandlers`로 이름 변경, 실 6종 경로·
+    envelope로 재작성, `mocks/handlers/index.ts`에서 `handlers` → `testOnlyHandlers` 이동
+    (브라우저는 실백엔드로 프록시). 문자열 caseId ↔ 정수 caseSeq는 `caseSeqOf`(history 더블
+    규칙 재사용). `mocks/data/guests.ts`에 `GuestRecord.userSeq` 추가(seed 9001~, 로그인
+    계정 소스 `guestLoginAccounts`는 존치 — #17). `previewNextGuestId` 삭제.
+    `GuestListPage.test.tsx` 어서션 갱신(`-` → `경호건 없음`, 발급 후보 로드 대기).
+  - 검증: `npm run test` 121/121(`--testTimeout=30000`) · lint(기존 warning 2) · build 통과.
+    실백엔드 `run-s-pgms` `SPoliceM5`(동래): 목록 0건 → 발급(loginId `SPoliceGuestN`,
+    `userName:"게스트"`, ST0007) → 조회권 수정(ST0007 회수 → "경호건 없음") → 삭제 →
+    "게스트 계정이 없습니다", 콘솔 에러 0. 스크린샷 `16-01`~`16-06`. 동래 게스트 목록은
+    원래 0개였고 테스트 후 0개로 복구(curl 정리 포함).
+  - 문서: issues #3 → 🟢, exclusions(`useYn` 숨김 / `name` 고정값 / GetGuestCaseDetail
+    라벨 머지 3건), matrix 게스트 계정 관리 표·#16행·전체요약, roadmap 그룹 D 체크박스 +
+    설계이슈 #3, 응답 샘플 `User-Police-Guest.md` 신규. 프로브 `_probe-16.sh`·`_probe-16b.sh`.
+  - **다음**: 커밋 후 사용자 승인 → #17([경찰서] 게스트 · 경호목록 + 상세 조회전용) —
+    그룹 D 마지막 = 섹션 경계 → 종료 시 issues/exclusions 일괄 요청(`useYn` 전달사항 포함).
 
 - 2026-09-08: 15번([본청]/[지역청] · 이력 조회 + 진행중 건 상세) — **부분완료(△)**.
   그룹 C 마지막 화면 = 섹션 경계. **이번 iteration은 코드 변경 없음(문서만)** — 프로브에서

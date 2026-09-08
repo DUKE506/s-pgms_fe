@@ -100,27 +100,25 @@ childGroupName}]}]`). 이건 **경찰 조직(지방청/경찰서) 축**이라 �
 
 ---
 
-## 3. 🔴 게스트 계정 발급 아이디 "미리보기" API가 없음
+## 3. 🟢 게스트 계정 발급 아이디 "미리보기" API가 없음 — 프론트 UX 변경으로 해소
 
 **발견 경위**: 화면×API 매트릭스 작성 중 확인(2026-08-31).
 
-**현재 상태**: mock은 `GET /guests/next-id`로 발급 전 자동생성될 아이디를 미리 보여주고,
-사용자가 확인 후 `POST /guests`로 실제 발급하는 2단계. 실제 API는 `AddGuestUser`
-하나뿐이고 미리보기용 엔드포인트가 없음 — 아이디는 서버가 발급 시점에 그때 확정해서
-응답으로 돌려주는 구조로 보임.
+**현재 상태(당시)**: mock은 `GET /guests/next-id`로 발급 전 자동생성될 아이디를 미리
+보여주고, 사용자가 확인 후 `POST /guests`로 실제 발급하는 2단계. 실제 API는 `AddGuestUser`
+하나뿐이고 미리보기용 엔드포인트가 없음.
 
-**왜 문제인가**: `IssueGuestAccountDialog`가 "자동생성 아이디: GangnamGuest7" 처럼 발급
-버튼을 누르기 전에 미리 보여주고 "초기비밀번호는 아이디와 동일합니다" 안내까지 하는
-UX인데, 실제 API로는 발급 전에 그 값을 알 방법이 없음.
+**왜 문제인가**: `IssueGuestAccountDialog`가 "자동생성 아이디: GangnamGuest7"처럼 발급
+버튼을 누르기 전에 미리 보여주는 UX인데, 실제 API로는 발급 전에 그 값을 알 방법이 없음.
 
-**요청/제안**:
-1. 미리보기 전용 GET 엔드포인트 추가 요청, 또는
-2. (더 간단) **UX를 바꿔서 해결** — "발급하기" 버튼을 누르면 바로 발급되고, 결과 화면에서
-   발급된 아이디를 보여주는 방식으로 변경. 신규 엔드포인트 없이 프론트 화면 흐름만
-   바꾸면 되는 선택지라 우선 이 방향을 검토.
+**결론(2026-09-08, #16 연동 · 사용자 결정)**: 제안 2안 채택 — **신규 엔드포인트 요청 없이
+프론트 UX만 변경**. 발급 다이얼로그의 아이디 미리보기 자리를 "발급 시 자동으로
+생성됩니다" 안내로 바꾸고(초기비밀번호=아이디 안내는 유지), 발급 후 목록을 재조회해
+새 계정(loginId)을 보여준다. `previewNextGuestAccount` / `GET /guests/next-id` 제거.
+`AddGuestUser` 응답은 `{data:true}`뿐이라 발급된 아이디를 돌려주지 않는 점도 이 방식으로 흡수.
 
-**영향받는 화면/코드**: `IssueGuestAccountDialog.tsx`, `features/police/api/guests.ts`의
-`previewNextGuestAccount`.
+**영향받는 화면/코드**: `IssueGuestAccountDialog.tsx`, `features/police/api/guests.ts`
+(`previewNextGuestAccount` 삭제), `mocks/data/guests.ts`(`previewNextGuestId` 삭제).
 
 ---
 
