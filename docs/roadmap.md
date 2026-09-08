@@ -270,6 +270,14 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         UI 없어 범위 밖(백로그).
 - [ ] **그룹 C — 이력** (본사 이력 → 경찰서 이력 → 본청/지역청 이력 + 진행중 건 상세
       조회전용). 그룹 B의 종결·취소가 터미널 데이터를 만든 뒤라야 의미 있음.
+      - [~] [본사] 이력 조회 — **부분 연동(2026-09-08, △)**. 목록 `GET History/Stec/W/GetHistoryList`
+        실 API 전환(`company/api/history.ts` 신규 분리 — 경찰 이력 화면 #14·#15는 mock 유지).
+        응답 이중 래핑·행 축소 매핑, `statusName`("경호취소"→'취소'), `totalMin`→총경호시간.
+        **본부관리자 스코프(HIST-003) 실제 적용 확인**(StecM3 배정 0건→이력 0건). 실서버에
+        취소 건 5개 존재 → 브라우저 검증(StecM1 5건 / StecM2 동래 5건). **상세는 보류** —
+        `History/Stec/W/GetHistoryDetail` 404, Police EP는 본사 토큰 403(issues #14) →
+        `/admin/history/:id`는 "준비 중" 안내. 종결 건(종결코드 매핑·`totalMin` 실값) 재검증
+        보류 — 사용자가 종결 데이터 생성 후.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).
       부가 기능이라 가장 뒤.
 
@@ -294,6 +302,11 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
    취소 엔드포인트가 없고, 유일한 `Deploy/Police/W/CancelGuardCase`는 Police 태그라 본사
    토큰으로 호출 불가(403). 배치요청 목록 "취소" 메뉴 비활성화. 본사용 취소 API 신설
    요청 예정(그룹 B 섹션 #12에서 일괄)
+10~13. issues.md 참고(#10·#13은 해결, #11·#12는 B-2 요청서로 전달).
+14. [본사] 이력 조회 상세 API 없음(2026-09-08) — `History/Stec/W/GetHistoryDetail`은 404,
+    `History/Police/W/GetHistoryDetail`은 본사 토큰에 403(피전 토큰만 200). 목록
+    (`GetHistoryList`)만 연동, `/admin/history/:id`는 "준비 중" 안내. 본사용 상세 EP
+    신설/권한확장 요청 예정(그룹 C 섹션 종료 시 일괄)
 
 **발견된 후속 항목 (이번 범위 밖, 별도 진행 예정)**:
 

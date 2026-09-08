@@ -619,4 +619,38 @@ CCTV / 잠정조치 1호" 렌더 확인. 응답 샘플: `Deploy-Police-GetDeploy
 현재 `baseInfo` 자체를 만들지 않음), `shared/components/CaseBaseInfoCard.tsx`,
 `features/police/pages/SecurityCaseDetailPage.tsx`.
 
+## 14. 🔴 [본사] 이력 조회 — 상세 조회 API가 없음
+
+**발견 경위**: 화면13([본사] 이력 조회) 연동(2026-09-08). 목록(`History/Stec/W/GetHistoryList`)은
+정상 연동됐으나, 상세(`/admin/history/:id`)에 붙일 EP가 없다.
+
+**현재 상태**(2026-09-08 실측):
+- `GET History/Stec/W/GetHistoryDetail?caseSeq=46` (StecM1) → **HTTP 404** (경로 자체 없음).
+  스웨거에도 `History/Stec/W`엔 `GetHistoryList`만 있고 `GetHistoryDetail`이 없다.
+- `GET History/Police/W/GetHistoryDetail?caseSeq=46` (본사 토큰) → **HTTP 403**.
+- `GET History/Police/W/GetHistoryDetail?caseSeq=46` (피전 토큰 `SPoliceM5`) → **HTTP 200**,
+  정상. 응답: `{caseSeq, mgmtNo, statusName, suspectUserName(마스킹), startDate, endDate,
+  totalGuardWorkMinutes, investigator, responsibleOfficer, guardWorkLoc, guardHomeLoc,
+  endDt, remark, guards:[{guardSeq, guardName, workDays, totalMinutes}]}`.
+- 즉 상세 데이터·EP는 존재하나 **Police 태그 전용**이고 본사(Stec) 토큰엔 막혀 있다.
+  목록은 `History/Stec/W`·`History/Police/W` 둘 다 있는데 상세는 Police만 있는 비대칭.
+
+**왜 문제인가**: [본사] 이력 목록에서 행을 클릭하면 종결/취소 건의 기본정보·근무자별
+투입실적·종결(취소) 사유를 봐야 하는데(HIST-002, 승인된 화면
+`features/company/pages/HistoryDetailPage.tsx`), 조회할 방법이 없다.
+
+**요청/제안**: 아래 중 하나.
+1. `History/Stec/W/GetHistoryDetail` 신설 — `History/Police/W/GetHistoryDetail`과 같은
+   응답, 본사 스코프(운영/시스템=전국, 본부관리자=본인 배정 건, HIST-003) 적용.
+2. 기존 `History/Police/W/GetHistoryDetail`을 본사 토큰도 호출 가능하게 권한 확장.
+
+**임시 처리**: `/admin/history/:id`는 "이력 상세 조회는 준비 중입니다" 안내만 표시
+(`getCompanyHistoryDetail`은 `CompanyHistoryDetailUnavailableError` throw).
+목록은 정상 연동. `blockers.md` 참고.
+
+**전달**: 그룹 C(이력) 섹션 종료(#15) 시 일괄 요청서에 포함 예정. 🔴 유지.
+
+**영향받는 화면/코드**: `features/company/api/history.ts`(`getCompanyHistoryDetail`),
+`features/company/pages/HistoryDetailPage.tsx`.
+
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->

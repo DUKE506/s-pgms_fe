@@ -99,3 +99,20 @@ GetDeployDetail*`(배치요구서 기간 보유)을 부르면 **403**(2026-09-04
 배정+미등록): `BaseInfoForm` 배치기간 2026-09-12 ~ 2026-09-22 표시, `periodMissing` 경고
 사라짐, "등록" 버튼 활성. issues #7·#10 → 🟢. 응답 샘플
 `docs/backend-integration-responses/GuardCase-Stec-GetDeployDetail.md`.
+
+---
+
+## [본사] 이력 조회 상세 — 본사(Stec)용 조회 EP가 없음
+
+**상황**: 화면13([본사] 이력 조회) 연동(2026-09-08). 목록(`History/Stec/W/GetHistoryList`)은
+정상 연동했으나 상세(`/admin/history/:id`)에 붙일 엔드포인트가 없다.
+**문제**: `History/Stec/W/GetHistoryDetail`은 404(경로 없음), `History/Police/W/GetHistoryDetail`은
+본사 토큰에 403(피전 토큰으론 200). → [본사] 이력 상세를 조회할 방법이 없다.
+**해결되어야 하는 것**: `History/Stec/W/GetHistoryDetail` 신설 또는 Police EP 권한 확장
+(`docs/backend-integration-issues.md` #14).
+**해결방안 후보(프론트)**:
+1. **(채택)** 목록만 연동하고 상세 화면은 "준비 중" 안내로 둔다(`getCompanyHistoryDetail`은
+   `CompanyHistoryDetailUnavailableError` throw). 목록 행 클릭 → 안내 화면. EP가 오면
+   조회 연동 + 기존 상세 레이아웃 복원. — 그룹 C 진행을 막지 않음.
+2. 목록 행을 클릭 불가로 바꾼다 — 승인된 화면(행 클릭 → 상세) 동작을 더 크게 바꾸게 됨. 보류.
+**상태**: 확인 대기 — 그룹 C(이력) 섹션 종료(#15) 시 일괄 요청. PROGRESS #13 = 부분완료(△).

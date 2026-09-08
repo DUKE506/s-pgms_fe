@@ -321,8 +321,8 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listSecurityCaseHistory`(경찰 쪽 함수 재사용) | `GET History/Stec/W/GetHistoryList` | 종결·취소 데이터 필요 — 본사 쪽에서 가장 나중에 진행 |
-| 상세 조회 | `getSecurityCaseHistoryDetail`(경찰 쪽 함수 재사용) | `GET GetHistoryDetail` | Police와 동일 엔드포인트 공용인지 확인 필요 |
+| 목록 조회 | `listCompanyHistory`(신규, `company/api/history.ts` — 경찰 쪽 `listSecurityCaseHistory`에서 분리) | `GET History/Stec/W/GetHistoryList` | ✅ 연동 완료(2026-09-08). 응답 이중 래핑 `{meta, data:[...]}` → `unwrapEnvelope` + `.data`, `pageSize` 100 순회(경호목록과 동일). 행 축소: `{caseSeq, mgmtNo, groupName, parentGroupName, startDt, endDt, totalMin, statusName, remark}` → `caseSeq`→id, `splitMgmtNo`, `groupName/parentGroupName`→경찰서/지역청, `statusName`("경호취소"→'취소'), `totalMin`→`totalGuardMinutes`(분, 종결만 실값), `remark`→취소사유/종결코드. 종결·취소만 반환(HIST-001). **본부관리자 스코프(HIST-003) 실제 적용됨** — StecM3(배정 0건)→이력 0건, StecM2(동래 담당)→동래 취소 5건. `status`/`searchKey` 파라미터는 클라 필터로 대체(exclusions). 응답 샘플: `History-Stec-GetHistoryList.md` |
+| 상세 조회 | `getCompanyHistoryDetail`(신규, 항상 throw) | ⚠️ **없음** | issues #14 — `History/Stec/W/GetHistoryDetail`은 404, `History/Police/W/GetHistoryDetail`은 본사 토큰에 403(피전 토큰만 200). `/admin/history/:id`는 "준비 중" 안내만 표시, `getCompanyHistoryDetail`은 `CompanyHistoryDetailUnavailableError` throw. blockers.md. 그룹 C 종료(#15) 시 일괄 요청 |
 
 #### 대시보드 (`/admin/dashboard`, 아직 미구현·Phase 4)
 
