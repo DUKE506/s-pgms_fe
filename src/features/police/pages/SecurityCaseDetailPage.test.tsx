@@ -41,6 +41,15 @@ function loginAsHq() {
   })
 }
 
+// 게스트도 본청/지역청과 같은 isReadOnlyViewer 분기 — 조회권 부여된 건만 보고 액션 없음.
+function loginAsGuest() {
+  useAuthStore.setState({
+    user: { id: 'gangnamguest1', name: 'GangnamGuest1', role: '게스트' },
+    accessToken: 'access.gangnamguest1.test',
+    refreshToken: 'refresh.gangnamguest1.test',
+  })
+}
+
 function findCase(receiptNumber: string) {
   return securityCases.find((c) => c.receiptNumber === receiptNumber)!
 }
@@ -169,6 +178,16 @@ describe('PoliceSecurityCaseDetailPage', () => {
 
   it('본청은 이 화면에 조회 전용으로 들어와 액션 버튼과 배치요구서 수정 링크가 없다', async () => {
     loginAsHq()
+    const record = findCase('26-01-강남경찰서')
+    renderAt(record.id)
+
+    await screen.findByText('기본정보')
+    expect(screen.queryByRole('button', { name: '경호취소' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument()
+  })
+
+  it('게스트도 조회 전용으로 들어와 액션 버튼이 없다', async () => {
+    loginAsGuest()
     const record = findCase('26-01-강남경찰서')
     renderAt(record.id)
 
