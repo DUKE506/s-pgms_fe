@@ -42,7 +42,7 @@
 | 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 완료 | (이번 커밋) | `GetStecUserList`(목록)·`UpdateUser`(정보수정·비번초기화) 실 API 전환. `loginId→id`·`userSeq` 신규. 빈 연락처는 `""` 전송(`null`은 백엔드가 무시 — 실측). 배정건수·담당경호는 `GetGuardCaseList`(실 API) 담당자명 매칭 — mock `listManagerAssignedCases`/`listMockSecurityCases` 제거, `handlers/companyAccounts.ts` 삭제. **본부관리자는 `GetStecUserList` 403** → "운영·시스템관리자만 이용" 안내(B, 사용자 확인). 접근 자체(route/메뉴 제외 vs 백엔드가 본인 행만)는 **#12에서 결정**. "본부" 열 "-"(issues #1). 실백엔드 검증: StecM1 목록·정보수정 왕복·비번초기화(StecM4)·담당경호(HS2본부→caseSeq 51·29), StecM2 403 안내. 응답 샘플 `User-Stec-UpdateUser.md` |
 | 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 검증완료·문서보류 | `a570869` (더블만) | **API 레벨 스코프 검증 완료(2026-09-08, StecM2·StecM3)**. 완료 표시·issues 전달상태 갱신·지역청 필터 프론트 후속은 **B-2 백엔드 회신 후** 재검증과 함께 처리. B-2 요청서 전달(`docs/backend-integration-requests/2026-09-08-본사-경호관리-B2.md`/`.xlsx`). 아래 로그 참고 |
 | 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Stec/W/GetHistoryList` 실 API 전환(`company/api/history.ts` 신규 분리 — 경찰 이력 #14·#15는 mock 유지). 이중 래핑·행 축소 매핑, `statusName`("경호취소"→'취소'), `totalMin`→`totalGuardMinutes`. **본부관리자 스코프(HIST-003) 실제 적용 확인**(StecM3 배정 0건→이력 0건, StecM2 동래 담당→5건). 실서버에 취소 건 5개 존재 → 브라우저 검증(StecM1 5건/StecM2 5건, 콘솔 에러 0). **상세 보류** — `History/Stec/W/GetHistoryDetail` 404, Police EP 본사 토큰 403(issues #14 신규, blockers) → `/admin/history/:id` "준비 중" 안내. **종결 건 재검증 보류** — 사용자가 오늘 날짜 경호건 생성→종결 후 status 코드 매핑·`totalMin` 실값 재확인. 안 되면 △ 유지. 응답 샘플 `History-Stec-GetHistoryList.md` |
-| 14 | C | [경찰서] 피전 | 이력 조회 | 대기 | | 접수취소 + (그룹 B 이후) 종결 데이터 확인 |
+| 14 | C | [경찰서] 피전 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Police/W/GetHistoryList` + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail` 신규 — 본청·지역청 #15는 mock, `role === '경찰서'` 분기). `groupSeq`(세션) 필수·끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드. `caseType`·5개 조치·배치장소 응답에 없음→축소(exclusions). 브라우저 검증(SPoliceM5 동래: 목록 취소 5건, 상세 대상자 마스킹·근무자 4명 투입실적·취소일/사유), 콘솔 에러 0. **종결 건 재검증 보류**(#13과 동일 — 사용자 종결 데이터 생성 후 종결코드·`totalGuardMinutes` 실값). 응답 샘플 `History-Police-GetHistoryList.md`·`-GetHistoryDetail.md` |
 | 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 대기 | | 4·9 데이터 필요. 진행중 건은 경호 상세 화면을 조회 전용 재사용. + 본부관리자 이력 스코프 꼬리 확인. **이력 섹션 종료 → 백엔드 일괄 요청** |
 | 16 | D | [경찰서] 피전 | 게스트 계정 관리 | 대기 | | 아이디 미리보기 이슈(issues.md #3) |
 | 17 | D | [경찰서] 게스트 | 경호목록 + 상세(조회전용) | 대기 | | 16·2 완료 후 |
@@ -51,6 +51,39 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-08: 14번([경찰서] 피전 · 이력 조회) — **부분완료(△)**. 그룹 C 두 번째 화면.
+  - **1단계 프로브**(`_probe-14.sh`): `GetHistoryList`는 `groupSeq`(로그인 경찰서 조직번호,
+    `GetMyProfile`로 세션 저장) 필수 — 없으면 전 역할 0건, 넣으면 그 노드만 반환(역할 스코프
+    서버 미검, `GetDeployList`와 동형). 끝난 건만(HIST-001). `GetHistoryDetail`은 3역할 모두
+    200(스코프 미검), 응답에 `guards[]`(근무자별 이름·일수·분) 인라인. 실서버에 동래 취소
+    5건 존재(caseSeq 46~50), 종결 0건.
+  - **연동**: `police/api/history.ts`에 `listPoliceStationHistory`/`getPoliceStationHistoryDetail`
+    신규(기존 mock 함수 `listSecurityCaseHistory`/`getSecurityCaseHistoryDetail`는 본청·지역청
+    #15용으로 존치). 목록: 이중 래핑 unwrap + 페이지 순회, 세션 `groupSeq` 파라미터. 상세:
+    이중 래핑 아님, `suspectUserName`(마스킹)→`nameInitial`, `responsibleOfficer`→"경찰관 정보",
+    `endDt`→취소일/종결일, `remark`→취소사유/종결사유, `guards[]`→신규 `SecurityCase.historyGuards`
+    필드. `HistoryListPage`·`HistoryDetailPage`(police)는 `role === '경찰서'`일 때 새 함수 호출,
+    행/표 렌더는 `totalGuardMinutes`·`historyGuards` 있으면 우선(없으면 mock 계산 폴백).
+    상세의 `workersQuery`는 경찰서일 때 `enabled:false`(guards[]에 이름 있어 조인 불필요).
+  - **테스트 더블**: `mocks/handlers/history.ts` 신규(`GetHistoryList`·`GetHistoryDetail`,
+    seed 종결/취소 → 실응답 shape, `groupSeq` 필수는 `GetDeployList` 더블처럼 재현 안 하고
+    토큰으로 소속 판별). `index.ts` `testOnlyHandlers`에 등록.
+  - **손실 매핑(exclusions)**: 상세 응답에 `caseType`·5개 조치·배치장소 없음 → 사건유형은
+    `'사건미접수'`, 조치는 "-"(배치장소는 이 화면이 원래 미표시). 종결 건에서 실제 갭 —
+    종결 데이터 생기면 재확인, 남으면 issues(#13 경찰 상세 조치와 같은 성격). `status`/
+    `searchKey` 클라 필터 유지. 접수단계 취소는 hard-delete라 이력에 없음(설계).
+  - 검증: `npm run test` 121/121(`--testTimeout=30000`, 기본 15s로는 머신 부하로
+    `SecurityCaseNew/EditPage` 폼 테스트가 간헐 타임아웃 — 격리 실행 시 전부 통과, 회귀 아님) ·
+    lint(기존 warning 2) · build 통과. 실백엔드 `run-s-pgms` SPoliceM5(동래): 목록 취소 5건
+    (관리번호 splitMgmtNo·취소 배지·기간/시간 "-"), 상세(대상자 "홍**", 근무자 4명 배정이력
+    `guards[]` 인라인 이름, 취소일 2026.09.07·사유 "ㅍ"), 콘솔 에러 0.
+  - **이월(#15)**: 본청·지역청 `GetHistoryList` `groupSeq` 캐스케이드(관할 전체) 여부 미검증,
+    진행중 건 조회 EP 불명확(본청 토큰 `GetGuardCaseList` 403·`GetDeployList` 400), 본청·지역청
+    상세 스코프 차단 미확인. 그룹 C 종료(#15) 시 issues 일괄.
+  - 응답 샘플: `History-Police-GetHistoryList.md`·`History-Police-GetHistoryDetail.md`.
+    프로브 `_probe-14.sh`. `test-accounts.local.md`에 StecM3(#13에서 추가) 유지.
+  - **다음**: 커밋 후 사용자 승인 → #15([본청]/[지역청] 이력 조회 + 진행중 건 상세).
 
 - 2026-09-08: 13번([본사] 운영/시스템관리자 · 이력 조회) — **부분완료(△)**. 그룹 C 첫 화면.
   - **1단계 프로브 결과 전제 변경**: 실서버에 **경호취소 건 5개**(caseSeq 46~50, 누가

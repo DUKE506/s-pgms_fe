@@ -278,6 +278,13 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         `History/Stec/W/GetHistoryDetail` 404, Police EP는 본사 토큰 403(issues #14) →
         `/admin/history/:id`는 "준비 중" 안내. 종결 건(종결코드 매핑·`totalMin` 실값) 재검증
         보류 — 사용자가 종결 데이터 생성 후.
+      - [~] [경찰서] 이력 조회 — **부분 연동(2026-09-08, △)**. 목록 `GET History/Police/W/GetHistoryList`
+        + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail`
+        신규 분리 — 본청·지역청 #15는 mock 유지, `role === '경찰서'` 분기). `groupSeq`(세션) 필수,
+        끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드로 근무자
+        배정 이력 표. `caseType`·5개 조치·배치장소는 응답에 없어 축소(exclusions). 브라우저
+        검증(SPoliceM5 동래, 취소 5건 + 상세). 종결 건 재검증 보류(#13과 동일). 본청·지역청
+        `groupSeq` 캐스케이드·진행중 EP는 #15.
 - [ ] **그룹 D — 게스트** (피전 게스트 계정 관리 → 게스트 계정 경호목록/상세 조회전용).
       부가 기능이라 가장 뒤.
 

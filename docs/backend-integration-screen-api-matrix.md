@@ -187,10 +187,15 @@
 
 #### 이력 조회 (`/history`, `/history/:id`)
 
+이 화면(과 상세)은 **경찰서·본청·지역청이 role로 갈라 공유**한다(`POLICE_HISTORY`).
+#14는 **경찰서 경로만** 실 API로 전환했고, 본청·지역청은 아직 mock(`listSecurityCaseHistory`)
+— #15에서 전환한다.
+
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listSecurityCaseHistory` | `GET History/Police/W/GetHistoryList` | 그룹 C에서 진행 — 이 시점엔 그룹 B의 종결·취소 데이터가 이미 있어야 함(종결은 배정→경호중→경호완료를 거쳐야 함) |
-| 상세 조회 | `getSecurityCaseHistoryDetail` | `GET History/Police/W/GetHistoryDetail` | 위와 동일 |
+| 목록 조회 (경찰서) | `listPoliceStationHistory`(신규, `police/api/history.ts` — 기존 함수에서 분리) | `GET History/Police/W/GetHistoryList` | ✅ 연동 완료(2026-09-08, **부분완료 △** — 종결 데이터 없어 취소 5건만 실측). `groupSeq`(세션 저장, `GetMyProfile`) 필수 — 없으면 빈 목록, 역할 스코프는 서버가 안 검. 끝난 건만(HIST-001). 응답 이중 래핑 `{meta,data:[...]}` → `unwrapEnvelope` + 페이지 순회. 행: `caseSeq`→id, `mgmtNo` `splitMgmtNo`, `groupName`/`parentGroupName`→경찰서/지역청, `startDt`/`endDt`(취소 건 null), `totalMin`→`totalGuardMinutes`, `statusName`("경호취소"→'취소'). `status`/`searchKey` 파라미터는 클라 필터로 대체(exclusions). 응답 샘플 `History-Police-GetHistoryList.md` |
+| 상세 조회 (경찰서) | `getPoliceStationHistoryDetail`(신규) | `GET History/Police/W/GetHistoryDetail?caseSeq=` | ✅ 연동(2026-09-08). 응답(이중 래핑 아님): `suspectUserName`(마스킹)→`nameInitial`, `responsibleOfficer`→"경찰관 정보", `startDate`/`endDate`(ISO)→날짜, `totalGuardWorkMinutes`→`totalGuardMinutes`, `endDt`→취소일/종결일, `remark`→취소사유/종결사유, `guards[]`(이름·일수·분 인라인)→신규 `historyGuards` 필드로 "근무자 배정 이력" 표. `caseType`·5개 조치·배치장소는 응답에 없음 → 표시 축소(exclusions). 3역할 모두 200(스코프 미검) — 본청/지역청 상세 스코프 차단은 #15 확인. 응답 샘플 `History-Police-GetHistoryDetail.md` |
+| 목록·상세 조회 (본청·지역청) | `listSecurityCaseHistory` / `getSecurityCaseHistoryDetail` | (미전환) | #15 — `GetHistoryList`가 `groupSeq` 경찰서 단위라 관할 전체를 한 번에 못 받음(부모 캐스케이드 미검증) + 진행중 건 조회 EP 불명확(본청 토큰으로 `GuardCase/Stec/GetGuardCaseList` 403, `Deploy/Police/GetDeployList` 400) |
 
 #### 대시보드 (`/dashboard`, 아직 미구현·Phase 4)
 
