@@ -6,6 +6,7 @@ import { deployTestHandlers } from './deploy'
 import { guardTestHandlers } from './guard'
 import { guardCaseTestHandlers } from './guardCase'
 import { guardCaseDetailTestHandlers } from './guardCaseDetail'
+import { historyTestHandlers } from './history'
 
 // 아직 mock인 화면들 — 브라우저(dev)와 테스트(vitest) 둘 다 이 배열을 쓴다.
 export const handlers = [...securityCaseHandlers, ...workerHandlers, ...guestHandlers]
@@ -19,4 +20,5 @@ export const testOnlyHandlers = [
   ...guardTestHandlers,
   ...guardCaseTestHandlers,
   ...guardCaseDetailTestHandlers,
+  ...historyTestHandlers,
 ]

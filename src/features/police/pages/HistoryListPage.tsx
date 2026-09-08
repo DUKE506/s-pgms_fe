@@ -22,7 +22,7 @@ import {
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { useAuthStore, type Role } from '../../auth/store/authStore'
-import { listSecurityCaseHistory } from '../api/history'
+import { listPoliceStationHistory, listSecurityCaseHistory } from '../api/history'
 import { computeCaseHistorySummary } from '../lib/historySummary'
 import type { SecurityCase, SecurityCaseStatus } from '../types/securityCase'
 
@@ -47,6 +47,13 @@ function formatHours(hours: number) {
   return Number.isInteger(hours) ? `${hours}시간` : `${hours.toFixed(1)}시간`
 }
 
+// 총경호시간 — 경찰서(실 API) 경로는 서버가 준 totalGuardMinutes(분)를 쓰고,
+// 본청/지역청(mock) 경로는 workSchedule에서 계산한다.
+function totalHoursOf(c: SecurityCase) {
+  if (c.totalGuardMinutes != null) return c.totalGuardMinutes / 60
+  return computeCaseHistorySummary(c.workSchedule).totalHours
+}
+
 // 본청/지역청 이력 목록에는 진행중 건도 섞여 있다 — 종결/취소는 이 화면 자체의
 // 상세(/history/:id)로, 아직 끝나지 않은 건은 기존 경호 상세 화면
 // (/security-cases/:id, 조회 전용)으로 보낸다(2026-08-27 결정).
@@ -64,7 +71,11 @@ function historyTarget(c: SecurityCase): string {
 function HistoryListPage() {
   const user = useAuthStore((state) => state.user)
   const navigate = useNavigate()
-  const historyQuery = useQuery({ queryKey: ['police-history'], queryFn: listSecurityCaseHistory })
+  // 경찰서는 실 API(GetHistoryList), 본청/지역청은 아직 mock — 컴포넌트 공유(#15에서 전환).
+  const historyQuery = useQuery({
+    queryKey: ['police-history', user?.role],
+    queryFn: user?.role === '경찰서' ? listPoliceStationHistory : listSecurityCaseHistory,
+  })
 
   const [statusFilter, setStatusFilter] = useState<typeof ALL | SecurityCaseStatus>(ALL)
   const [jurisdictionFilter, setJurisdictionFilter] = useState(ALL)
@@ -248,7 +259,7 @@ interface RowProps {
 
 function HistoryRow({ record: c, role, onClick }: RowProps) {
   const isClosed = c.status === '종결'
-  const { totalHours } = computeCaseHistorySummary(c.workSchedule)
+  const totalHours = totalHoursOf(c)
 
   return (
     <TableRow className="cursor-pointer" onClick={onClick}>
@@ -272,7 +283,7 @@ function HistoryRow({ record: c, role, onClick }: RowProps) {
 
 function HistoryCard({ record: c, role, onClick }: RowProps) {
   const isClosed = c.status === '종결'
-  const { totalHours } = computeCaseHistorySummary(c.workSchedule)
+  const totalHours = totalHoursOf(c)
 
   return (
     <div

@@ -126,6 +126,13 @@ export interface CaseAttachments {
   destructionCertFileName: string | null
 }
 
+export interface HistoryGuard {
+  guardSeq: number
+  guardName: string
+  workDays: number
+  totalMinutes: number
+}
+
 export interface SecurityCase {
   id: string
   receiptNumber: string
@@ -166,6 +173,11 @@ export interface SecurityCase {
   // mock 경로는 workSchedule에서 computeCaseHistorySummary로 계산하지만, 실 API는
   // 이 값을 직접 준다(종결 건만 실값, 취소 건은 null → undefined).
   totalGuardMinutes?: number
+  // 이력 상세(History/Police/W/GetHistoryDetail)의 근무자별 투입실적. 실 API는
+  // guards[]로 근무자 이름까지 함께 줘서, 상세 화면이 근무자 명단을 따로 조회하지
+  // 않고 바로 "근무자 배정 이력" 표를 그린다. mock 경로는 이 값 없이 workSchedule +
+  // computeCaseHistorySummary로 계산한다.
+  historyGuards?: HistoryGuard[]
   // 경찰서가 경호중 상태에서 연장/단축을 요청하면 즉시 반영되지 않고 여기 대기한다
   // — 본사(운영관리자/본부관리자) 승인 화면(후속 항목)에서 승인해야 실제 startDate/
   // endDate·근무스케줄에 반영된다(2026-08-25 결정). 대기 중엔 재요청 불가.

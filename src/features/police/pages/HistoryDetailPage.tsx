@@ -2,7 +2,8 @@ import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
-import { getSecurityCaseHistoryDetail } from '../api/history'
+import { useAuthStore } from '../../auth/store/authStore'
+import { getPoliceStationHistoryDetail, getSecurityCaseHistoryDetail } from '../api/history'
 import { listWorkers } from '../api/workers'
 import { computeCaseHistorySummary } from '../lib/historySummary'
 import type { MeasurePeriod } from '../types/securityCase'
@@ -47,12 +48,20 @@ function Field({ label, value }: { label: string; value: string }) {
 // baseInfo가 있는 종결 건만 실값이고 취소 건은 baseInfo 자체가 없어 "-".
 function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const role = useAuthStore((state) => state.user?.role)
+  const isStation = role === '경찰서'
+  // 경찰서는 실 API(GetHistoryDetail), 본청/지역청은 아직 mock — 컴포넌트 공유(#15에서 전환).
   const caseQuery = useQuery({
-    queryKey: ['security-case-history', id],
-    queryFn: () => getSecurityCaseHistoryDetail(id!),
+    queryKey: ['security-case-history', role, id],
+    queryFn: () => (isStation ? getPoliceStationHistoryDetail(id!) : getSecurityCaseHistoryDetail(id!)),
     enabled: Boolean(id),
   })
-  const workersQuery = useQuery({ queryKey: ['workers'], queryFn: listWorkers })
+  // mock 경로만 근무자 명단 조인이 필요하다 — 실 API는 guards[]에 이름이 들어있다.
+  const workersQuery = useQuery({
+    queryKey: ['workers'],
+    queryFn: listWorkers,
+    enabled: !isStation,
+  })
 
   if (caseQuery.isLoading || workersQuery.isLoading) {
     return (
@@ -74,7 +83,23 @@ function HistoryDetailPage() {
   const workers = workersQuery.data ?? []
   const isCanceled = c.status === '취소'
   const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
-  const { totalHours, workers: workerSummaries } = computeCaseHistorySummary(c.workSchedule)
+  const summary = computeCaseHistorySummary(c.workSchedule)
+  // 총경호시간·근무자 배정 이력 — 경찰서(실 API)는 서버가 준 값(totalGuardMinutes·
+  // historyGuards)을, 본청/지역청(mock)은 workSchedule 계산값을 쓴다.
+  const totalHours = c.totalGuardMinutes != null ? c.totalGuardMinutes / 60 : summary.totalHours
+  const guardRows = c.historyGuards
+    ? c.historyGuards.map((g) => ({
+        key: String(g.guardSeq),
+        name: g.guardName,
+        workedDays: g.workDays,
+        totalHours: g.totalMinutes / 60,
+      }))
+    : summary.workers.map((w) => ({
+        key: w.workerId,
+        name: workers.find((worker) => worker.id === w.workerId)?.name ?? w.workerId,
+        workedDays: w.workedDays,
+        totalHours: w.totalHours,
+      }))
   const baseInfo = c.baseInfo
 
   return (
@@ -127,7 +152,7 @@ function HistoryDetailPage() {
 
           <div className="rounded-xl border border-border bg-card p-5.5">
             <div className="mb-4 text-sm font-bold text-foreground">근무자 배정 이력</div>
-            {workerSummaries.length === 0 ? (
+            {guardRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">배정된 근무자가 없습니다</p>
             ) : (
               <div className="flex flex-col gap-2">
@@ -136,16 +161,13 @@ function HistoryDetailPage() {
                   <span>근무일수</span>
                   <span>총근무시간</span>
                 </div>
-                {workerSummaries.map((w) => {
-                  const worker = workers.find((worker) => worker.id === w.workerId)
-                  return (
-                    <div key={w.workerId} className="grid grid-cols-3 gap-2 py-1.5 text-sm text-foreground">
-                      <span className="font-bold">{worker?.name ?? w.workerId}</span>
-                      <span>{w.workedDays}일</span>
-                      <span>{formatHours(w.totalHours)}</span>
-                    </div>
-                  )
-                })}
+                {guardRows.map((w) => (
+                  <div key={w.key} className="grid grid-cols-3 gap-2 py-1.5 text-sm text-foreground">
+                    <span className="font-bold">{w.name}</span>
+                    <span>{w.workedDays}일</span>
+                    <span>{formatHours(w.totalHours)}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
