@@ -18,7 +18,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useAuthStore } from '../../auth/store/authStore'
-import { listGuestScopeSecurityCases } from '../api/securityCases'
 import { listGuestAccounts, type GuestAccount } from '../api/guests'
 import IssueGuestAccountDialog, {
   type IssueGuestDialogState,
@@ -36,25 +35,17 @@ function formatDate(dateLike: string) {
 function GuestListPage() {
   const user = useAuthStore((state) => state.user)
   const guestsQuery = useQuery({ queryKey: ['guests'], queryFn: listGuestAccounts })
-  const casesQuery = useQuery({
-    queryKey: ['guest-scope-security-cases'],
-    queryFn: listGuestScopeSecurityCases,
-  })
 
   const [search, setSearch] = useState('')
   const [dialogState, setDialogState] = useState<IssueGuestDialogState>(null)
   const [deleteTarget, setDeleteTarget] = useState<GuestAccount | null>(null)
 
   const guests = guestsQuery.data ?? []
-  const cases = casesQuery.data ?? []
-  const codeById = new Map(cases.map((c) => [c.id, c.securityCode]))
 
-  // 목업(s9)은 조회가능 경호건을 관리번호가 아니라 경호코드만 나열해 보여준다.
+  // 조회가능 경호건은 관리번호가 아니라 경호코드(guardCode)만 나열해 보여준다 —
+  // GetGuestUserList 행의 accessList가 이미 경호코드를 담고 있다.
   function visibleCases(guest: GuestAccount) {
-    const codes = guest.caseIds
-      .map((id) => codeById.get(id))
-      .filter((code): code is string => Boolean(code))
-    return codes.length > 0 ? codes.join(', ') : '-'
+    return guest.accessCodes.length > 0 ? guest.accessCodes.join(', ') : '경호건 없음'
   }
 
   const filtered = guests.filter((g) => !search.trim() || g.name.includes(search.trim()))
@@ -164,7 +155,6 @@ function GuestListPage() {
 
       <IssueGuestAccountDialog
         state={dialogState}
-        cases={cases}
         onOpenChange={(open) => !open && setDialogState(null)}
       />
       <DeleteGuestAccountDialog

@@ -117,17 +117,6 @@ export async function listSecurityCases(): Promise<SecurityCase[]> {
   return rows.map(toSecurityCase)
 }
 
-// 게스트 계정 관리(화면 6, 아직 mock) 전용 — 발급 가능한 경호건의 id·경호코드
-// 목록만 필요하다. 실제 연동(matrix 6번) 전까지 mock 엔드포인트를 그대로 쓴다.
-// 경찰서 경호목록(listSecurityCases)과 응답 형태가 달라 캐시 키도 분리한다.
-export async function listGuestScopeSecurityCases(): Promise<SecurityCase[]> {
-  const res = await apiFetch('/security-cases')
-  if (!res.ok) {
-    throw new Error('경호목록을 불러오지 못했습니다')
-  }
-  return res.json() as Promise<SecurityCase[]>
-}
-
 // 화면5: 배치요구서 수정 → PUT Deploy/Police/W/UpdateDeployRequest.
 // AddDeployRequest와 대칭 DTO + deployReqSeq. 접수/배정은 배치기간 포함 전체 수정,
 // 경호중 이후는 화면단에서 배치기간 입력을 막고(스웨거 설명상 서버도 배정 후 배치기간

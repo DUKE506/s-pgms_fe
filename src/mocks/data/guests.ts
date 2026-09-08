@@ -1,8 +1,23 @@
-import type { GuestAccount } from '../../features/police/api/guests'
 import { policeAccounts, type Account } from './accounts'
 import { loadPersisted, savePersisted } from './persist'
 
 const STORAGE_KEY = 's-pgms:guest-accounts'
+
+// 테스트 더블 내부 저장 형태. 실 API의 GuestAccount(features/police/api/guests)와 달리
+// 로그인 계정 소스(guestLoginAccounts)로도 쓰여 password/mustChangePassword를 들고 있다.
+// userSeq는 실 응답의 게스트 식별자(수정/삭제 키) — 더블에서도 안정적인 정수로 부여한다.
+interface GuestRecord {
+  id: string
+  userSeq: number
+  name: string
+  policeStation: string
+  caseIds: string[]
+  issuedAt: string
+  password?: string
+  mustChangePassword?: boolean
+}
+
+const GUEST_USER_SEQ_BASE = 9000
 
 // 경찰서 표시명 → 게스트 로그인 아이디 접두어. 지금은 강남경찰서만 실제
 // 로그인 계정으로 존재해 하나만 매핑해두고, 매핑에 없는 서는 "Guest"로 대체한다.
@@ -18,9 +33,10 @@ function idPrefixForStation(policeStation: string): string {
 // 대체하므로 로그인 아이디를 유지한다(run-s-pgms SKILL.md 검증 계정과 동일).
 // 조회가능 경호건은 강남경찰서 소속 중 경호코드가 발급된 실제 seed 건
 // (mocks/data/securityCases.ts: ST101~103 진행중, ST110~112 이력)에서 배정.
-const SEED_GUEST_ACCOUNTS: GuestAccount[] = [
+const SEED_GUEST_ACCOUNTS: GuestRecord[] = [
   {
     id: 'gangnamguest1',
+    userSeq: 9001,
     name: 'GangnamGuest1',
     policeStation: '강남경찰서',
     caseIds: ['case-seed-6', 'case-seed-7'],
@@ -28,6 +44,7 @@ const SEED_GUEST_ACCOUNTS: GuestAccount[] = [
   },
   {
     id: 'gangnamguest2',
+    userSeq: 9002,
     name: 'GangnamGuest2',
     policeStation: '강남경찰서',
     caseIds: ['case-seed-7'],
@@ -35,6 +52,7 @@ const SEED_GUEST_ACCOUNTS: GuestAccount[] = [
   },
   {
     id: 'gangnamguest3',
+    userSeq: 9003,
     name: 'GangnamGuest3',
     policeStation: '강남경찰서',
     caseIds: ['case-seed-8'],
@@ -42,6 +60,7 @@ const SEED_GUEST_ACCOUNTS: GuestAccount[] = [
   },
   {
     id: 'gangnamguest4',
+    userSeq: 9004,
     name: 'GangnamGuest4',
     policeStation: '강남경찰서',
     caseIds: ['case-hist-1', 'case-hist-2'],
@@ -49,6 +68,7 @@ const SEED_GUEST_ACCOUNTS: GuestAccount[] = [
   },
   {
     id: 'gangnamguest5',
+    userSeq: 9005,
     name: 'GangnamGuest5',
     policeStation: '강남경찰서',
     caseIds: [],
@@ -56,6 +76,7 @@ const SEED_GUEST_ACCOUNTS: GuestAccount[] = [
   },
   {
     id: 'gangnamguest6',
+    userSeq: 9006,
     name: 'GangnamGuest6',
     policeStation: '강남경찰서',
     caseIds: [],
@@ -63,7 +84,7 @@ const SEED_GUEST_ACCOUNTS: GuestAccount[] = [
   },
 ]
 
-export const guestAccounts: GuestAccount[] = loadPersisted(STORAGE_KEY, SEED_GUEST_ACCOUNTS)
+export const guestAccounts: GuestRecord[] = loadPersisted(STORAGE_KEY, SEED_GUEST_ACCOUNTS)
 
 // 근무자/경호건 카운터와 같은 이유로 별도 카운터를 저장하지 않고 현재 데이터에서
 // 매번 다시 계산한다(mocks/data/workers.ts 패턴).
@@ -82,17 +103,15 @@ function nextGuestName(policeStation: string): string {
   return `${idPrefixForStation(policeStation)}Guest${nextGuestNumber(policeStation)}`
 }
 
-// 발급 모달(화면 10)이 실제 생성 전에 보여줄 아이디 미리보기 — 생성 로직과
-// 같은 함수를 써서 미리보기와 실제 발급 결과가 어긋나지 않게 한다.
-export function previewNextGuestId(policeStation: string): { id: string; name: string } {
-  const name = nextGuestName(policeStation)
-  return { id: name.toLowerCase(), name }
+function nextGuestUserSeq(): number {
+  return guestAccounts.reduce((acc, g) => Math.max(acc, g.userSeq), GUEST_USER_SEQ_BASE) + 1
 }
 
-export function createGuestAccount(policeStation: string, caseIds: string[]): GuestAccount {
+export function createGuestAccount(policeStation: string, caseIds: string[]): GuestRecord {
   const name = nextGuestName(policeStation)
-  const record: GuestAccount = {
+  const record: GuestRecord = {
     id: name.toLowerCase(),
+    userSeq: nextGuestUserSeq(),
     name,
     policeStation,
     caseIds,
@@ -108,7 +127,7 @@ export function createGuestAccount(policeStation: string, caseIds: string[]): Gu
 
 // 최초 로그인 강제 변경 모달에서 실제 비밀번호를 교체 — 성공하면
 // mustChangePassword를 해제해 다음 로그인부터는 정상 로그인된다.
-export function changeGuestAccountPassword(id: string, newPassword: string): GuestAccount | null {
+export function changeGuestAccountPassword(id: string, newPassword: string): GuestRecord | null {
   const record = guestAccounts.find((g) => g.id === id)
   if (!record) return null
   record.password = newPassword
@@ -117,7 +136,7 @@ export function changeGuestAccountPassword(id: string, newPassword: string): Gue
   return record
 }
 
-export function updateGuestAccountCases(id: string, caseIds: string[]): GuestAccount | null {
+export function updateGuestAccountCases(id: string, caseIds: string[]): GuestRecord | null {
   const record = guestAccounts.find((g) => g.id === id)
   if (!record) return null
   record.caseIds = caseIds

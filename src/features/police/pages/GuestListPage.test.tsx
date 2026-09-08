@@ -44,7 +44,7 @@ describe('GuestListPage', () => {
     await screen.findAllByText('GangnamGuest1')
     expect(withinTable().getByText('ST101, ST102')).toBeInTheDocument()
     expect(withinTable().getByText('GangnamGuest5')).toBeInTheDocument()
-    expect(withinTable().getAllByText('-').length).toBeGreaterThanOrEqual(2)
+    expect(withinTable().getAllByText('경호건 없음').length).toBeGreaterThanOrEqual(2)
   })
 
   it('아이디 검색으로 목록을 좁힐 수 있다', async () => {
@@ -66,7 +66,8 @@ describe('GuestListPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /게스트 계정 발급/ }))
     const dialog = await screen.findByRole('dialog')
 
-    fireEvent.click(within(dialog).getByText('26-01-강남경찰서 · ST101'))
+    // 다이얼로그가 발급 후보(GetGuestCaseList)를 직접 조회하므로 로드를 기다린다.
+    fireEvent.click(await within(dialog).findByText('26-01-강남경찰서 · ST101'))
     fireEvent.click(within(dialog).getByRole('button', { name: '발급하기' }))
 
     await waitFor(() => expect(withinTable().getByText('GangnamGuest7')).toBeInTheDocument())

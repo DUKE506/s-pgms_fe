@@ -14,7 +14,7 @@ function DeleteGuestAccountDialog({ targetGuest, onOpenChange }: DeleteGuestAcco
   const showToast = useToastStore((s) => s.show)
 
   const mutation = useMutation({
-    mutationFn: () => deleteGuestAccount(targetGuest!.id),
+    mutationFn: () => deleteGuestAccount(targetGuest!.userSeq),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guests'] })
       showToast('게스트 계정이 삭제되었습니다', 'success')
