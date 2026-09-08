@@ -91,9 +91,14 @@ function periodRequestList(request: Request, type: '연장' | '단축') {
 export const guardCaseTestHandlers = [
   // 목록 조회 — GET GuardCase/Stec/W/GetDeployRequestList.
   // 미배정(접수 상태) 배치요구서만. 실제 응답은 파라미터 없이 전량 반환.
+  // 실서버는 본부관리자 토큰에 403(배치요청 목록은 운영/시스템관리자 전용 —
+  // RequestListPage 라우트도 COMPANY_ADMIN이라 in-app 진입은 애초에 불가).
   http.get('/api/v1/GuardCase/Stec/W/GetDeployRequestList', ({ request }) => {
     const denied = requireStec(request)
     if (denied) return denied
+    if (stecUserFromBearer(request)?.role === '본부관리자') {
+      return HttpResponse.json({ message: '권한이 없습니다.', data: null, code: 403 }, { status: 403 })
+    }
     const data = securityCases
       .filter((c) => c.status === '접수')
       .map((c) => ({
