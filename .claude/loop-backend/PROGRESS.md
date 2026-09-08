@@ -40,7 +40,7 @@
 | 9 | B | [본사] 운영/시스템관리자 | 경호 상세 | 부분완료(△) | `6aeac40`·`f738723`·`0040d59`·`f4ab7df`·`92a7802` (+이번 커밋) | **조회 5종 조립** + 경호계획 수정(`PatchCaseInfo`) + 스케줄(`AutoAddSchedule`/`PatchScheduleGroup`/`DeleteScheduleGroup` — 그룹1 보호) + **사전미팅 저장/삭제**(`SaveCaseMeeting`) + **파일 업로드 3종**(`PatchGuardPlanDoc`/`PatchConsentDoc`/`PatchDestroyDoc`, multipart) + 파기확인서 다운로드 연동·브라우저 검증. **블록**: 경호계획 등록(`AddGuardCaseInfo`) — 배치기간 조회 경로 없음(blockers, issues #10) → 등록 버튼 비활성 + 안내. 경호취소 — 본사 API 없음(issues #9) → 버튼 비활성. 손실 매핑: 조치 5섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11). 대표근무자·그룹 메모 조회 갭(issues #12). 테스트 더블 `guardCaseDetail.ts`. 기본정보 조회 카드 피전/본사 통일(`CaseBaseInfoCard`, `f738723`). **→ 섹션 B-1(#6~#9) 종료, 백엔드 일괄 요청**(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`). **2026-09-07 B-1 응답 반영**: 신규 `GuardCase/Stec/W/GetDeployDetail` 연동 — `getSecurityCase`가 `GetCaseDoc.deploySeq`로 호출해 배치요구서 원본 병합(`mergeDeployRequest`) → "배치요구서 원본보기" 다이얼로그 전체 필드, 경호계획 미등록 건 배치기간 채움 → **경호계획 "등록" 버튼 활성화**(blockers/issues #10 종료), 첨부 "등록일". 브라우저 검증(caseSeq 48·46). 경호취소(issues #9)·화면7 다이얼로그·조치 구조화(#11)는 여전히 미해결. **4·2번 재검증**: caseSeq 46 데이터 보유 |
 | 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 부분완료(△) | (이번 커밋) | `GetExtendRequestList`/`GetShortenRequestList`(조회)·`ConfirmCasePeriod`(승인) 실 API 전환, `SecurityCaseTabs` 연장/단축 배지 실카운트 배선. 거부는 EP 없어 UI 차단(issues #2, B-2 종료 시 요청). **테스트 데이터로만 검증** — 실백엔드에 경호중 건이 없어 배정 건에 연장/단축 요청을 만들어 승인 왕복 실측(원복 완료). **연장/단축 신청은 업무상 경호중 상태만 대상**이고, 피전이 경호상세에서 직접 신청하는 부분(matrix #4 `requestPeriodChange`, △)이 개발·검증돼야 실제 요청 데이터가 생긴다 → **피전 요청 영역 개발 이후 재검증**(4번 "배정 이후 재검증"과 함께). 완료 표시 보류 |
 | 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 완료 | (이번 커밋) | `GetStecUserList`(목록)·`UpdateUser`(정보수정·비번초기화) 실 API 전환. `loginId→id`·`userSeq` 신규. 빈 연락처는 `""` 전송(`null`은 백엔드가 무시 — 실측). 배정건수·담당경호는 `GetGuardCaseList`(실 API) 담당자명 매칭 — mock `listManagerAssignedCases`/`listMockSecurityCases` 제거, `handlers/companyAccounts.ts` 삭제. **본부관리자는 `GetStecUserList` 403** → "운영·시스템관리자만 이용" 안내(B, 사용자 확인). 접근 자체(route/메뉴 제외 vs 백엔드가 본인 행만)는 **#12에서 결정**. "본부" 열 "-"(issues #1). 실백엔드 검증: StecM1 목록·정보수정 왕복·비번초기화(StecM4)·담당경호(HS2본부→caseSeq 51·29), StecM2 403 안내. 응답 샘플 `User-Stec-UpdateUser.md` |
-| 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 대기 | | 새 API 연동 아님 — 6~11 화면을 본부관리자로 재확인("본인 배정 건만"). 이력 스코프는 그룹 C 후 꼬리 확인. **여기까지 = 메인 워크플로우 검증 완료**, **섹션 B-2 종료 → 백엔드 일괄 요청** |
+| 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 검증완료·문서보류 | `a570869` (더블만) | **API 레벨 스코프 검증 완료(2026-09-08, StecM2·StecM3)**. 완료 표시·issues 전달상태 갱신·지역청 필터 프론트 후속은 **B-2 백엔드 회신 후** 재검증과 함께 처리. B-2 요청서 전달(`docs/backend-integration-requests/2026-09-08-본사-경호관리-B2.md`/`.xlsx`). 아래 로그 참고 |
 | 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 대기 | | 4·9의 종결·취소가 실제 터미널 데이터를 만들어야 의미 있음 |
 | 14 | C | [경찰서] 피전 | 이력 조회 | 대기 | | 접수취소 + (그룹 B 이후) 종결 데이터 확인 |
 | 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 대기 | | 4·9 데이터 필요. 진행중 건은 경호 상세 화면을 조회 전용 재사용. + 본부관리자 이력 스코프 꼬리 확인. **이력 섹션 종료 → 백엔드 일괄 요청** |
@@ -51,6 +51,41 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-08: 12번([본사] 본부관리자 · 스코프 재검증) — **API 레벨 검증 완료, 완료 처리·문서
+  갱신은 B-2 회신 후로 보류**(사용자 결정). 새 연동 아님. 사용자가 2번째 본부관리자
+  `StecM3`(userSeq 113) 활성화 → "0건 본부관리자 vs 2건 본부관리자(`StecM2`)" 대비로 실서버
+  스코프를 양성 검증.
+  - **서버 스코프 전부 실측 확인**(실백엔드, `StecM2` pw는 세션 중 `StecM1`로 바뀜 —
+    `test-accounts.local.md` 갱신):
+    - `GetGuardCaseList` → `StecM2` 2건 / `StecM3` 0건 / `StecM1`(운영) 2건 (본인 배정 건만)
+    - `GetGuardCaseDetail?caseSeq=51·29` → `StecM2`(본인) 200 / `StecM3`(남) 403
+    - `ConfirmCasePeriod {caseSeq:51}` → `StecM3` 403 "담당하지 않는 경호건입니다"(스코프 우선
+      검사) / `StecM2` 409(대기요청 없음, no-op)
+    - `GetExtend/ShortenRequestList` → 둘 다 200·0건(pending 데이터 없어 대비는 없음, 접근·필터
+      정상)
+    - `GetGuardList`(근무자) → `StecM2`·`StecM3` 둘 다 200 (스코프 없음, 의도대로)
+    - `GetStecUserList`(관리자 계정) → 둘 다 403 (#11 안내 문구)
+    - `GetDeployRequestList`(배치요청 목록) → 둘 다 403 (+ 라우트 `COMPANY_ADMIN` 차단)
+  - **브라우저 회귀**(`run-s-pgms`): `StecM2` 경호목록 2건 / 연장·단축 목록 빈 상태 / 근무자
+    목록 5건 정상 / 관리자 계정 관리 안내 문구 / `/admin/requests` → `/admin/dashboard`
+    리다이렉트 + "접근 권한이 없습니다" 토스트. `StecM3` 경호목록 "경호건이 없습니다" /
+    남의 건 URL(`/admin/security-cases/51`) 직접 → "경호건을 불러오지 못했습니다"(graceful,
+    크래시 없음). 콘솔 에러 0(403 응답 노이즈만).
+  - **코드 변경**: `mocks/handlers/guardCase.ts` `GetDeployRequestList` 더블이 본부관리자
+    토큰에 403 반환하도록 실서버와 일치(`GetStecUserList`·`GetGuardCaseList`·`ConfirmCasePeriod`
+    더블은 이미 스코프 재현 중). 테스트 122/122 · lint · build 통과.
+  - **관찰(블로커 아님)**: 남의 건 상세 403 → generic "경호건을 불러오지 못했습니다" + React
+    Query 기본 retry 3회로 콘솔 403 노이즈·~5초 지연. 엣지케이스(URL 직접 입력만). #11 A/B와
+    함께 후속 검토.
+  - **섹션 B-2 종료 처리 — 백엔드 요청서 전달**: `docs/backend-integration-requests/
+    2026-09-08-본사-경호관리-B2.md`/`.xlsx`(B-1 미회신분 + B-2 신규 통합, 화면×기능 단일 표,
+    유형=결정/논의/요청). **재검토로 제외**: 조치 `summary1~5`(섹션당 기간 1개 = `summaryNDate`
+    일치, 문제 아님), 경호목록 지역청 필터(`GetGuardCaseList.parentGroupName` 이미 옴 → 프론트
+    후속작업).
+  - **보류(B-2 회신 후 처리)**: PROGRESS/matrix/roadmap의 #12 완료 표시, issues.md #1·#2
+    전달상태 갱신, 지역청 필터 프론트 연동. 회신 오면 반영 → 재검증 → 그때 일괄 문서 갱신.
+  - **다음**: 그룹 C(이력) — 13번. 4·9의 종결·취소 터미널 데이터가 실제로 생긴 뒤 의미 있음.
 
 - 2026-09-07: 11번([본사] 운영/시스템관리자 · 관리자 계정 관리) — **완료**. 섹션 B-2 두 번째.
   - **연동**: `api/managerAccounts.ts` 3함수를 실 EP로 교체. `listManagerAccounts` →
