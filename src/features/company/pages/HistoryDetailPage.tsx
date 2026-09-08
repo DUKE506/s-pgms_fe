@@ -1,138 +1,36 @@
-import { useParams } from 'react-router'
-import { useQuery } from '@tanstack/react-query'
-import StatusBadge from '@/shared/components/StatusBadge'
-import { formatManagementNumber } from '@/shared/lib/managementNumber'
-import { getSecurityCaseHistoryDetail } from '../../police/api/history'
-import { listCaseJoinWorkers } from '../api/workers'
-import CaseBaseInfoCard from '@/shared/components/CaseBaseInfoCard'
-import ScheduleSection from '../components/ScheduleSection'
+import { useNavigate } from 'react-router'
+import { ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
-function formatDate(dateLike: string) {
-  const d = new Date(dateLike)
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}.${mm}.${dd}`
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="mb-1 text-xs text-muted-foreground">{label}</div>
-      <div className="text-sm font-semibold text-foreground">{value || '-'}</div>
-    </div>
-  )
-}
-
-// 화면 12: 본사 이력 상세. 종결 건은 본사 상세화면(SecurityCaseDetailPage) 레이아웃을
-// 재사용하되 조회 전용으로 — 액션 버튼과 첨부(경호계획서·개인정보동의서·파기확인서
-// 업로드 UI)는 전부 제거하고, 근무 스케줄은 정산 참고용으로 남긴다. 배치장소(주거지/
-// 직장)는 피해자 개인정보라 종결 건도 취소 건과 동일하게 숨긴다(2026-08-27 결정).
-// 취소 건은 baseInfo/workSchedule 자체가 없어(배정 단계에서 바로 전환) 경찰 이력
-// 상세와 같은 축소된 카드를 쓴다.
+// 화면 13: 본사 이력 상세. 본사(Stec)용 이력 상세 조회 엔드포인트가 아직 없다 —
+// History/Stec/W/GetHistoryDetail은 404, History/Police/W/GetHistoryDetail은 본사
+// 토큰에 403(2026-09-08 실측, docs/backend-integration-blockers.md / issues.md).
+// 목록(GetHistoryList)만 실 API로 연동돼 있고, 상세는 EP가 생기면 붙인다.
+// 그때까지 이 화면은 안내만 보여준다(목록 행 클릭 시 진입).
 function HistoryDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const caseQuery = useQuery({
-    queryKey: ['company-history-detail', id],
-    queryFn: () => getSecurityCaseHistoryDetail(id!),
-    enabled: Boolean(id),
-  })
-  const workersQuery = useQuery({ queryKey: ['workers', 'case-join'], queryFn: listCaseJoinWorkers })
-
-  if (caseQuery.isLoading || workersQuery.isLoading) {
-    return (
-      <main className="p-4 sm:p-8">
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      </main>
-    )
-  }
-
-  if (caseQuery.isError || !caseQuery.data) {
-    return (
-      <main className="p-4 sm:p-8">
-        <p className="py-8 text-center text-sm text-destructive">이력을 불러오지 못했습니다</p>
-      </main>
-    )
-  }
-
-  const c = caseQuery.data
-  const workers = workersQuery.data ?? []
-  const isCanceled = c.status === '취소'
-  const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
+  const navigate = useNavigate()
 
   return (
     <main className="flex flex-col gap-5 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <p className="text-xs text-muted-foreground">이력 조회 / {managementNumber}</p>
+      <button
+        type="button"
+        onClick={() => navigate('/admin/history')}
+        className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" />
+        이력 조회
+      </button>
 
-      <div className="flex flex-wrap items-center gap-3.5">
-        <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
-        <StatusBadge status={c.status} />
-      </div>
-
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
-          {isCanceled ? (
-            <div className="rounded-xl border border-border bg-card p-5.5">
-              <div className="mb-4 text-sm font-bold text-foreground">기본정보</div>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <Field label="대상자명" value={c.subject.nameInitial} />
-                <Field label="사건유형" value={c.caseType} />
-                <Field label="관할경찰서" value={c.policeStation} />
-                <Field label="경찰관 정보" value={c.policeContact.victimOfficer} />
-              </div>
-            </div>
-          ) : (
-            <>
-              <CaseBaseInfoCard securityCase={c} variant="history" />
-              {c.workSchedule && (
-                <ScheduleSection securityCase={c} workers={workers} readOnly />
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="w-full rounded-xl border border-border bg-card p-6 xl:w-96 xl:shrink-0">
-          {isCanceled ? (
-            <>
-              <div className="mb-3.5 text-sm font-bold text-foreground">취소 정보</div>
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">취소일자</span>
-                  <span className="font-semibold text-foreground">
-                    {c.canceledAt ? formatDate(c.canceledAt) : '-'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="shrink-0 text-muted-foreground">취소사유</span>
-                  <span className="text-right font-semibold text-foreground">
-                    {c.cancelReason || '-'}
-                  </span>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="mb-3.5 text-sm font-bold text-foreground">종결 정보</div>
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">종결일자</span>
-                  <span className="font-semibold text-foreground">
-                    {c.closedAt ? formatDate(c.closedAt) : '-'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="shrink-0 text-muted-foreground">종결 사유</span>
-                  <span className="text-right font-semibold text-foreground">
-                    {c.closureReason ?? '-'}
-                    {c.closureReason === '기타' && c.closureReasonDetail
-                      ? ` (${c.closureReasonDetail})`
-                      : ''}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+      <div className="rounded-xl border border-border bg-card p-8 text-center">
+        <p className="text-sm font-semibold text-foreground">
+          이력 상세 조회는 준비 중입니다
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          본사 이력 상세 조회 API가 아직 제공되지 않아 목록만 이용할 수 있습니다.
+        </p>
+        <Button variant="outline" className="mt-5" onClick={() => navigate('/admin/history')}>
+          목록으로 돌아가기
+        </Button>
       </div>
     </main>
   )

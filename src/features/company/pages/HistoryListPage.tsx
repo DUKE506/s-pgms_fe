@@ -21,8 +21,7 @@ import {
 } from '@/components/ui/table'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
-import { listSecurityCaseHistory } from '../../police/api/history'
-import { computeCaseHistorySummary } from '../../police/lib/historySummary'
+import { listCompanyHistory } from '../api/history'
 import type { SecurityCase, SecurityCaseStatus } from '../../police/types/securityCase'
 
 const ALL = '전체'
@@ -40,13 +39,19 @@ function formatHours(hours: number) {
   return Number.isInteger(hours) ? `${hours}시간` : `${hours.toFixed(1)}시간`
 }
 
+// 실 API(GetHistoryList)는 총근무시간을 totalGuardMinutes(분)로 직접 준다 — 종결
+// 건만 실값, 취소·미상은 undefined.
+function totalHoursOf(c: SecurityCase) {
+  return c.totalGuardMinutes != null ? c.totalGuardMinutes / 60 : 0
+}
+
 // 화면 12: 본사 이력 조회 — 진행중 건은 이미 /admin/security-cases에서 볼 수 있어
 // 경찰서 이력 목록과 같은 이유로 종결/취소만 대상이지만, 본사는 전국 스코프라
 // 지역청/경찰서 컬럼·필터를 둘 다 갖는 본청 이력 목록 형태를 따른다(2026-08-27,
 // Phase 3 항목2 논의 결정).
 function HistoryListPage() {
   const navigate = useNavigate()
-  const historyQuery = useQuery({ queryKey: ['company-history'], queryFn: listSecurityCaseHistory })
+  const historyQuery = useQuery({ queryKey: ['company-history'], queryFn: listCompanyHistory })
 
   const [statusFilter, setStatusFilter] = useState<typeof ALL | SecurityCaseStatus>(ALL)
   const [jurisdictionFilter, setJurisdictionFilter] = useState(ALL)
@@ -211,7 +216,7 @@ interface RowProps {
 
 function HistoryRow({ record: c, onClick }: RowProps) {
   const isClosed = c.status === '종결'
-  const { totalHours } = computeCaseHistorySummary(c.workSchedule)
+  const totalHours = totalHoursOf(c)
 
   return (
     <TableRow className="cursor-pointer" onClick={onClick}>
@@ -235,7 +240,7 @@ function HistoryRow({ record: c, onClick }: RowProps) {
 
 function HistoryCard({ record: c, onClick }: RowProps) {
   const isClosed = c.status === '종결'
-  const { totalHours } = computeCaseHistorySummary(c.workSchedule)
+  const totalHours = totalHoursOf(c)
 
   return (
     <div

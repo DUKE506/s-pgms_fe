@@ -162,6 +162,10 @@ export interface SecurityCase {
   closureReason?: ClosureReason
   closureReasonDetail?: string
   closedAt?: string
+  // 이력 조회 목록(History/*/GetHistoryList)이 서버에서 집계해 내려주는 총근무시간(분).
+  // mock 경로는 workSchedule에서 computeCaseHistorySummary로 계산하지만, 실 API는
+  // 이 값을 직접 준다(종결 건만 실값, 취소 건은 null → undefined).
+  totalGuardMinutes?: number
   // 경찰서가 경호중 상태에서 연장/단축을 요청하면 즉시 반영되지 않고 여기 대기한다
   // — 본사(운영관리자/본부관리자) 승인 화면(후속 항목)에서 승인해야 실제 startDate/
   // endDate·근무스케줄에 반영된다(2026-08-25 결정). 대기 중엔 재요청 불가.

@@ -11,6 +11,7 @@ import {
 } from '../data/securityCases'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../features/police/types/securityCase'
 import type { SecurityCase } from '../../features/police/types/securityCase'
+import { computeCaseHistorySummary } from '../../features/police/lib/historySummary'
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — [본사] 배치요청
 // 목록·본부 배정·경호목록·연장단축·관리자 계정 관리는 실제 백엔드(GuardCase/Stec/W/
@@ -256,6 +257,59 @@ export const guardCaseTestHandlers = [
       )
     }
     return HttpResponse.json({ message: 'ok', data: true, code: 200 })
+  }),
+
+  // 이력 조회 목록 — GET History/Stec/W/GetHistoryList.
+  // 끝난 건(종결·취소)만. 응답은 GetGuardCaseList처럼 {meta, data:[...]}를 envelope로
+  // 한 번 더 감싼다. 운영/시스템관리자는 전국 전체, 본부관리자는 본인 배정 건만
+  // (HIST-003 — 실서버에서 StecM3(배정 0건) → 이력 0건 실측).
+  http.get('/api/v1/History/Stec/W/GetHistoryList', ({ request }) => {
+    const account = stecUserFromBearer(request)
+    if (!account) {
+      return HttpResponse.json(
+        { message: '인증이 필요합니다.', data: null, code: 401 },
+        { status: 401 },
+      )
+    }
+    const url = new URL(request.url)
+    const pageNumber = Number(url.searchParams.get('pageNumber') ?? '1')
+    const pageSize = Number(url.searchParams.get('pageSize') ?? '10')
+
+    const all = securityCases
+      .filter((c) => c.status === '종결' || c.status === '취소')
+      .filter((c) => account.role !== '본부관리자' || c.assigneeId === account.id)
+      .map((c) => {
+        const canceled = c.status === '취소'
+        return {
+          caseSeq: caseSeqOf(c),
+          mgmtNo: `${c.receiptNumber} ${c.securityCode}`,
+          groupName: c.policeStation,
+          parentGroupName: c.jurisdiction,
+          // 실서버는 취소 건의 경호기간·총근무시간을 null로 준다.
+          startDt: canceled ? null : c.startDate,
+          endDt: canceled ? null : c.endDate,
+          totalMin: canceled
+            ? null
+            : Math.round(computeCaseHistorySummary(c.workSchedule).totalHours * 60),
+          statusName: canceled ? '경호취소' : '종결',
+          remark: canceled ? (c.cancelReason ?? null) : (c.closureReason ?? null),
+        }
+      })
+
+    const start = (pageNumber - 1) * pageSize
+    return HttpResponse.json({
+      message: 'ok',
+      data: {
+        meta: {
+          pageNumber,
+          pageSize,
+          totalCount: all.length,
+          totalPages: Math.max(1, Math.ceil(all.length / pageSize)),
+        },
+        data: all.slice(start, start + pageSize),
+      },
+      code: 200,
+    })
   }),
 
   // 연장/단축 요청 목록 — GET GuardCase/Stec/W/GetExtendRequestList · GetShortenRequestList.
