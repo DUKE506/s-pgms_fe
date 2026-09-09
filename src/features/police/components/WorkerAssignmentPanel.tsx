@@ -112,11 +112,12 @@ function WorkerAssignmentPanel({ securityCase, workers }: WorkerAssignmentPanelP
         </div>
       )}
 
-      <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
-        {securityCase.status === '경호완료'
-          ? `경호기간(${formatDateShort(startDate)}~${formatDateShort(endDate)})이 종료되었습니다. 파기확인서 업로드 완료 후 종결 처리할 수 있습니다.`
-          : `경호기간(${formatDateShort(startDate)}~${formatDateShort(endDate)}) 내에서만 조회할 수 있습니다. 근무자 배정 변경은 본사 화면에서만 관리됩니다.`}
-      </p>
+      {securityCase.status === '경호완료' && (
+        <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+          경호기간({formatDateShort(startDate)}~{formatDateShort(endDate)})이 종료되었습니다. 파기확인서
+          업로드 완료 후 종결 처리할 수 있습니다.
+        </p>
+      )}
     </div>
   )
 }

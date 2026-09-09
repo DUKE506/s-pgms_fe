@@ -8,9 +8,12 @@ import { hhmm, parseMeasureItems, parseMeasurePeriod } from '@/shared/lib/caseMe
 import type {
   CaseBaseInfo,
   ClosureReason,
+  ScheduleDay,
   SecurityCase,
   SecurityCaseStatus,
+  WorkSchedule,
 } from '../types/securityCase'
+import type { Worker } from '../../company/api/workers'
 
 // 화면4: [경찰서] 피전 · 경호 상세 — 백엔드 연동(matrix 4번).
 //
@@ -171,6 +174,71 @@ export async function getSecurityCase(id: string): Promise<SecurityCase> {
   const mapped = toSecurityCase(id, d)
   // d.mock은 테스트 더블에서만 온다(위 DeployDetailData 주석 참고).
   return d.mock ? { ...mapped, ...d.mock, id } : mapped
+}
+
+// 화면4 우측 "근무자 배정" 패널 — 일자별 근무 스케줄.
+// GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq= (실측:
+// docs/backend-integration/responses/Deploy-Police-GetDeployGuardSchedule.md).
+// 응답은 평면 배열(envelope 이중 래핑 없음): 일자별 `{ dates, guardSchedule:[{guardSeq,
+// name, phone, deptName, isWork}] }`. 근무자 표시정보(이름·연락처)가 인라인이라 근무자
+// 마스터 조인이 필요 없다 — 피전은 근무자 마스터 접근 권한이 없어(findings #6) 예전엔
+// 이 패널이 빈 상태였다. 근무 시각은 응답에 없어 경호계획 근무시간(baseInfo.workHours
+// "HH:MM ~ HH:MM")을 모든 근무에 공통 적용한다(연장/단축으로 일자별 시간이 갈리는
+// 경우는 배정 이후 재검증 대상). 접수·배정(스케줄 미생성) 상태는 빈 배열.
+interface GuardScheduleDateRow {
+  dates: string
+  guardSchedule: {
+    guardSeq: number
+    name: string
+    phone: string | null
+    deptName: string | null
+    isWork: boolean
+  }[]
+}
+
+export interface DeployGuardSchedule {
+  workSchedule: WorkSchedule
+  // WorkerAssignmentPanel이 workerId로 조인하는 근무자 표시정보. id = String(guardSeq).
+  workers: Worker[]
+}
+
+export async function getDeployGuardSchedule(
+  id: string,
+  workHours?: string,
+): Promise<DeployGuardSchedule> {
+  const res = await apiFetch(
+    `/v1/Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=${encodeURIComponent(id)}`,
+  )
+  if (!res.ok) {
+    throw new Error('근무 일정을 불러오지 못했습니다')
+  }
+  const rows = (await unwrapEnvelope<GuardScheduleDateRow[]>(res)) ?? []
+  const [startTime = '', endTime = ''] = (workHours ?? '').split(' ~ ')
+
+  const workerById = new Map<string, Worker>()
+  const days: ScheduleDay[] = rows.map((row) => ({
+    date: row.dates,
+    groups: [
+      {
+        id: `${row.dates}-g1`,
+        note: '',
+        assignments: row.guardSchedule.map((g) => {
+          const workerId = String(g.guardSeq)
+          if (!workerById.has(workerId)) {
+            workerById.set(workerId, {
+              id: workerId,
+              name: g.name,
+              employeeId: '',
+              phone: g.phone ?? '',
+            })
+          }
+          return { workerId, startTime, endTime, isOff: !g.isWork }
+        }),
+      },
+    ],
+  }))
+
+  return { workSchedule: { preMeeting: null, days }, workers: [...workerById.values()] }
 }
 
 // 화면5: [경찰서] 피전 · 배치요구서 수정 — prefill 소스.

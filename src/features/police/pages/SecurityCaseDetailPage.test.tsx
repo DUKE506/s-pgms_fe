@@ -176,6 +176,27 @@ describe('PoliceSecurityCaseDetailPage', () => {
     expect(firstButton('종결')).toBeDisabled()
   })
 
+  it('근무 일정이 있으면 우측 패널에 일자별 근무자 이름·시간이 조회된다', async () => {
+    loginAsStation()
+    // withDemoDetail로 workSchedule이 채워진 종결 seed(case-hist-1)를 경호중 건으로
+    // 복제 — GetDeployGuardSchedule 더블이 이 workSchedule을 실 응답 shape로 내려준다.
+    const base = securityCases.find((c) => c.id === 'case-hist-1')!
+    const record = {
+      ...base,
+      id: 'case-test-schedule',
+      receiptNumber: '26-07-강남경찰서',
+      securityCode: 'ST900',
+      status: '경호중' as const,
+    }
+    securityCases.push(record)
+    renderAt(record.id)
+
+    await screen.findByText('기본정보')
+    // 우측 패널 고유 값: 근무자 이름·연락처(GetDeployGuardSchedule 응답 인라인)
+    expect(await screen.findByText('최민준')).toBeInTheDocument()
+    expect(screen.getByText('010-1234-5678')).toBeInTheDocument()
+  })
+
   it('본청은 이 화면에 조회 전용으로 들어와 액션 버튼과 배치요구서 수정 링크가 없다', async () => {
     loginAsHq()
     const record = findCase('26-01-강남경찰서')

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { useAuthStore } from '../../auth/store/authStore'
-import { getSecurityCase } from '../api/securityCaseDetail'
+import { getDeployGuardSchedule, getSecurityCase } from '../api/securityCaseDetail'
 import StatusStepper from '../components/StatusStepper'
 import CaseBaseInfoCard from '@/shared/components/CaseBaseInfoCard'
 import DocumentsCard from '../components/DocumentsCard'
@@ -100,20 +100,22 @@ function SecurityCaseDetailPage() {
     queryFn: () => getSecurityCase(id!),
     enabled: Boolean(id),
   })
-  // 근무자 이름/연락처는 원래 mock의 근무자 마스터 목록(GET /api/workers)을 받아
-  // workerId로 조인해 표시했다. 그런데 (1) 그건 본사 전용 API(GetGuardList)라
-  // 피전 계정이 호출할 수 없고, (2) 백엔드 확인 결과 "경호 상세에서 근무 스케줄을
-  // 조회하는 API 자체가 누락"됐다(2026-09-02). 그래서 mock 연결을 끊는다 —
-  // 근무 스케줄 조회 API가 개발되면 그 응답(근무자 정보 embed 예상)으로
-  // WorkerAssignmentPanel/ConsentDocsCard를 다시 채운다.
-  // docs/backend-integration/findings.md #6 / docs/backend-integration/findings.md
-  const workers: never[] = []
+  // 근무 일정 — GET Deploy/Police/W/GetDeployGuardSchedule(2026-09-09 연결, findings #6).
+  // 응답에 근무자 이름·연락처가 인라인이라 근무자 마스터 조인 없이 패널을 채운다.
+  // 근무 시각은 경호계획 근무시간(baseInfo.workHours)을 공통 적용한다. 접수 상태는
+  // 스케줄이 없어 호출하지 않는다(빈 배열).
+  const sc = caseQuery.data
+  const scheduleQuery = useQuery({
+    queryKey: ['deploy-guard-schedule', id, sc?.baseInfo?.workHours ?? null],
+    queryFn: () => getDeployGuardSchedule(id!, sc?.baseInfo?.workHours),
+    enabled: Boolean(id) && Boolean(sc) && sc?.status !== '접수',
+  })
 
   const [cancelOpen, setCancelOpen] = useState(false)
   const [periodRequestOpen, setPeriodRequestOpen] = useState(false)
   const [closeOpen, setCloseOpen] = useState(false)
 
-  if (caseQuery.isLoading) {
+  if (caseQuery.isLoading || scheduleQuery.isLoading) {
     return (
       <main className="p-4 sm:p-8">
         <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
@@ -129,7 +131,13 @@ function SecurityCaseDetailPage() {
     )
   }
 
-  const securityCase = caseQuery.data
+  const baseCase = caseQuery.data
+  // 근무 일정을 받았으면 securityCase에 얹어 WorkerAssignmentPanel이 일자별 근무자를
+  // 그리게 한다. workers는 스케줄 응답에서 합성한 표시정보(id=String(guardSeq)).
+  const securityCase = scheduleQuery.data
+    ? { ...baseCase, workSchedule: scheduleQuery.data.workSchedule }
+    : baseCase
+  const workers = scheduleQuery.data?.workers ?? []
   const managementNumber = formatManagementNumber(securityCase.receiptNumber, securityCase.securityCode)
   const canRequestPeriod = securityCase.status === '경호중' && !securityCase.pendingPeriodRequest
   const canClose = securityCase.status === '경호완료' && Boolean(securityCase.attachments?.destructionCertFileName)

@@ -9,6 +9,7 @@ import {
   securityCases,
   updateSecurityCase,
 } from '../data/securityCases'
+import { workers } from '../data/workers'
 import type { ClosureReason, SecurityCase } from '../../features/police/types/securityCase'
 import { caseTypeToCrimeCode, crimeCodeToCaseType } from '../../shared/lib/crimeType'
 
@@ -274,6 +275,35 @@ export const deployTestHandlers = [
       )
     }
     return HttpResponse.json({ message: 'ok', data: toDeployDetail(record), code: 200 })
+  }),
+
+  // 화면4 우측 근무자 배정 패널 — GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=
+  // (docs/backend-integration/responses/Deploy-Police-GetDeployGuardSchedule.md).
+  // 응답은 평면 배열: 일자별 { dates, guardSchedule:[{guardSeq,name,phone,deptName,isWork}] }.
+  // 근무자 이름·연락처가 인라인(피전은 근무자 마스터 접근 불가). 근무 시각은 응답에 없어
+  // 프론트가 경호계획 근무시간을 공통 적용한다. 접수·미배정 건은 빈 배열.
+  http.get('/api/v1/Deploy/Police/W/GetDeployGuardSchedule', ({ request }) => {
+    if (!stationFromBearer(request)) {
+      return HttpResponse.json({ message: '인증이 필요합니다.', data: null, code: 401 }, { status: 401 })
+    }
+    const record = findBySeq(new URL(request.url).searchParams.get('deployReqSeq'))
+    const days = record?.workSchedule?.days ?? []
+    const data = days.map((day) => ({
+      dates: day.date,
+      guardSchedule: day.groups.flatMap((g) =>
+        g.assignments.map((a) => {
+          const w = workers.find((x) => x.id === a.workerId)
+          return {
+            guardSeq: Number(a.workerId.replace(/\D/g, '')) || 0,
+            name: w?.name ?? a.workerId,
+            phone: w?.phone ?? null,
+            deptName: w?.department ?? null,
+            isWork: !a.isOff,
+          }
+        }),
+      ),
+    }))
+    return HttpResponse.json({ message: 'ok', data, code: 200 })
   }),
 
   // 접수취소 + 경호취소 공용 — POST Deploy/Police/W/CancelGuardCase
