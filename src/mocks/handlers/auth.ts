@@ -4,7 +4,7 @@ import { allPoliceLoginAccounts, changeGuestAccountPassword } from '../data/gues
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — 로그인
 // 화면은 이미 실제 백엔드(/api/v1/Login/W/*)로 연동 완료됐다(docs/
-// backend-integration-responses/Login-*.md). 브라우저 dev 모드에서는 이
+// backend-integration/responses/Login-*.md). 브라우저 dev 모드에서는 이
 // 경로가 MSW 미등록 상태로 남아 vite 프록시를 통해 실제 백엔드로 나가야
 // 하므로, 여기서 핸들러를 등록하면 안 된다. 실제 응답 envelope 구조
 // ({message,data,code})와 상태코드(성공 200 / 자격증명 오류 400 / 최초

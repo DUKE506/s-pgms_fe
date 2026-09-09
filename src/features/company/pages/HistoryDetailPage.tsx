@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 
 // 화면 13: 본사 이력 상세. 본사(Stec)용 이력 상세 조회 엔드포인트가 아직 없다 —
 // History/Stec/W/GetHistoryDetail은 404, History/Police/W/GetHistoryDetail은 본사
-// 토큰에 403(2026-09-08 실측, docs/backend-integration-blockers.md / issues.md).
+// 토큰에 403(2026-09-08 실측, docs/backend-integration/findings.md / issues.md).
 // 목록(GetHistoryList)만 실 API로 연동돼 있고, 상세는 EP가 생기면 붙인다.
 // 그때까지 이 화면은 안내만 보여준다(목록 행 클릭 시 진입).
 function HistoryDetailPage() {

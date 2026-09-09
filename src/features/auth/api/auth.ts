@@ -5,7 +5,7 @@ import type { AuthSession } from '../store/authStore'
 
 // 최초 로그인 강제 비밀번호 변경(게스트 발급/관리자 비밀번호 초기화 직후) —
 // 로그인 자체는 성공했지만 세션은 발급되지 않은 상태. 실제 백엔드는 이 경우
-// HTTP 428로 신호를 준다(docs/backend-integration-responses/Login-Login.md).
+// HTTP 428로 신호를 준다(docs/backend-integration/responses/Login-Login.md).
 export interface MustChangePasswordResult {
   mustChangePassword: true
   id: string

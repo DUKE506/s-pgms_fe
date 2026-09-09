@@ -5,7 +5,7 @@
   지방청관리자, groupSeq 24), `SPoliceM5`(동래경찰서 = 피전, groupSeq 32)
 - 엔드포인트: `GET /api/v1/Login/W/GetGroupTree`
 - 파라미터: 없음 (토큰만)
-- 프로브: `.claude/loop-backend/_probe-15b.sh`
+- 프로브: `.claude/loop-backend/local/_probe-15b.sh`
 
 ## 응답 (실제) — `SPoliceM1`(본청)
 
@@ -73,4 +73,4 @@
   부모 노드로는 캐스케이드가 안 되므로(둘 다 실측), 본청/지역청이 관할 전체를 보려면 이
   트리에서 leaf `groupSeq` 목록을 뽑아 경찰서마다 호출해 합쳐야 한다. → #15 결정:
   이 클라 팬아웃은 임시방편이라 채택하지 않고 백엔드에 부모 groupSeq 캐스케이드를 요청
-  (`docs/backend-integration-requests/2026-09-08-이력-C.md`).
+  (`docs/backend-integration/requests/2026-09-08-이력-C.md`).

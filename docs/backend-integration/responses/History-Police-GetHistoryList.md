@@ -4,7 +4,7 @@
 - 사용한 테스트 계정/데이터: `SPoliceM5`(동래경찰서, groupSeq 32), `SPoliceM3`(부산경찰청),
   `SPoliceM1`(본청) / 동래경찰서 경호취소 건 caseSeq 46~50
 - 엔드포인트: `GET /api/v1/History/Police/W/GetHistoryList`
-- 프로브: `.claude/loop-backend/_probe-14.sh`
+- 프로브: `.claude/loop-backend/local/_probe-14.sh`
 
 ## 파라미터 (스웨거)
 
@@ -86,4 +86,4 @@
   둘 다 200. 타 관할 차단 로직 없음(#14와 동일). 응답에 `guardWorkLoc`/`guardHomeLoc`
   포함(#14 exclusions "배치장소 없음"과 배치 — 재확인 필요, #15 이월 메모).
 - → #15는 **부분완료(△)**, 본청/지역청 이력은 mock 유지. 백엔드 요청:
-  `docs/backend-integration-requests/2026-09-08-이력-C.md` (issues #14·#15).
+  `docs/backend-integration/requests/2026-09-08-이력-C.md` (issues #14·#15).

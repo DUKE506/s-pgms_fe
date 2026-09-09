@@ -102,8 +102,8 @@ HTTP 400 (ASP.NET `[ApiController]` 자동 모델 검증 — envelope가 아니�
 - **`deploymentPlace`가 단일 필드** — 우리 폼은 배치장소를 주거지/직장지/기타1/기타2
   4필드로 받는데 API는 1개. **D-2 임시 처리**: 주거지(`location.residence`)만 전송,
   나머지 3개는 제외. 백엔드에 4필드 확장 요청함 —
-  `docs/backend-integration-issues.md` #5, `docs/backend-integration-blockers.md`,
-  `docs/backend-integration-exclusions.md`.
+  `docs/backend-integration/findings.md` #5, `docs/backend-integration/findings.md`,
+  `docs/backend-integration/findings.md`.
 - **`mgmtNo` 조합 형태 확정**: `"26-09-동래경찰서 접수"`(YY-MM-경찰서명 + 공백 + "접수").
   프론트는 마지막 공백에서 잘라 `formatManagementNumber`로 `"26-09-동래경찰서 · 접수"`로
   재조합(matrix 2번과 동일 규칙). `remainDays`는 오늘~`endDt` 기준으로 채워져 내려옴

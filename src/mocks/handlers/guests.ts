@@ -12,7 +12,7 @@ import { securityCases } from '../data/securityCases'
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — [경찰서] 게스트 계정
 // 관리는 실제 백엔드(User/Police/W/GetGuestUserList·GetGuestCaseList·GetGuestCaseDetail·
 // AddGuestUser·UpdateGuestCaseInfo·DeleteGuestUser)로 연동 완료됐다(응답 샘플:
-// docs/backend-integration-responses/User-Police-Guest.md). 브라우저 dev에서는 이 경로를
+// docs/backend-integration/responses/User-Police-Guest.md). 브라우저 dev에서는 이 경로를
 // MSW 미등록으로 두고 vite 프록시가 실제 백엔드로 보낸다. 여기서는 실제 응답 envelope·
 // 항목 필드를 흉내내 vitest가 매핑 로직을 오프라인으로 검증하게 한다. groupSeq 필터는
 // 실제 백엔드 몫이라 Bearer 토큰으로 소속 경찰서를 판별한다.

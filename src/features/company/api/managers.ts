@@ -12,7 +12,7 @@ export interface Manager {
 }
 
 // GET /api/v1/User/Stec/W/GetStecUserList 의 항목 형태
-// (docs/backend-integration-responses/User-Stec-GetStecUserList.md 실측).
+// (docs/backend-integration/responses/User-Stec-GetStecUserList.md 실측).
 interface StecUserRow {
   userSeq: number
   codeSeq: number

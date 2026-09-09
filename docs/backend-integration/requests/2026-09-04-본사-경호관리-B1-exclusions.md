@@ -2,7 +2,7 @@
 
 > **상태**: 2026-09-04 정리, 백엔드 전달 예정. 설계 변경/신규 API 요청 본문은
 > `2026-09-04-본사-경호관리-B1.md`(요청서), 이 문서는 그와 짝을 이루는 **우회 처리
-> (exclusions) 화면별 정리**다. 상세 근거는 `docs/backend-integration-exclusions.md`.
+> (exclusions) 화면별 정리**다. 상세 근거는 `docs/backend-integration/findings.md`.
 >
 > 표기: 🔴 신규 API/큰 변경 필요 · 🟠 응답에 필드 추가하면 해소 · 🟢 정상 동작(FYI, 수정 불필요)
 

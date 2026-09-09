@@ -53,4 +53,4 @@ HTTP 200
   `phone`(빈 문자열은 `undefined` 취급) / `useYn`.
 - **본부관리자 토큰은 403** — 이 화면은 실서버에서 운영/시스템관리자 전용. 본부관리자의
   이 화면 스코프(본인 행만? 403?)는 matrix #12에서 재검증.
-- 쓰기(정보수정·비번초기화)는 `User/Stec/W/UpdateUser` — `docs/backend-integration-responses/User-Stec-UpdateUser.md`.
+- 쓰기(정보수정·비번초기화)는 `User/Stec/W/UpdateUser` — `docs/backend-integration/responses/User-Stec-UpdateUser.md`.

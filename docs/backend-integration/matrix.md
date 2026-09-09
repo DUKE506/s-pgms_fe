@@ -1,13 +1,12 @@
 # 화면 × API 매트릭스 (계정권한별)
 
-`docs/backend-integration-analysis.md`(스웨거/DB 갭 분석)를 화면 단위로 재가공한
-작업 체크리스트입니다. `.claude/loop-backend/`가 이 문서를 순회하며 화면 단위로
+`docs/backend-integration/findings.md` PART 4(초기 스웨거/DB 갭 분석)를 화면 단위로
+재가공한 작업 체크리스트입니다. `.claude/loop-backend/`가 이 문서를 순회하며 화면 단위로
 연동 작업을 진행합니다. 화면 하나에 API가 여러 개 걸리는 경우 한 줄에 몰아 적지
 않고 API 하나당 한 행으로 나눴습니다.
 
 **⚠️ 표시 = mock엔 있지만 실제 백엔드 API에 없는 것.** 연동 시 반드시 짚고 넘어가야
-할 항목이며, 상세 내용은 `docs/backend-integration-issues.md` 또는
-`docs/backend-integration-blockers.md`로 옮겨 기록합니다.
+할 항목이며, 상세 내용은 `docs/backend-integration/findings.md`에 기록합니다.
 
 같은 화면 컴포넌트를 여러 역할이 공유하는 경우(예: 회사 쪽 경호 상세는 시스템/운영/
 본부관리자가 다 씀) 화면 자체는 한 번만 상세히 적고, 역할별로는 접근 가능 여부와
@@ -37,7 +36,7 @@
 - **비블로킹** — 요청 후 응답을 기다리지 않고 다음 섹션 작업을 계속한다.
 - **백엔드 완료분 반영은 화면 경계에서** — 백엔드가 요청분을 완료하면, 지금 붙잡은
   화면은 마무리까지 하고, **다음 화면 착수 전에** 백엔드 변경분 확인 → 코드 수정 →
-  반영 → 검증 → 그 다음 화면으로. (절차 상세는 `docs/backend-integration-process.md`
+  반영 → 검증 → 그 다음 화면으로. (절차 상세는 `.claude/loop-backend/TASK.md`
   "원칙 4", `.claude/loop-backend/LOOP_INSTRUCTIONS.md` 1·7단계)
 
 ### 순서
@@ -96,7 +95,7 @@
    (blockers, issues #10, 버튼 비활성) / 경호취소 = 본사 API 없음(issues #9, 버튼 비활성).
    손실 매핑: 조치 섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11).
    → **섹션 B-1(#6~#9) 종료 → issues/exclusions 백엔드 일괄 요청**
-   (`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`). 이후 **4번·2번의
+   (`docs/backend-integration/requests/2026-09-04-본사-경호관리-B1.md`). 이후 **4번·2번의
    배정 이후 상태 표시를 재검증**(caseSeq 46에 경호계획+스케줄+미팅+첨부 데이터 생성됨)
 10. **[본사] 운영/시스템관리자 — 연장/단축요청 목록 (+승인/거부)** — *섹션 B-2 시작.*
     △ **부분 연동 (2026-09-07)**: 조회 2종(`GetExtend/ShortenRequestList`)·승인
@@ -143,7 +142,7 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listSecurityCases` | `GET Deploy/Police/W/GetDeployList` | ✅ 연동 완료(2026-09-01). `groupSeq`(필수)는 로그인 시 `GetMyProfile`로 받아 세션에 저장한 값 사용, 권한 밖 `groupSeq`는 서버가 403으로 막음(analysis.md 4-6 스코프 우려 해소). status/페이지네이션 파라미터 없음 — 화면이 전량 로드 후 클라이언트 필터라 무관. `mgmtNo`는 서버 조합 완성형("… 접수" / "… ST###")이라 마지막 공백에서 잘라 `formatManagementNumber`로 재조합. **배정 이후 상태 문자열은 데이터 없어 미검증 → 그룹 B(#9 본사 경호 상세) 이후 재검증**(exclusions.md). 응답 샘플: `docs/backend-integration-responses/Deploy-Police-GetDeployList.md` |
+| 목록 조회 | `listSecurityCases` | `GET Deploy/Police/W/GetDeployList` | ✅ 연동 완료(2026-09-01). `groupSeq`(필수)는 로그인 시 `GetMyProfile`로 받아 세션에 저장한 값 사용, 권한 밖 `groupSeq`는 서버가 403으로 막음(analysis.md 4-6 스코프 우려 해소). status/페이지네이션 파라미터 없음 — 화면이 전량 로드 후 클라이언트 필터라 무관. `mgmtNo`는 서버 조합 완성형("… 접수" / "… ST###")이라 마지막 공백에서 잘라 `formatManagementNumber`로 재조합. **배정 이후 상태 문자열은 데이터 없어 미검증 → 그룹 B(#9 본사 경호 상세) 이후 재검증**(exclusions.md). 응답 샘플: `docs/backend-integration/responses/Deploy-Police-GetDeployList.md` |
 
 #### 접수/배치요구서 작성 (`/security-cases/new`)
 
@@ -175,7 +174,7 @@
 
 #### 게스트 계정 관리 (`/guests`)
 
-**✅ 연동 완료(2026-09-08, #16)** — 응답 샘플 `docs/backend-integration-responses/User-Police-Guest.md`.
+**✅ 연동 완료(2026-09-08, #16)** — 응답 샘플 `docs/backend-integration/responses/User-Police-Guest.md`.
 `handlers/guests.ts`(`guestTestHandlers`)를 실 6종으로 재작성해 `testOnlyHandlers`로 이동.
 
 | API 기능 | mock 함수 → 실 함수 | 실제 엔드포인트 | 비고 |
@@ -198,7 +197,7 @@
 |---|---|---|---|
 | 목록 조회 (경찰서) | `listPoliceStationHistory`(신규, `police/api/history.ts` — 기존 함수에서 분리) | `GET History/Police/W/GetHistoryList` | ✅ 연동 완료(2026-09-08, **부분완료 △** — 종결 데이터 없어 취소 5건만 실측). `groupSeq`(세션 저장, `GetMyProfile`) 필수 — 없으면 빈 목록, 역할 스코프는 서버가 안 검. 끝난 건만(HIST-001). 응답 이중 래핑 `{meta,data:[...]}` → `unwrapEnvelope` + 페이지 순회. 행: `caseSeq`→id, `mgmtNo` `splitMgmtNo`, `groupName`/`parentGroupName`→경찰서/지역청, `startDt`/`endDt`(취소 건 null), `totalMin`→`totalGuardMinutes`, `statusName`("경호취소"→'취소'). `status`/`searchKey` 파라미터는 클라 필터로 대체(exclusions). 응답 샘플 `History-Police-GetHistoryList.md` |
 | 상세 조회 (경찰서) | `getPoliceStationHistoryDetail`(신규) | `GET History/Police/W/GetHistoryDetail?caseSeq=` | ✅ 연동(2026-09-08). 응답(이중 래핑 아님): `suspectUserName`(마스킹)→`nameInitial`, `responsibleOfficer`→"경찰관 정보", `startDate`/`endDate`(ISO)→날짜, `totalGuardWorkMinutes`→`totalGuardMinutes`, `endDt`→취소일/종결일, `remark`→취소사유/종결사유, `guards[]`(이름·일수·분 인라인)→신규 `historyGuards` 필드로 "근무자 배정 이력" 표. `caseType`·5개 조치·배치장소는 응답에 없음 → 표시 축소(exclusions). 3역할 모두 200(스코프 미검) — 본청/지역청 상세 스코프 차단은 #15 확인. 응답 샘플 `History-Police-GetHistoryDetail.md` |
-| 목록·상세 조회 (본청·지역청) | `listSecurityCaseHistory` / `getSecurityCaseHistoryDetail` | (미전환 — **mock 유지**) | #15 **부분완료(△)**, 2026-09-08 프로브. 전환 불가 확정 — ① `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq`가 **경찰서(leaf) 노드일 때만** 데이터(부모 노드 본청 22·지방청 24 → 0건, 캐스케이드 없음), ② `GetHistoryList`는 종결·취소만·진행중 토글 없음(본청/지역청 이력은 진행중도 표시해야 함). `Login/W/GetGroupTree`(3역할 공통 200, 서브트리)로 클라 팬아웃은 가능하나 임시방편이라 미채택(사용자 결정). 백엔드 요청 후 전환 → `docs/backend-integration-requests/2026-09-08-이력-C.md`(issues #15) |
+| 목록·상세 조회 (본청·지역청) | `listSecurityCaseHistory` / `getSecurityCaseHistoryDetail` | (미전환 — **mock 유지**) | #15 **부분완료(△)**, 2026-09-08 프로브. 전환 불가 확정 — ① `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq`가 **경찰서(leaf) 노드일 때만** 데이터(부모 노드 본청 22·지방청 24 → 0건, 캐스케이드 없음), ② `GetHistoryList`는 종결·취소만·진행중 토글 없음(본청/지역청 이력은 진행중도 표시해야 함). `Login/W/GetGroupTree`(3역할 공통 200, 서브트리)로 클라 팬아웃은 가능하나 임시방편이라 미채택(사용자 결정). 백엔드 요청 후 전환 → `docs/backend-integration/requests/2026-09-08-이력-C.md`(issues #15) |
 
 #### 대시보드 (`/dashboard`, 아직 미구현·Phase 4)
 
@@ -221,7 +220,7 @@
 ## 2. [경찰서] 게스트
 
 **✅ 연동 완료(2026-09-08, #17)** — 피전 경호목록/상세 화면·API를 role로만 갈라 재사용,
-별도 코드 없음. 응답 샘플 `docs/backend-integration-responses/Deploy-Police-GetDeployList.md`
+별도 코드 없음. 응답 샘플 `docs/backend-integration/responses/Deploy-Police-GetDeployList.md`
 "#17 관찰" 섹션.
 
 #### 경호목록 (`/security-cases`, 조회 전용)

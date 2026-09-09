@@ -13,7 +13,7 @@ import type { CaseType, ClosureReason, SecurityCase } from '../../features/polic
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — 경찰서 경호목록은
 // 이미 실제 백엔드(GET /api/v1/Deploy/Police/W/GetDeployList)로 연동 완료됐다
-// (docs/backend-integration-responses/Deploy-Police-GetDeployList.md). 브라우저
+// (docs/backend-integration/responses/Deploy-Police-GetDeployList.md). 브라우저
 // dev에서는 이 경로를 MSW 미등록으로 두고 vite 프록시가 실제 백엔드로 보낸다.
 // 여기서는 실제 응답 envelope({message,data,code})와 항목 필드(deploySeq/caseSeq/
 // mgmtNo/suspectUserName/statusName/startDt/endDt/...)를 흉내내 vitest가 매핑
@@ -257,7 +257,7 @@ export const deployTestHandlers = [
   }),
 
   // 화면4: 경호 상세 조회 — GET Deploy/Police/W/GetDeployDetail?deployReqSeq=
-  // (docs/backend-integration-responses/Deploy-Police-GetDeployDetail.md).
+  // (docs/backend-integration/responses/Deploy-Police-GetDeployDetail.md).
   // 조회 전용 role(본청/지역청/게스트)도 이 화면에 들어오므로 role은 제한하지
   // 않고 유효 계정이면 통과시킨다(게스트 케이스 스코프는 matrix 8번에서 처리).
   http.get('/api/v1/Deploy/Police/W/GetDeployDetail', ({ request }) => {
@@ -276,7 +276,7 @@ export const deployTestHandlers = [
   }),
 
   // 접수취소 + 경호취소 공용 — POST Deploy/Police/W/CancelGuardCase
-  // (docs/backend-integration-responses/Deploy-Police-CancelGuardCase.md).
+  // (docs/backend-integration/responses/Deploy-Police-CancelGuardCase.md).
   http.post('/api/v1/Deploy/Police/W/CancelGuardCase', async ({ request }) => {
     if (!stationFromBearer(request)) {
       return HttpResponse.json({ message: '인증이 필요합니다.', data: null, code: 401 }, { status: 401 })

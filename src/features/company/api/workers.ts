@@ -2,12 +2,12 @@ import { apiFetch } from '../../auth/api/client'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 
 // 근무자(경호원) 마스터 — 본사 운영/시스템관리자용 CRUD.
-// 실측: docs/backend-integration-responses/Guard-Stec-GuardInfo.md
+// 실측: docs/backend-integration/responses/Guard-Stec-GuardInfo.md
 //
 // ⚠️ deptName 비대칭(issues.md #8): AddGuardInfo/PatchGuardInfo는 deptName을
 // 받지만 GetGuardList 응답엔 deptName이 없고 근무자 상세조회 API도 없다.
 // → 저장은 하되 목록에서 부서를 표시할 수 없어 부서 열을 뺐다
-// (docs/backend-integration-exclusions.md). 등록/수정 폼의 부서 입력은 유지.
+// (docs/backend-integration/findings.md). 등록/수정 폼의 부서 입력은 유지.
 export interface Worker {
   id: string
   name: string

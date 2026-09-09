@@ -145,7 +145,7 @@ HTTP 404
   `guardEtcLoc1`/`guardEtcLoc2`. 여기선 전부 `null`인데, #3의 `AddDeployRequest`가
   D-2 임시처리로 `deploymentPlace`(단일) 하나만 보냈기 때문. 즉 **읽기 쪽은 이미
   4필드를 지원하고, 쓰기 DTO(`AddDeployRequestDto.deploymentPlace`)만 단일**이다
-  (`docs/backend-integration-issues.md` #5 근거 보강). `deploymentPlace`로 보낸 값이
+  (`docs/backend-integration/findings.md` #5 근거 보강). `deploymentPlace`로 보낸 값이
   이 응답 어디에도 안 보이는데(`suspectAddress`는 대상자 주소로 별개), 저장은 됐으나
   상세 조회에는 매핑이 안 된 것으로 보임 — issues #5에 함께 기록.
 - **`caseSummary`(사건개요)·`caseMemo`(추가 참고사항)가 응답에 없다.** `AddDeployRequest`

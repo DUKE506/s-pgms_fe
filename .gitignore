@@ -15,8 +15,9 @@ dist-ssr
 # Claude Code (personal/local-only overrides)
 .claude/settings.local.json
 .claude/skills/run-s-pgms/shots/
-.claude/loop-backend/test-accounts.local.md
-.claude/loop-backend/_probe-*.sh
+# local/ 폴더는 README.md만 커밋, 나머지(계정·프로브 스크립트)는 로컬 전용
+.claude/loop-backend/local/test-accounts.md
+.claude/loop-backend/local/_probe-*.sh
 
 # Editor directories and files
 .vscode/*

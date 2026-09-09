@@ -4,7 +4,7 @@ import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import type { SecurityCase } from '../../police/types/securityCase'
 
 // GET /api/v1/GuardCase/Stec/W/GetDeployRequestList 의 항목 형태
-// (docs/backend-integration-responses/GuardCase-Stec-GetDeployRequestList.md 실측).
+// (docs/backend-integration/responses/GuardCase-Stec-GetDeployRequestList.md 실측).
 interface DeployRequestRow {
   deploySeq: number
   caseSeq: number | null
@@ -54,7 +54,7 @@ export async function listPendingRequests(): Promise<SecurityCase[]> {
 }
 
 // GET /api/v1/GuardCase/Stec/W/GetGuardCaseList 의 항목 형태 (실측:
-// docs/backend-integration-responses/GuardCase-Stec-GetGuardCaseList.md).
+// docs/backend-integration/responses/GuardCase-Stec-GetGuardCaseList.md).
 // 응답은 {meta:{pageNumber,pageSize,totalCount,totalPages}, data:[...]} 를 한 번 더
 // envelope로 감싼 형태다.
 interface GuardCaseRow {
@@ -157,7 +157,7 @@ export async function cancelPendingRequest(caseId: string): Promise<void> {
 }
 
 // GET /api/v1/GuardCase/Stec/W/GetExtendRequestList · GetShortenRequestList 의 항목
-// 형태 (실측: docs/backend-integration-responses/GuardCase-Stec-GetExtend-GetShortenRequestList.md).
+// 형태 (실측: docs/backend-integration/responses/GuardCase-Stec-GetExtend-GetShortenRequestList.md).
 // GetDeployRequestList와 거의 같은 구조 — caseSeq가 채워져 있고(배정된 건),
 // requestedEndDate가 신청한 새 종료일이라는 점만 다르다.
 interface PeriodRequestRow {

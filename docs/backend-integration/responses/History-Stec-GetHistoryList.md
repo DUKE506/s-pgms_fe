@@ -3,7 +3,7 @@
 - 테스트 날짜: 2026-09-08
 - 사용한 테스트 계정/데이터: `StecM1`(운영관리자), `StecM2`(본부관리자) / 동래경찰서 경호취소 건 caseSeq 46~50
 - 엔드포인트: `GET /api/v1/History/Stec/W/GetHistoryList`
-- 프로브: `.claude/loop-backend/_probe-13.sh`, `_probe-13b.sh`
+- 프로브: `.claude/loop-backend/local/_probe-13.sh`, `_probe-13b.sh`
 
 ## 파라미터 (스웨거)
 

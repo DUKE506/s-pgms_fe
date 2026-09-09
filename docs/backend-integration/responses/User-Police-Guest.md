@@ -5,7 +5,7 @@
   `SPoliceM3`(부산경찰청)로 타 경찰서 게스트 스코프 테스트
 - 엔드포인트: `GET GetGuestUserList` · `GET GetGuestCaseList` · `GET GetGuestCaseDetail` ·
   `POST AddGuestUser` · `PATCH UpdateGuestCaseInfo` · `POST DeleteGuestUser` (모두 `/api/v1/User/Police/W/`)
-- 프로브: `.claude/loop-backend/_probe-16.sh`(읽기) · `_probe-16b.sh`(쓰기 왕복)
+- 프로브: `.claude/loop-backend/local/_probe-16.sh`(읽기) · `_probe-16b.sh`(쓰기 왕복)
 
 ## GetGuestUserList — `?groupSeq=<int>` **필수**
 

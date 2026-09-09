@@ -8,7 +8,7 @@ import type { SecurityCase, SecurityCaseStatus } from '../../police/types/securi
 // 여기로 분리한다(8·10·11에서 쓴 회귀 차단 패턴과 동일).
 
 // GET /api/v1/History/Stec/W/GetHistoryList 항목 형태 (실측:
-// docs/backend-integration-responses/History-Stec-GetHistoryList.md).
+// docs/backend-integration/responses/History-Stec-GetHistoryList.md).
 // 응답은 GetGuardCaseList처럼 {meta, data:[...]}를 envelope로 한 번 더 감싼다.
 interface HistoryRow {
   caseSeq: number

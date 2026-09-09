@@ -57,7 +57,7 @@ export async function createSecurityCase(input: SecurityCaseCreateInput): Promis
 }
 
 // GET /api/v1/Deploy/Police/W/GetDeployList 의 항목 형태
-// (docs/backend-integration-responses/Deploy-Police-GetDeployList.md 실측).
+// (docs/backend-integration/responses/Deploy-Police-GetDeployList.md 실측).
 interface DeployListRow {
   deploySeq: number
   caseSeq: number | null

@@ -75,7 +75,7 @@
 
 ## 특이사항
 
-- `codeSeq`/`codeName`이 `docs/backend-integration-analysis.md` 6-1의 `BASIC_CODE` 매핑과 일치 (2=운영관리자, 6=피전).
+- `codeSeq`/`codeName`이 `docs/backend-integration/findings.md` 6-1의 `BASIC_CODE` 매핑과 일치 (2=운영관리자, 6=피전).
 - **경찰 계정의 `userName`은 개인 이름이 아니라 소속 조직명**("동래경찰서") — 경찰 계정이 조직 노드별 1개 공유 계정이라는 analysis.md 1-3 설명과 일치. 본사 계정은 반대로 개인 이름("HS1운영").
 - **`groupSeq`/`groupName`은 경찰만 값이 있고 본사는 `null`** — 본사 쪽 "본부" 소속은 여기서도 안 내려옴(이미 issues.md #1로 기록된 공백과 일치, `groupSeq`는 경찰 조직트리(`POLICE_GROUP_INFO`) 전용으로 보임).
 - 역할 판별에 필요한 필드는 `codeSeq`(정수) — 프론트 `Role`(한글 라벨) 매핑 헬퍼가 필요.

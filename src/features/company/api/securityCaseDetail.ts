@@ -24,7 +24,7 @@ import type {
 // 화면9: [본사] 운영/시스템관리자 · 경호 상세 — 백엔드 연동(matrix 9번).
 //
 // 상세는 조회 5종으로 쪼개져 있다(스웨거 갱신 확인, 2026-09-04 실측 —
-// docs/backend-integration-responses/GuardCase-Stec-GetGuardCaseDetail.md 외):
+// docs/backend-integration/responses/GuardCase-Stec-GetGuardCaseDetail.md 외):
 //   GET GetGuardCaseDetail?caseSeq=  → 경호계획(baseInfo) + 헤더
 //   GET GetCaseGuardList?caseSeq=    → 경호원 배정 목록(경호풀, isAssigned)
 //   GET GetCaseSchedule?caseSeq=     → 일자별 근무 스케줄
@@ -283,7 +283,7 @@ function toAttachments(doc: CaseDocData): CaseAttachments {
 }
 
 // GET GuardCase/Stec/W/GetDeployDetail?deployReqSeq= — 본사용 배치요구서 원본
-// (2026-09-07 실측 — docs/backend-integration-responses/GuardCase-Stec-GetDeployDetail.md).
+// (2026-09-07 실측 — docs/backend-integration/responses/GuardCase-Stec-GetDeployDetail.md).
 // GetGuardCaseDetail(경호계획 뷰)이 안 주는 원본 필드(요구자 3필드·사건개요·참고사항·
 // 성별/생년/직업/거주지·배치장소·문서 등록일)를 보완하고, 경호계획 미등록 배정 건의
 // 배치기간(periodFrom/periodTo)을 준다(issues #7·#10). 경찰용 Deploy/Police/W/GetDeployDetail과

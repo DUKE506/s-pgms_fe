@@ -4,7 +4,7 @@
 - 사용한 테스트 계정/데이터: `SPoliceM5`(동래경찰서), `SPoliceM3`(부산경찰청), `SPoliceM1`(본청) /
   경호취소 건 caseSeq 46
 - 엔드포인트: `GET /api/v1/History/Police/W/GetHistoryDetail?caseSeq=`
-- 프로브: `.claude/loop-backend/_probe-14.sh`
+- 프로브: `.claude/loop-backend/local/_probe-14.sh`
 
 ## 응답 (실제) — `caseSeq=46`, `SPoliceM5`
 

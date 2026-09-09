@@ -151,9 +151,9 @@ Phase 3.5 항목2(통합 테스트) 중 본부관리자 스코프 제한을 작�
 확보해 갭 분석을 진행(2026-08-31~09-01). 화면 자체는 이미 구현·승인된 상태라, 이 Phase는
 화면별 mock API 호출을 실제 API 호출로 교체하는 작업이다. loop-screens와 완료 기준이
 달라(스크린샷 승인이 아니라 API 연동 정확성+회귀 없음) 별도 loop로 분리해 진행한다
-(`.claude/loop-backend/`, 2026-09-01 결정) — 절차/정지조건은 `docs/
-backend-integration-process.md`, 대상 목록은 `docs/backend-integration-screen-api-matrix.md`
-참고.
+(`.claude/loop-backend/`, 2026-09-01 결정) — 정책/정지조건은
+`.claude/loop-backend/TASK.md`, 절차는 `LOOP_INSTRUCTIONS.md`, 대상 목록은
+`docs/backend-integration/matrix.md` 참고.
 
 진행 순서는 **메인 워크플로우(경호건 생명주기) 우선**이다(2026-09-03 재정렬) — 그룹
 A(피전 경호관리) → B(본사 메인 워크플로우 + 그 검증, 본부관리자 스코프 재검증 포함) →
@@ -166,7 +166,7 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
 진행하되, 설계 변경/누락 API 요청은 한 섹션(한 역할의 한 기능 영역)이 끝나는 시점에
 쌓인 `issues.md`를 묶어 한 번에 백엔드로 보낸다. 응답을 기다리지 않고 다음 섹션을
 계속하며, 완료 통보가 오면 다음 화면 착수 전에 반영·검증한다
-(`docs/backend-integration-process.md` 원칙 4). **그룹 B는 요청분이 커져 두 섹션으로
+(`.claude/loop-backend/TASK.md` 원칙 4). **그룹 B는 요청분이 커져 두 섹션으로
 쪼갬(2026-09-04)** — B-1(#6~#9), B-2(#10~#12); B-1은 #9(사전미팅·파일업로드 포함)까지
 하고 종료.
 
@@ -179,7 +179,7 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
       - [x] 경찰서 경호목록 — `GET Deploy/Police/W/GetDeployList` (2026-09-01). `groupSeq`
         필수라 `AuthUser`에 `groupSeq`/`groupName` 추가(로그인 시 `GetMyProfile`에서
         채움), 스코프는 서버가 403으로 강제. 배정 이후 상태 표시는 데이터가 없어 미검증 —
-        그룹 B(본사 경호 상세) 이후 재검증 예정(`docs/backend-integration-exclusions.md`).
+        그룹 B(본사 경호 상세) 이후 재검증 예정(`docs/backend-integration/findings.md`).
       - [x] 접수 / 배치요구서 작성 — `POST Deploy/Police/W/AddDeployRequest` (2026-09-02,
         배치장소 4필드 보정 2026-09-03). 폼→서버 DTO 매핑. 결정 3건: 요구자 3필드 분리,
         출생년도→생년월일 입력(`DateField` yearGrid 신규), 배치장소는 백엔드 수정으로
@@ -246,7 +246,7 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         `BaseInfoReadCard` + 본사 `BaseInfoSummaryCard` → `shared/components/CaseBaseInfoCard`
         하나로(variant로만 분기). 이 과정에서 issues #13 발견(`GetDeployDetail`이 경호계획
         조치·근무시간을 안 줘서 피전 상세에서 `-`). **→ 섹션 B-1(#6~#9) 종료, 백엔드
-        일괄 요청**(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md` —
+        일괄 요청**(`docs/backend-integration/requests/2026-09-04-본사-경호관리-B1.md` —
         요청 9건). 이후 4·2번 배정 이후 상태 재검증(caseSeq 46에 경호계획+스케줄+미팅+
         첨부 데이터 생성됨).
       - [~] 연장/단축요청 목록 — **부분 연동(2026-09-07, △)**. *섹션 B-2 시작.*
@@ -291,10 +291,10 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         → 0건, 캐스케이드 없음), `GetHistoryList`는 종결·취소만(진행중 토글 없음). `Login/W/
         GetGroupTree`(3역할 공통 200, 서브트리)로 클라 팬아웃은 가능하나 임시방편이라
         미채택(사용자 결정). 진행중 건 상세 EP(`GetDeployDetail`)는 본청/지역청 토큰에 200 —
-        목록 전환 시 코드 변경 최소. 백엔드 요청서 전달 → `docs/backend-integration-requests/
+        목록 전환 시 코드 변경 최소. 백엔드 요청서 전달 → `docs/backend-integration/requests/
         2026-09-08-이력-C.md`(issues #14·#15). 그룹 C 섹션 종료.
 - [x] **그룹 D — 게스트** — **완료(2026-09-08, #16·#17)**. 그룹 D 섹션 종료 → 백엔드
-      일괄 요청서 `docs/backend-integration-requests/2026-09-08-게스트-D.md`.
+      일괄 요청서 `docs/backend-integration/requests/2026-09-08-게스트-D.md`.
       - [x] [경찰서] 게스트 계정 관리 — **연동 완료(2026-09-08, #16)**. `User/Police/W/`
         `GetGuestUserList`(평면 배열, `groupSeq` 필수)·`GetGuestCaseList`(발급 후보)·
         `GetGuestCaseDetail`(수정 후보, `isAccess`)·`AddGuestUser`(`{name,caseSeqs}`, 응답
@@ -306,7 +306,7 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         무시하고 `GUEST_CASE_ACCESS` 스코프만 적용(실측). 상세 200·읽기전용. 조회권 없는
         건 상세 차단은 미검증(동래 활성 건 1개뿐, 이월). 게스트 쓰기/Stec/피전전용 EP 403.
 
-**발견된 설계 이슈(백엔드/기획에 변경 요청, `docs/backend-integration-issues.md` 참고)**:
+**발견된 설계 이슈(백엔드/기획에 변경 요청, `docs/backend-integration/findings.md` 참고)**:
 1. 본부관리자 계정에 소속 본부·담당자 개인정보 저장 공간 없음
 2. 연장/단축 신청 "거부" API 없음
 3. ~~게스트 계정 발급 아이디 "미리보기" API 없음~~ → **해결(2026-09-08, #16)**: 프론트 UX

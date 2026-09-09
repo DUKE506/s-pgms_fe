@@ -106,7 +106,7 @@ function SecurityCaseDetailPage() {
   // 조회하는 API 자체가 누락"됐다(2026-09-02). 그래서 mock 연결을 끊는다 —
   // 근무 스케줄 조회 API가 개발되면 그 응답(근무자 정보 embed 예상)으로
   // WorkerAssignmentPanel/ConsentDocsCard를 다시 채운다.
-  // docs/backend-integration-issues.md #6 / docs/backend-integration-exclusions.md
+  // docs/backend-integration/findings.md #6 / docs/backend-integration/findings.md
   const workers: never[] = []
 
   const [cancelOpen, setCancelOpen] = useState(false)

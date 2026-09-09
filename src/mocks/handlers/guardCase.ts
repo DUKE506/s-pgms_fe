@@ -17,7 +17,7 @@ import { computeCaseHistorySummary } from '../../features/police/lib/historySumm
 // 목록·본부 배정·경호목록·연장단축·관리자 계정 관리는 실제 백엔드(GuardCase/Stec/W/
 // GetDeployRequestList·AddGuardCase·GetGuardCaseList·GetExtend/ShortenRequestList·
 // ConfirmCasePeriod, User/Stec/W/GetStecUserList·UpdateUser)로 연동 완료됐다
-// (docs/backend-integration-responses/GuardCase-Stec-*.md, User-Stec-GetStecUserList.md).
+// (docs/backend-integration/responses/GuardCase-Stec-*.md, User-Stec-GetStecUserList.md).
 // 브라우저 dev에서는 이 경로들을 MSW 미등록으로 두고 vite 프록시가 실제 백엔드로
 // 보낸다. 여기서는 실제 응답 envelope({message,data,code})와 항목 필드를 흉내내
 // vitest가 매핑 로직까지 오프라인으로 검증하게 한다. 스코프(운영/시스템관리자

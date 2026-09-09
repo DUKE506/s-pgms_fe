@@ -22,7 +22,7 @@ import type {
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록) — 화면9([본사] 경호 상세)는 실제 백엔드
 // GuardCase/Stec/W/{GetGuardCaseDetail,GetCaseGuardList,GetCaseSchedule,GetCaseMeeting,
 // GetCaseDoc,AddGuardCaseInfo,PatchCaseInfo,AutoAddSchedule,PatchScheduleGroup}로 연동
-// 완료(docs/backend-integration-responses/GuardCase-Stec-GetGuardCaseDetail.md 외).
+// 완료(docs/backend-integration/responses/GuardCase-Stec-GetGuardCaseDetail.md 외).
 // 브라우저 dev는 vite 프록시로 실제 백엔드, vitest는 이 더블로 오프라인 검증한다.
 //
 // 조회는 GetGuardCaseDetail 하나에 mock SecurityCase 레코드 전체를 실어 보내고

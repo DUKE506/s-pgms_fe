@@ -18,10 +18,10 @@ export interface GuestAccount {
   issuedAt: string // createDt
 }
 
-// GET GetGuestUserList 행 (실측: docs/backend-integration-responses/User-Police-Guest.md).
+// GET GetGuestUserList 행 (실측: docs/backend-integration/responses/User-Police-Guest.md).
 // data는 평면 배열(경호목록·이력과 달리 {meta,data} 이중 래핑 아님). 중지된 계정도
 // useYn=false로 함께 오지만 이 화면엔 "계정 중지" 기능이 없어(설계상 중지 안 함)
-// 걸러낸다 — backend-integration-exclusions.md 기록, 그룹 D 마무리 시 전달.
+// 걸러낸다 — backend-integration/findings.md 기록, 그룹 D 마무리 시 전달.
 interface GuestUserRow {
   userSeq: number
   loginId: string

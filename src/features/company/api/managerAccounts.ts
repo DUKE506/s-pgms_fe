@@ -21,7 +21,7 @@ export interface ManagerAccount {
 }
 
 // GET /api/v1/User/Stec/W/GetStecUserList 의 항목 형태
-// (docs/backend-integration-responses/User-Stec-GetStecUserList.md 실측).
+// (docs/backend-integration/responses/User-Stec-GetStecUserList.md 실측).
 // managers.ts 의 listManagers 도 같은 응답을 쓴다(거기선 본부관리자만 골라 담당자
 // 후보로 사용).
 interface StecUserRow {

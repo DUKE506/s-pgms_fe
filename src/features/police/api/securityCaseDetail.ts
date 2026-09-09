@@ -15,7 +15,7 @@ import type {
 // 화면4: [경찰서] 피전 · 경호 상세 — 백엔드 연동(matrix 4번).
 //
 // 조회는 GET Deploy/Police/W/GetDeployDetail
-// (docs/backend-integration-responses/Deploy-Police-GetDeployDetail.md 실측).
+// (docs/backend-integration/responses/Deploy-Police-GetDeployDetail.md 실측).
 // 접수 상태 조회는 검증 완료. 2026-09-07 백엔드가 배정+경호계획 등록 건에 대해
 // summary1~5(조치 5개)·startTime/endTime(근무시간 명시 필드)·guardUserList(대표근무자
 // 이름)를 응답에 추가 — 이제 본사 GetGuardCaseDetail과 같은 구조다. 그 필드로 baseInfo를
@@ -118,7 +118,7 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
     subject: {
       nameInitial: d.suspectUserName ?? '',
       // 성별/생년월일/직업은 GetDeployDetail이 주지 않는다(수정 화면 #5에서
-      // 별도 확인 — docs/backend-integration-exclusions.md).
+      // 별도 확인 — docs/backend-integration/findings.md).
       gender: '',
       birthDate: '',
       occupation: '',

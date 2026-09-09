@@ -25,7 +25,7 @@ export async function getSecurityCaseHistoryDetail(id: string): Promise<Security
 // ── 실 API ([경찰서] 이력 조회, 화면 #14) ────────────────────────────────────
 
 // GET /api/v1/History/Police/W/GetHistoryList 항목 형태 (실측:
-// docs/backend-integration-responses/History-Police-GetHistoryList.md).
+// docs/backend-integration/responses/History-Police-GetHistoryList.md).
 // 응답은 GetGuardCaseList처럼 {meta, data:[...]}를 envelope로 한 번 더 감싼다.
 interface HistoryListRow {
   caseSeq: number
@@ -40,7 +40,7 @@ interface HistoryListRow {
 }
 
 // GET /api/v1/History/Police/W/GetHistoryDetail 응답 형태 (실측:
-// docs/backend-integration-responses/History-Police-GetHistoryDetail.md).
+// docs/backend-integration/responses/History-Police-GetHistoryDetail.md).
 interface HistoryDetailRow {
   caseSeq: number
   mgmtNo: string
