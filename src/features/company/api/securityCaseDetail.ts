@@ -2,6 +2,7 @@ import { apiFetch } from '../../auth/api/client'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderCodeToLabel } from '@/shared/lib/subject'
+import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
 import {
   formatMeasurePeriod,
   hhmm,
@@ -13,7 +14,6 @@ import { toSeq } from '../../police/api/securityCaseDetail'
 import type {
   CaseAttachments,
   CaseBaseInfo,
-  CaseType,
   PreMeeting,
   ScheduleGroup,
   SecurityCase,
@@ -169,7 +169,7 @@ function toHeader(id: string, d: GuardCaseDetailData): SecurityCase {
     policeStation: split.receiptNumber.replace(/^\d{2}-\d{2}-/, ''),
     jurisdiction: '',
     status: d.statusName as SecurityCaseStatus,
-    caseType: (d.crimeType as CaseType) || '사건미접수',
+    caseType: crimeCodeToCaseType(d.crimeType),
     subject: {
       nameInitial: d.suspectUserName ?? '',
       // 성별/생년월일/직업은 이 응답에 없다(경찰 화면5와 동일, exclusions).
@@ -289,6 +289,8 @@ function toAttachments(doc: CaseDocData): CaseAttachments {
 // 배치기간(periodFrom/periodTo)을 준다(issues #7·#10). 경찰용 Deploy/Police/W/GetDeployDetail과
 // 경로가 겹치므로 주의. 필드명: 읽기 응답은 suspectBirth/etcLoc1/etcLoc2
 // (쓰기 DTO는 suspectBirthDate/guardEtcLoc1/guardEtcLoc2).
+// 이 응답에도 crimeType이 있으나 사건유형은 toHeader가 GetGuardCaseDetail에서
+// 이미 채우므로(crimeCodeToCaseType) 여기선 읽지 않는다.
 interface DeployRequestDetailData {
   deployReqSeq: number
   suspectGender: number | null

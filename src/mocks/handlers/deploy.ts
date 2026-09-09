@@ -9,7 +9,8 @@ import {
   securityCases,
   updateSecurityCase,
 } from '../data/securityCases'
-import type { CaseType, ClosureReason, SecurityCase } from '../../features/police/types/securityCase'
+import type { ClosureReason, SecurityCase } from '../../features/police/types/securityCase'
+import { caseTypeToCrimeCode, crimeCodeToCaseType } from '../../shared/lib/crimeType'
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — 경찰서 경호목록은
 // 이미 실제 백엔드(GET /api/v1/Deploy/Police/W/GetDeployList)로 연동 완료됐다
@@ -58,7 +59,7 @@ function dtoToCreateInput(dto: Record<string, unknown>) {
       occupation: String(dto.suspectJob ?? ''),
       residence: String(dto.suspectAddress ?? ''),
     },
-    caseType: (dto.crimeType as CaseType) ?? '사건미접수',
+    caseType: crimeCodeToCaseType(dto.crimeType as string | null),
     caseSummary: String(dto.caseSummary ?? ''),
     startDate: String(dto.deploymentPeriodFrom ?? ''),
     endDate: String(dto.deploymentPeriodTo ?? ''),
@@ -112,7 +113,7 @@ function toDeployDetail(c: SecurityCase) {
     guardEtcLoc2: c.location.etc2 || null,
     investigator: c.policeContact.investigator,
     responsibleOfficer: c.policeContact.victimOfficer,
-    crimeType: c.caseType,
+    crimeType: caseTypeToCrimeCode(c.caseType),
     extendCount: 0,
     downloadYn: null,
     // 조치 5개·대표근무자는 경호계획 등록 후에만 실제 값이 붙는다(2026-09-07 실측).
@@ -142,7 +143,7 @@ function toDeployDetailUpdate(c: SecurityCase) {
   return {
     deployReqSeq: deploySeqOf(c),
     deployStatus: c.status,
-    crimeType: c.caseType,
+    crimeType: caseTypeToCrimeCode(c.caseType),
     suspectUserName: c.subject.nameInitial,
     suspectGender: c.subject.gender === '여' ? 1 : 0,
     suspectBirth: c.subject.birthDate || null,

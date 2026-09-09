@@ -3,6 +3,7 @@ import { useAuthStore } from '../../auth/store/authStore'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderLabelToCode } from '@/shared/lib/subject'
+import { caseTypeToCrimeCode } from '@/shared/lib/crimeType'
 import { toSeq } from './securityCaseDetail'
 import type {
   SecurityCase,
@@ -15,6 +16,8 @@ import type {
 // 매핑을 공유한다. 배치장소는 서버가 guardHomeLoc/guardWorkLoc/guardEtcLoc1/
 // guardEtcLoc2 4필드를 받는다(2026-09-03 백엔드 수정 반영 — 이전엔 deploymentPlace
 // 단일 필드로 알고 주거지만 보내던 D-2 임시처리였음). 빈 문자열은 null로 보낸다.
+// 사건유형은 서버 enum 코드(stalking 등)로 보낸다 — DEPLOY_REQUEST.CRIME_TYPE이
+// 코드 컬럼이라(shared/lib/crimeType.ts).
 function toDeployRequestDto(input: SecurityCaseCreateInput) {
   return {
     suspectName: input.subject.nameInitial,
@@ -22,7 +25,7 @@ function toDeployRequestDto(input: SecurityCaseCreateInput) {
     suspectBirthDate: input.subject.birthDate,
     suspectJob: input.subject.occupation,
     suspectAddress: input.subject.residence,
-    crimeType: input.caseType,
+    crimeType: caseTypeToCrimeCode(input.caseType),
     caseSummary: input.caseSummary,
     deploymentPeriodFrom: input.startDate,
     deploymentPeriodTo: input.endDate,

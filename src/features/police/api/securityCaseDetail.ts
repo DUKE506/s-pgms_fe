@@ -3,10 +3,10 @@ import { useAuthStore } from '../../auth/store/authStore'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderCodeToLabel } from '@/shared/lib/subject'
+import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
 import { hhmm, parseMeasureItems, parseMeasurePeriod } from '@/shared/lib/caseMeasures'
 import type {
   CaseBaseInfo,
-  CaseType,
   ClosureReason,
   SecurityCase,
   SecurityCaseStatus,
@@ -114,7 +114,7 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
     policeStation: groupName,
     jurisdiction: '',
     status: d.statusName as SecurityCaseStatus,
-    caseType: (d.crimeType as CaseType) || '사건미접수',
+    caseType: crimeCodeToCaseType(d.crimeType),
     subject: {
       nameInitial: d.suspectUserName ?? '',
       // 성별/생년월일/직업은 GetDeployDetail이 주지 않는다(수정 화면 #5에서
@@ -218,7 +218,7 @@ function toSecurityCaseFromEdit(id: string, d: DeployDetailUpdateData): Security
     policeStation: useAuthStore.getState().user?.groupName ?? '',
     jurisdiction: '',
     status: d.deployStatus as SecurityCaseStatus,
-    caseType: (d.crimeType as CaseType) || '사건미접수',
+    caseType: crimeCodeToCaseType(d.crimeType),
     subject: {
       nameInitial: d.suspectUserName ?? '',
       gender: d.suspectGender != null ? genderCodeToLabel(d.suspectGender) : '',

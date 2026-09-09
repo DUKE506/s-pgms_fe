@@ -18,6 +18,7 @@ import type {
   ScheduleGroup,
   SecurityCase,
 } from '../../features/police/types/securityCase'
+import { caseTypeToCrimeCode } from '../../shared/lib/crimeType'
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록) — 화면9([본사] 경호 상세)는 실제 백엔드
 // GuardCase/Stec/W/{GetGuardCaseDetail,GetCaseGuardList,GetCaseSchedule,GetCaseMeeting,
@@ -161,7 +162,7 @@ export const guardCaseDetailTestHandlers = [
       endTime: plan ? `${(plan.workHours.split('~')[1] ?? '18:00').trim()}:00` : null,
       investigator: record.policeContact.investigator,
       responsibleOfficer: record.policeContact.victimOfficer,
-      crimeType: record.caseType,
+      crimeType: caseTypeToCrimeCode(record.caseType),
       extendCount: 0,
       guardHomeLoc: plan?.placeResidence ?? null,
       guardWorkLoc: plan?.placeWorkplace ?? null,
