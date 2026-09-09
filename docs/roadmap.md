@@ -316,7 +316,9 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         건 상세 차단은 미검증(동래 활성 건 1개뿐, 이월). 게스트 쓰기/Stec/피전전용 EP 403.
 
 **발견된 설계 이슈(백엔드/기획에 변경 요청, `docs/backend-integration/findings.md` 참고)**:
-1. 본부관리자 계정에 소속 본부·담당자 개인정보 저장 공간 없음
+1. 본부관리자 계정에 소속 본부·담당자 개인정보 저장 공간 없음 → **본부 파트 종결(2026-09-09)**:
+   `USER_INFO.groupSeq/groupName`은 경찰 전용 공유 컬럼이라 본사엔 안 둠 — 관리자 계정 관리
+   "본부" 열·`branch` 필드 제거. 담당자 개인정보·`userSeq` 조인은 운영팀 문의 대기
 2. 연장/단축 신청 "거부" API 없음
 3. ~~게스트 계정 발급 아이디 "미리보기" API 없음~~ → **해결(2026-09-08, #16)**: 프론트 UX
    변경으로 흡수(발급 후 목록 재조회). 신규 EP 요청 안 함
@@ -334,10 +336,13 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
 8. 근무자 `deptName`이 조회 응답에 안 옴(2026-09-03) — DB(`GUARD_USER_INFO.DEPT_NM`,
    NOT NULL)·등록/수정 INPUT엔 있는데 `GetGuardList` 응답에만 빠짐. 근무자 목록에서
    부서 열 제거. `GetGuardList` 응답에 필드 추가 요청 예정(그룹 B 섹션 #12에서 일괄)
-9. [본사] 배치요청 "취소"에 대응하는 API 없음(2026-09-03) — `GuardCase/Stec/W`에 케이스
-   취소 엔드포인트가 없고, 유일한 `Deploy/Police/W/CancelGuardCase`는 Police 태그라 본사
-   토큰으로 호출 불가(403). 배치요청 목록 "취소" 메뉴 비활성화. 본사용 취소 API 신설
-   요청 예정(그룹 B 섹션 #12에서 일괄)
+9. ~~[본사] 배치요청 "취소"에 대응하는 API 없음~~ → **해결(2026-09-09)**: `POST GuardCase/
+   Stec/W/CancelGuardCase {deployReqSeq, reason?}` 신설. 접수취소/경호취소를 서버가 배정
+   여부로 분기. `cancelPendingRequest`(#7)·`cancelAssignedCase`(#9) 배선, 버튼 활성. 실왕복
+   미검(되돌릴 수 없음).
+9b. [신규] `Deploy/Police/W/GetDeployDetail` 응답에 `caseSeq` 없음(2026-09-09) —
+   `CloseGuardCase`·`GetDestroyDocDownload`가 `caseSeq`를 요구해 `GetDeployList` 재조회
+   우회(`resolveCaseSeq`). 응답에 `caseSeq` 추가 요청.
 10~13. issues.md 참고(#10·#13은 해결, #11·#12는 B-2 요청서로 전달).
 14. [본사] 이력 조회 상세 API 없음(2026-09-08) → **해결(2026-09-09)** —
     `GET History/Stec/W/GetHistoryDetail?caseSeq=` 신설, 상세 실 API 연동 완료.

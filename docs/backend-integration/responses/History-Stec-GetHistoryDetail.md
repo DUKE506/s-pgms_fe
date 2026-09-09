@@ -72,7 +72,34 @@
 }
 ```
 
-## 이월 (데이터 대기)
+## 종결 건 실측 (2026-09-09 — 사용자가 종결한 caseSeq 51)
 
-- **종결 건(status=3) 실서버 0개** — `totalGuardWorkMinutes` 실값·종결코드(`remark`)
-  매핑 미검. 정상 종결 건 생성 후 재확인(CARRYOVER B).
+```json
+{
+  "caseSeq": 51, "mgmtNo": "26-09-동래경찰서 ST0007", "statusName": "종결",
+  "groupName": "동래경찰서", "parentGroupName": "부산경찰청", "suspectUserName": "이**",
+  "startDate": "2026-09-07T09:00:00", "endDate": "2026-09-08T18:00:00",
+  "totalGuardWorkMinutes": 2160,
+  "investigator": null, "responsibleOfficer": null,
+  "guardWorkLoc": null, "guardHomeLoc": null,
+  "endDt": "2026-09-09T08:01:10", "remark": "경호기간 만료",
+  "guards": [
+    { "guardSeq": 13, "guardName": "김가드", "workDays": 2, "totalMinutes": 1080 },
+    { "guardSeq": 14, "guardName": "이가드", "workDays": 2, "totalMinutes": 1080 }
+  ]
+}
+```
+
+- `totalGuardWorkMinutes: 2160` (종결에서 계산됨) → 화면 "36시간".
+- `remark: "경호기간 만료"` = 종결코드(END_REASON) — 프론트가 보낸 문자열 그대로. `ClosureReason`
+  타입에 있는 값이라 그대로 렌더.
+- **`guardWorkLoc`/`guardHomeLoc` = null** — 종결 시 파기됨(END-007, 스웨거 회신대로).
+- `investigator`/`responsibleOfficer` null — 종결 시 담당 수사관·피전 정보도 파기.
+- `GetHistoryList`(Stec) 행: `{caseSeq:51, status:3, statusName:"종결", startDt:"2026-09-07",
+  endDt:"2026-09-08", totalMin:2160, remark:"경호기간 만료"}`.
+- → 이력 3화면(#13·#14·#15) 종결 건 렌더 정상 검증. **CARRYOVER B 종결 데이터 대기 소진.**
+
+## 이월
+
+- #14·#15 상세의 **사건유형·5개 조치**는 종결 건에서도 응답에 없음(exclusions 유지) —
+  필요 시 findings 승격.

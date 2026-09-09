@@ -51,6 +51,13 @@ HTTP 200
   `ManagerAccount.id`, 화면 "아이디" 열 + 본인 매칭) / `userSeq`(→ `UpdateUser` 대상
   식별) / `userName`(→ 이름, 배정건수·담당경호 매칭 키) / `codeSeq`(→ `roleFromCodeSeq`) /
   `phone`(빈 문자열은 `undefined` 취급) / `useYn`.
-- **본부관리자 토큰은 403** — 이 화면은 실서버에서 운영/시스템관리자 전용. 본부관리자의
-  이 화면 스코프(본인 행만? 403?)는 matrix #12에서 재검증.
+- **~~본부관리자 토큰은 403~~ → 2026-09-09 재실측: 본부관리자도 200** (스웨거 회신 —
+  담당부서 필터를 채우려면 목록이 필요, 내려가는 내용은 세 권한 동일). `StecM2`·`StecM3`
+  (본부관리자) → 운영 토큰과 동일한 5행 목록. → `ManagerAccountListPage`의 "운영·시스템만
+  이용" 안내 제거, 목록 노출. **수정/등록은 여전히 `canEdit`(운영·시스템만)**.
+  `ManagerListForbiddenError`는 혹시 모를 403 안전망으로만 존치.
+- **`groupSeq`/`groupName` 항상 null** — 본사 계정엔 소속 본부 개념 없음(경찰 전용 공유
+  컬럼). "본부" 열·`branch` 필드 제거(findings #1 본부 파트 종결, 2026-09-09).
+- `StecM4`(loop-backend-temp-test)는 `useYn: false`로 목록에 포함 — 재활성화용(현재
+  `listManagerAccounts`는 useYn 필터 안 함).
 - 쓰기(정보수정·비번초기화)는 `User/Stec/W/UpdateUser` — `docs/backend-integration/responses/User-Stec-UpdateUser.md`.

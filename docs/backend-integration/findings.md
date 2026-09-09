@@ -37,7 +37,16 @@
 
 ---
 
-## 1. 🔴 본부관리자 계정에 "소속 본부"와 "담당자 개인정보"를 둘 다 저장할 곳이 없음
+## 1. 🟡 본부관리자 계정에 "소속 본부"와 "담당자 개인정보"를 둘 다 저장할 곳이 없음 — **본부 파트 종결(제외), 담당자 개인정보는 운영팀 문의 대기**
+
+**본부 파트 종결(2026-09-09, 사용자 확인)**: `USER_INFO.groupSeq/groupName`은 경찰 관계자용
+공유 컬럼이라 본사 계정은 항상 null — 본사에 "소속 본부" 개념을 두지 않기로 결정. 관리자
+계정 관리의 **"본부" 열 제거**(`ManagerAccountListPage` 헤더·셀·모바일), `ManagerAccount.branch`
+·`Manager.branch` 필드 삭제, 담당자 배정 다이얼로그 2개의 `· {branch}` suffix 제거. → 본부
+소속 구조화(요청 1·3) 요청 취소. **담당자 개인정보(성명·직급·연락처) + `GetGuardCaseList`
+담당자 `userSeq` 조인**은 여전히 미해결 — 운영팀 문의 대기(B-2 나머지).
+
+---
 
 **발견 경위**: `docs/db-dump/user_table_value.csv`(USER_INFO 실제 데이터) 확인 중
 (2026-08-31).
@@ -434,7 +443,23 @@ breadcrumb만 영향, 경미) / 읽기·쓰기 필드명 비대칭(`suspectBirth
 
 ---
 
-## 9. 🟡 [본사] 배치요청 "취소"에 대응하는 API가 없음
+## 9. 🟢 [본사] 배치요청 "취소"에 대응하는 API가 없음 → **해결(2026-09-09, EP 신설)**
+
+**해결(2026-09-09)**: 백엔드가 `POST GuardCase/Stec/W/CancelGuardCase { deployReqSeq, reason? }`
+신설. 경찰용(`Deploy/Police/W/CancelGuardCase`)과 같은 동작 — 서버가 배정 여부로 접수취소
+(배치요구서 hard delete, reason 없음, 시스템·운영만) / 경호취소(상태 '취소', reason 필수)를
+갈라 처리. 본부관리자는 자기 배정 건만(아니면 403). 취소 가능 상태 = 배정·경호중·경호완료
+(경찰용은 배정뿐), 종결·취소면 409.
+- **연동**: `requests.ts::cancelPendingRequest`(#7 ⋮"취소") + `securityCaseDetail.ts`(company)
+  `::cancelAssignedCase`(#9 경호상세 "경호취소"). 두 화면의 `disabled` 제거. `SecurityCase`에
+  `deploySeq` 필드 추가(company `getSecurityCase`가 `GetCaseDoc.deploySeq`로 채움 — 키가
+  caseSeq가 아니라 deployReqSeq라서).
+- **프로브(옵션 C, 상태 안 바꿈)**: 없는 deployReqSeq → 400. StecM3(본부 0건) 남 배정건 →
+  403 "담당하지 않는 경호건입니다", 접수건 → 403 "담당하지 않는 배치요구서입니다".
+- **미검(이월)**: 실제 취소 왕복(접수취소 hard delete / 경호취소 상태전환)은 되돌릴 수 없어
+  미테스트 — 버려도 되는 데이터로 사용자 확인 예정(CARRYOVER B).
+
+---
 
 **발견 경위**: 화면7([본사] 운영/시스템관리자 · 배치요청 목록) 연동(2026-09-03),
 `GuardCase/Stec/W/*` 스웨거 확인 중.
@@ -765,6 +790,46 @@ CCTV / 잠정조치 1호" 렌더 확인. 응답 샘플: `Deploy-Police-GetDeploy
 `getSecurityCaseHistoryDetail`), `features/police/pages/HistoryListPage.tsx`·
 `HistoryDetailPage.tsx`, `features/police/pages/SecurityCaseDetailPage.tsx`(본청/지역청
 진행중 건 상세 재사용).
+
+<!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
+
+## 16. 🟡 `Deploy/Police/W/GetDeployDetail` 응답에 `caseSeq`가 없음
+
+**발견 경위**: 사용자가 종결 건을 만드는 중(2026-09-09). 경호완료 상태 건이 처음 생겨서
+피전 경호상세의 배정 이후 액션(파기확인서 다운로드·종결)을 실측할 수 있게 됐는데 둘 다
+400/실패.
+
+**현재 상태**:
+- `POST Deploy/Police/W/CloseGuardCase`의 DTO는 `{ caseSeq(int, required), endReason(1~500) }`.
+- `GET Deploy/Police/W/GetDestroyDocDownload`의 파라미터도 `caseSeq`.
+- 그런데 `GET Deploy/Police/W/GetDeployDetail`(피전 경호상세 조회) 응답엔 `deployReqSeq`만
+  있고 **`caseSeq`가 없다**(실측 키 목록에 없음). 피전 경호목록(`GetDeployList`) 행에는
+  `{deploySeq, caseSeq}`가 둘 다 온다.
+- 기존 `closeCase`가 `caseSeq` 자리에 `deployReqSeq`(라우트 id)를 그대로 넣어 보내고 있어
+  서버가 "없는 caseSeq"로 **400 "잘못된 요청입니다"**.
+
+**임시 처리**: `police/api/securityCaseDetail.ts::resolveCaseSeq(deployReqSeq)` 신설 —
+`GetDeployList`를 한 번 더 불러 `deploySeq → caseSeq`를 매핑. `closeCase`·
+`downloadDestructionCert`가 이걸로 실제 `caseSeq`를 얻어 전송.
+
+**요청**: `GetDeployDetail` 응답에 `caseSeq` 추가(경호계획 등록 이후 건). 추가되면
+`resolveCaseSeq` 제거. (또는 `CloseGuardCase`/`GetDestroyDocDownload`가 `deployReqSeq`도
+받도록 — `CancelGuardCase`처럼.)
+
+## 17. 🟢 피전 경호상세 문서함(파기확인서/경호계획서) 매핑 누락 → **해결(2026-09-09)**
+
+**발견 경위**: 본사가 파기확인서를 업로드했는데 피전 경호상세 문서함이 "대기중" 고정,
+종결 버튼도 비활성(2026-09-09).
+
+**현재 상태 / 해결**: `GET GetDeployDetail` 응답이 문서함 필드를 주고 있었는데
+(`docDestructionDetail: {drtFileName, drtFileExt}`, `docGuardDetail`, `docAgreeDetail: []`,
+`downloadYn`) `toSecurityCase`가 안 읽어 `attachments`가 항상 undefined였다. →
+`attachments` 조립 추가(`docFileNameOf` 헬퍼로 `drtFileName` 등 추출). `downloadYn`
+(= `DESTROY_DOC_DOWNLOAD_YN`, 파기확인서를 받아야 켜지고 종결 선결조건 — 안 받고 종결하면
+409)을 `SecurityCase.destructionCertDownloaded`로 매핑하고 `canClose`에 포함. 파기확인서
+다운로드(`Deploy/Police/W/GetDestroyDocDownload?caseSeq=`)도 배선(이전엔 no-op).
+- **미확정**: `docGuardDetail`(경호계획서)은 실측 데이터가 null이라 필드명 확정 못 함 —
+  폴백 3개(`drtFileName`/`docFileName`/`fileName`). 본사 경호계획서 업로드 건으로 재확인.
 
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
 

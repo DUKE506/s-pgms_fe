@@ -156,9 +156,9 @@
 |---|---|---|---|
 | 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail` (배정 이후는 `GetGuardCaseDetail` 분기 예정) | △ 연동(2026-09-03), **접수 상태만 실측**. 접수단계 응답: `startDt`/`endDt` null(기간은 `periodFrom`/`periodTo`). 배치장소 4필드는 저장돼 있어도 **이 응답은 항상 null**(`GetDeployDetailUpdate`만 실제 값 반환 — 화면4 배치장소 표시는 빈 값, exclusions). 성별·생년월일·직업·사건개요·참고사항 없음. `crimeType`은 `crimeCodeToCaseType`으로 변환(2026-09-09 enum 전환). 배정 이후 `GetGuardCaseDetail` 분기·`caseSeq` 확보는 그룹 B(#9). 응답 샘플: `Deploy-Police-GetDeployDetail.md` |
 | 접수취소 | `cancelPendingCase` | `POST CancelGuardCase` | ✅ 연동+검증 완료(2026-09-03). 성공 `{data:true}` + 하드 삭제, 실패 시 400 `{data:false}`. 응답 샘플: `Deploy-Police-CancelGuardCase.md` |
-| 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
+| 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | △ 코드만 교체, **실왕복 미검**(되돌릴 수 없음). 피전 경호취소는 `Deploy/Police/W/CancelGuardCase {deployReqSeq, reason}` |
 | 연장/단축 요청 | `requestPeriodChange` | `PATCH ExtendDeployPeriod` / `ShortenDeployPeriod` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
-| 종결 | `closeCase` | `POST CloseGuardCase` | △ 코드만 교체, **미검증**. ⚠️ DTO가 `caseSeq`를 요구하나 `GetDeployDetail`이 안 줘서 `deployReqSeq`를 임시 전송 → 그룹 B(#9 본사 경호 상세, `GetGuardCaseDetail`) 재검증/수정. 종결 시 배치요구서·첨부파일 3종이 실제로 삭제됨(mock은 안 지움) — 이력 화면 영향(analysis.md 6-5) |
+| 종결 | `closeCase` | `POST Deploy/Police/W/CloseGuardCase {caseSeq, endReason}` | ✅ **연동·검증 완료(2026-09-09, 사용자 실제 종결)**. DTO가 `caseSeq`(int)를 요구하는데 `GetDeployDetail`엔 없음 → `resolveCaseSeq`(GetDeployList 재조회로 deploySeq→caseSeq 매핑, findings #16). 선결조건: 파기확인서 다운로드로 `DESTROY_DOC_DOWNLOAD_YN` 켜야 함(안 받고 종결 → 409) → `canClose`에 `destructionCertDownloaded` 포함. 종결 시 배치요구서·문서·배치장소가 서버에서 파기됨(END-007) |
 | 근무 스케줄 / 근무자 표시 | `getDeployGuardSchedule`(신규, `securityCaseDetail.ts`) | `GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=` | ✅ 연동 완료(**2026-09-09**, findings #6 근무일정 파트). 평면 배열 `[{ dates, guardSchedule:[{guardSeq,name,phone,deptName,isWork}] }]` — 근무자 이름·연락처 인라인(피전은 근무자 마스터 접근 불가). 근무 시각은 응답에 없어 `baseInfo.workHours` 공통 적용. `SecurityCaseDetailPage`의 `workers: never[] = []` 제거 → `useQuery`로 병합, `enabled = status !== '접수'`. 브라우저 검증(SPoliceM5·SPoliceM1 `/security-cases/90`). 응답 샘플 `Deploy-Police-GetDeployGuardSchedule.md`. 근무자별 동의서 조회(요청 3)는 여전히 전용 GET 미확인 |
 
 #### 배치요구서 수정 (`/security-cases/:id/edit`) — ✅ 연동 완료(2026-09-03)
@@ -268,9 +268,9 @@
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
 | 목록 조회 | `listPendingRequests` | `GET GuardCase/Stec/W/GetDeployRequestList` | ✅ 파라미터 없이 전량 반환, 스코프 필터 없음(운영/시스템관리자 전국 미배정 건 전부). 본부관리자 403. 응답 `{deploySeq,caseSeq(null),mgmtNo,groupName,parentGroupName,createDt,periodFrom,periodTo,requestedEndDate}` — `mgmtNo`는 접미사 없는 `"26-09-동래경찰서"`라 그대로 사용. 응답 샘플: `GuardCase-Stec-GetDeployRequestList.md` |
-| 담당자 선택 목록 | `listManagers` | `GET User/Stec/W/GetStecUserList` | ✅ 전용 EP 없음 — 클라이언트에서 `codeName==='본부관리자' && useYn`로 필터. `branch`(issues #1)·`assignedCount` 필드 없어 표시 생략. matrix 11번(관리자 계정)과 같은 응답. 응답 샘플: `User-Stec-GetStecUserList.md` |
+| 담당자 선택 목록 | `listManagers` | `GET User/Stec/W/GetStecUserList` | ✅ 전용 EP 없음 — 클라이언트에서 `codeName==='본부관리자' && useYn`로 필터. `assignedCount` 필드 없어 배지 생략. **본부(`branch`)는 제외 확정**(2026-09-09, findings #1). matrix 11번과 같은 응답. 응답 샘플: `User-Stec-GetStecUserList.md` |
 | 본부 배정 | `assignManager` | `POST GuardCase/Stec/W/AddGuardCase` | ✅ DTO `{deploySeq,userSeq}`, 성공 `{data:true}`(seq 안 줌). **여기서 GuardCase가 처음 생성됨** — 배정 즉시 `statusName:"배정"` + `mgmtNo`에 `ST####`. deploySeq 81 실배정(caseSeq 46)해 검증·유지(8·9 입력 데이터). 응답 샘플: `GuardCase-Stec-AddGuardCase.md` |
-| 취소 | `cancelPendingRequest` | ⚠️ **없음** | issues #9 — `GuardCase/Stec/W`에 케이스 취소 EP 없음. `Deploy/Police/W/CancelGuardCase`는 Police 태그라 본사 토큰 403. ⋮ 메뉴 "취소" 비활성화(`disabled`), API 오면 해제 |
+| 취소 | `cancelPendingRequest` | `POST GuardCase/Stec/W/CancelGuardCase {deployReqSeq}` | ✅ 연동(**2026-09-09**, findings #9 🟢). 배정 전이라 서버가 접수취소로 처리(배치요구서 hard delete, reason 없음, 시스템·운영만 — 본부관리자 403). ⋮ "취소" `disabled` 제거. 실왕복 미검(되돌릴 수 없음, CARRYOVER B) |
 | (인프라) refresh single-flight | — | `POST Login/W/RefreshToken` | `client.ts` 수정 — 동시 401 시 각자 refresh 호출 → 실백엔드 1회용 RefreshToken이 회전돼 두 번째부터 401 → 강제 로그아웃되던 문제. 진행 중 refresh를 공유하도록 single-flight화(아직 mock인 화면에 실백엔드 계정으로 들어갈 때 재현됨) |
 
 #### 경호목록 (`/admin/security-cases`)
@@ -294,7 +294,7 @@
 | 조회(첨부 메타) | `getSecurityCase` | `GET GuardCase/Stec/W/GetCaseDoc?caseSeq=` | ✅ 읽기만. `{caseInfoDto,guardAgreementDtos[],guardDeployDocDto}` → `attachments`. 필드↔문서 대응은 업로드된 데이터 없어 추정(후속에서 확정) |
 | 경호계획 등록 | `registerBaseInfo(...,{isNew:true,period})` | `PUT AddGuardCaseInfo` | ⚠️ **코드 완성·미검증(△)** — 배치기간 조회 경로 없음(blockers, issues #10) → **배정 건에서 등록 버튼 비활성 + 안내문**. 스케줄 생성 후 재호출 시 409(실측). caseSeq 46은 curl로 등록 |
 | 경호계획 부분수정 | `registerBaseInfo(...,{isNew:false})` | `PATCH PatchCaseInfo` | ✅ 연동·브라우저 검증. `startDt/endDt` 없음(기간 잠금). `isNew`로 등록/수정 분기 |
-| 경호취소 | `cancelAssignedCase`(throw) | ⚠️ **없음** | 본사 토큰 → `Deploy/Police/W/CancelGuardCase` 403(실측). issues #9. 버튼 비활성 |
+| 경호취소 | `cancelAssignedCase` | `POST GuardCase/Stec/W/CancelGuardCase {deployReqSeq, reason}` | ✅ 연동(**2026-09-09**, findings #9 🟢). `SecurityCase.deploySeq`(GetCaseDoc) 사용 — 키가 caseSeq 아님. "경호취소" 버튼 활성(배정 상태). 본부관리자는 자기 배정건만(403 "담당하지 않는 경호건입니다"). 실왕복 미검 |
 | 스케줄 자동생성 | `createSchedule` | `POST AutoAddSchedule` | ✅ 연동·curl 검증. `{caseSeq,startDate,endDate,startTime:"HH:MM:SS",endTime}`. 대표(isRepresentative) 근무자만 자동 배정(실측 — matrix 최초 우려 해소) |
 | 근무조 저장 | `upsertScheduleGroup(...,order)` | `PUT PatchScheduleGroup` | ✅ 연동·curl 검증. `groupSeq` 있으면 수정/없으면 추가. `order`(신규 인자)는 1+ & 일자 내 유일 필수(중복 시 409). 근무자 중복시각 배정도 409, 경호풀 밖 근무자 400. `memo` 저장되나 조회엔 없음(issues #12) |
 | 근무조 삭제 | `deleteScheduleGroup` | `DELETE DeleteScheduleGroup?groupSeq=&caseSeq=` | ✅ 연동·브라우저 검증. 그룹1(첫 조)은 삭제 불가(일자별 최소 1개 유지) — 모달에서 버튼 숨김 |
@@ -324,7 +324,7 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listManagerAccounts` | `GET User/Stec/W/GetStecUserList` | ✅ `loginId→id`(아이디 열·본인매칭)·`userSeq` 신규(쓰기 대상)·`codeSeq→roleFromCodeSeq`. **본부관리자는 403** → 화면이 "운영·시스템관리자만 이용" 안내(B, 2026-09-07 사용자 확인). "본부" 열은 `groupName` null이라 "-"(issues #1). 응답 샘플 `User-Stec-GetStecUserList.md` |
+| 목록 조회 | `listManagerAccounts` | `GET User/Stec/W/GetStecUserList` | ✅ `loginId→id`·`userSeq`·`codeSeq→roleFromCodeSeq`. **2026-09-09**: 본부관리자도 **200**(스웨거 회신) → 403 안내 제거, 목록 노출(수정은 `canEdit`=운영·시스템만). **"본부" 열 제거**(findings #1 본부 파트 🟢). 403 안전망(`ManagerListForbiddenError`)만 존치. 응답 샘플 `User-Stec-GetStecUserList.md` |
 | 정보수정 | `updateManagerAccountInfo` | `PATCH User/Stec/W/UpdateUser` | ✅ `{userSeq,name,phone}`. **빈 연락처는 `""` 전송** — `null`은 백엔드가 "변경 안 함"으로 무시(실측). StecM1 왕복 검증. 응답 샘플 `User-Stec-UpdateUser.md` |
 | 비밀번호 초기화 | `resetManagerAccountPassword` | `PATCH User/Stec/W/UpdateUser` | ✅ `{userSeq, loginPw:loginId, pwChangedYn:true}`. StecM4(폐기용)에서 `pwChangedYn false→true` 확인 |
 | 계정 정지/재활성화 | — | `PATCH UpdateUser`의 `useYn` | 스키마상 가능하나 대응 UI 없음 → 이번 범위 밖(roadmap 백로그) |

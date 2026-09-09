@@ -180,3 +180,29 @@ HTTP 404
   `subject.gender`/`birthDate`/`occupation`, `caseSummary`, `additionalNotes`는 응답에
   없어 빈 값(수정 화면 #5에서 별도 확인).
 ```
+
+## 2026-09-09 추가 — 문서함 필드 + `downloadYn` + `caseSeq` 여전히 없음
+
+경호완료 상태 건(deployReqSeq 90)이 처음 생겨 재실측. 새로 확인된 필드:
+
+```json
+{
+  "downloadYn": false,
+  "docGuardDetail": null,
+  "docDestructionDetail": { "drtFileName": "2026-09-08-본사-경호관리-B2.xlsx", "drtFileExt": ".xlsx" },
+  "docAgreeDetail": []
+}
+```
+
+- **`docDestructionDetail`** → 파기확인서(`{drtFileName, drtFileExt}`). 본사가 업로드하면 채워짐.
+  → `SecurityCase.attachments.destructionCertFileName`. (기존엔 `toSecurityCase`가 이 필드를
+  안 읽어 `attachments`가 항상 undefined → 문서함 "대기중" 고정 버그였음, findings #17)
+- **`docGuardDetail`** → 경호계획서. 이번 실측 데이터가 `null`이라 **필드명 미확정**
+  (파기확인서가 `drtFileName`인 걸로 보아 `docFileName`/`fileName` 등 추정) — 폴백 3개로 처리.
+- **`docAgreeDetail`** → 근무자별 동의서 배열(현재 `[]`, findings #6 요청 3 소관).
+- **`downloadYn`** = `DESTROY_DOC_DOWNLOAD_YN` — 파기확인서를 다운로드(`GetDestroyDocDownload`)
+  하면 켜지고, **최종 종결(CloseGuardCase)의 선결조건**(안 받고 종결하면 409). →
+  `SecurityCase.destructionCertDownloaded`, `canClose`에 포함.
+- **`caseSeq` 여전히 없음** — 그런데 `CloseGuardCase`·`GetDestroyDocDownload` 둘 다 `caseSeq`를
+  요구 → `resolveCaseSeq`(GetDeployList 재조회)로 우회. **findings #16 — 응답에 `caseSeq` 추가 요청.**
+- 단축 반영 확인: `statusName:"경호완료"`, `periodTo:"2026-09-08"`(단축된 종료일)로 반환.
