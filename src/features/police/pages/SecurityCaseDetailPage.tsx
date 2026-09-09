@@ -41,7 +41,11 @@ interface ActionButtonsProps {
 }
 
 function ActionButtons({ securityCase, fullWidth, onCancel, onPeriodRequest, onClose }: ActionButtonsProps) {
-  const canClose = securityCase.status === '경호완료' && Boolean(securityCase.attachments?.destructionCertFileName)
+  const canClose =
+    securityCase.status === '경호완료' &&
+    Boolean(securityCase.attachments?.destructionCertFileName) &&
+    // 파기확인서를 받아야(DESTROY_DOC_DOWNLOAD_YN) 종결 가능 — 안 받고 종결하면 서버 409.
+    securityCase.destructionCertDownloaded === true
   const widthClass = fullWidth && 'w-full'
 
   return (
@@ -140,7 +144,11 @@ function SecurityCaseDetailPage() {
   const workers = scheduleQuery.data?.workers ?? []
   const managementNumber = formatManagementNumber(securityCase.receiptNumber, securityCase.securityCode)
   const canRequestPeriod = securityCase.status === '경호중' && !securityCase.pendingPeriodRequest
-  const canClose = securityCase.status === '경호완료' && Boolean(securityCase.attachments?.destructionCertFileName)
+  const canClose =
+    securityCase.status === '경호완료' &&
+    Boolean(securityCase.attachments?.destructionCertFileName) &&
+    // 파기확인서를 받아야(DESTROY_DOC_DOWNLOAD_YN) 종결 가능 — 안 받고 종결하면 서버 409.
+    securityCase.destructionCertDownloaded === true
 
   const actionProps = {
     securityCase,

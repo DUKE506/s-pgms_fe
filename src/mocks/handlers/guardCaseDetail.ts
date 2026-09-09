@@ -183,7 +183,9 @@ export const guardCaseDetailTestHandlers = [
         .filter((w) => w.isDefault)
         .map((w) => ({ guardName: workers.find((x) => x.id === w.workerId)?.name ?? w.workerId })),
       // features/company/api/securityCaseDetail.ts getSecurityCase가 이걸 그대로 얹는다.
-      mock: record,
+      // deploySeq는 실서버라면 GetCaseDoc이 주는 값 — 더블에선 id 숫자부(deploySeqOf 규칙)로
+      // 채워 CancelGuardCase(키가 deployReqSeq)가 찾을 수 있게 한다.
+      mock: { ...record, deploySeq: Number(String(record.id).replace(/\D/g, '')) || 0 },
     })
   }),
 

@@ -159,7 +159,14 @@ function withDemoDetail(record: SecurityCase, opts: { destructionCert: boolean }
     destructionCertFileName: opts.destructionCert ? `파기확인서_${record.securityCode}.pdf` : null,
   }
 
-  return { ...record, baseInfo, workSchedule: { preMeeting: null, days }, attachments }
+  return {
+    ...record,
+    baseInfo,
+    workSchedule: { preMeeting: null, days },
+    attachments,
+    // 파기확인서가 있는 데모 건은 이미 피전이 받은 상태로 둔다(종결 선결조건).
+    destructionCertDownloaded: opts.destructionCert,
+  }
 }
 
 // 이력 조회(Phase 3-1) 검증용 — 종결/취소 건이 기존 seed에 하나도 없어서 별도로

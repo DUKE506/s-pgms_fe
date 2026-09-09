@@ -24,7 +24,8 @@ function CancelAssignedCaseDialog({ securityCase, open, onOpenChange }: CancelAs
   const showToast = useToastStore((state) => state.show)
 
   const mutation = useMutation({
-    mutationFn: () => cancelAssignedCase(securityCase.id, reason.trim()),
+    // 취소 키는 deployReqSeq(=deploySeq) — 상세 조회가 GetCaseDoc에서 채워 온다.
+    mutationFn: () => cancelAssignedCase(securityCase.deploySeq ?? Number(securityCase.id), reason.trim()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
       showToast('경호가 취소되었습니다', 'success')

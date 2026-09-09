@@ -181,11 +181,10 @@ function RequestListPage() {
                               <UserPlus />
                               배정
                             </DropdownMenuItem>
-                            {/* 배치요청 취소 API가 아직 없어 비활성화 (requests.ts
-                                cancelPendingRequest 주석 / issues.md 참고) */}
+                            {/* 접수취소 — POST CancelGuardCase (findings #9, 2026-09-09).
+                                본부관리자 토큰은 서버가 403(접수취소는 시스템·운영만). */}
                             <DropdownMenuItem
                               variant="destructive"
-                              disabled
                               onSelect={() => setCancelTargetCase(r)}
                             >
                               <Trash2 />

@@ -4,12 +4,11 @@ import { unwrapEnvelope } from '@/shared/api/envelope'
 export interface Manager {
   id: string
   name: string
-  // 소속 본부 — 실제 GetStecUserList 응답엔 없다(groupName도 null). issues.md #1
-  // (본부 소속 구조화 저장 없음) 반영 전까지 항상 undefined.
-  branch?: string
   // 담당 배정 건수 — 실제 응답에 없고 집계 API도 없어 undefined. 화면에서 배지 생략.
   assignedCount?: number
 }
+// ※ "소속 본부"는 담지 않는다(2026-09-09 결정) — 본사 계정은 groupSeq/groupName이
+//   항상 null. findings #1 본부 파트 종결.
 
 // GET /api/v1/User/Stec/W/GetStecUserList 의 항목 형태
 // (docs/backend-integration/responses/User-Stec-GetStecUserList.md 실측).

@@ -7,6 +7,8 @@ import {
 import {
   assignManager,
   approvePeriodRequest as mockApprovePeriodRequest,
+  cancelAssignedCase,
+  cancelPendingCase,
   securityCases,
 } from '../data/securityCases'
 import { workers } from '../data/workers'
@@ -174,14 +176,10 @@ export const guardCaseTestHandlers = [
 
   // 담당자 선택 목록 / 관리자 계정 관리 목록 — GET User/Stec/W/GetStecUserList.
   // 전용 엔드포인트가 없어 본사 사용자 전체를 반환, 프론트가 본부관리자만 필터한다.
-  // 실서버는 본부관리자 토큰에 403(운영/시스템관리자 전용) — 그대로 재현한다.
+  // 2026-09-09 스웨거 회신: 세 권한 모두 조회 가능(내용 동일) — 본부관리자 403 재현 제거.
   http.get('/api/v1/User/Stec/W/GetStecUserList', ({ request }) => {
     const denied = requireStec(request)
     if (denied) return denied
-    const actor = stecUserFromBearer(request)
-    if (actor?.role === '본부관리자') {
-      return HttpResponse.json({ message: '권한이 없습니다.', data: null, code: 403 }, { status: 403 })
-    }
     const data = companyAccounts.map((a) => ({
       userSeq: userSeqOf(a.id),
       codeSeq: codeSeqOf(a.role),
@@ -255,6 +253,59 @@ export const guardCaseTestHandlers = [
       return HttpResponse.json(
         { message: '배정할 수 없는 상태입니다.', data: false, code: 400 },
         { status: 400 },
+      )
+    }
+    return HttpResponse.json({ message: 'ok', data: true, code: 200 })
+  }),
+
+  // 취소(접수취소 / 경호취소) — POST GuardCase/Stec/W/CancelGuardCase { deployReqSeq, reason? }.
+  // 서버가 배정 여부로 갈라 처리한다(findings #9, 2026-09-09 신설). 키는 deployReqSeq.
+  // 없는 값 → 400. 본부관리자가 남의 배정 건 → 403 "담당하지 않는 경호건입니다",
+  // 접수 건 → 403 "담당하지 않는 배치요구서입니다"(접수취소는 시스템·운영만).
+  // 배정 전 = 접수취소(행 삭제, reason 무시), 배정 후 = 경호취소(상태 '취소', reason 필수).
+  http.post('/api/v1/GuardCase/Stec/W/CancelGuardCase', async ({ request }) => {
+    const denied = requireStec(request)
+    if (denied) return denied
+    const account = stecUserFromBearer(request)!
+    const { deployReqSeq, reason } = (await request.json()) as {
+      deployReqSeq?: unknown
+      reason?: unknown
+    }
+    const record = securityCases.find((c) => deploySeqOf(c) === Number(deployReqSeq))
+    if (deployReqSeq == null || !record) {
+      return HttpResponse.json(
+        { message: '잘못된 요청입니다.', data: false, code: 400 },
+        { status: 400 },
+      )
+    }
+    const pending = record.status === '접수'
+    if (account.role === '본부관리자') {
+      if (pending) {
+        return HttpResponse.json(
+          { message: '담당하지 않는 배치요구서입니다.', data: false, code: 403 },
+          { status: 403 },
+        )
+      }
+      if (record.assigneeId !== account.id) {
+        return HttpResponse.json(
+          { message: '담당하지 않는 경호건입니다.', data: false, code: 403 },
+          { status: 403 },
+        )
+      }
+    }
+    if (record.status === '취소' || record.status === '종결') {
+      return HttpResponse.json(
+        { message: '취소할 수 없는 상태입니다.', data: false, code: 409 },
+        { status: 409 },
+      )
+    }
+    const ok = pending
+      ? cancelPendingCase(record.id)
+      : Boolean(cancelAssignedCase(record.id, typeof reason === 'string' ? reason : ''))
+    if (!ok) {
+      return HttpResponse.json(
+        { message: '취소할 수 없는 상태입니다.', data: false, code: 409 },
+        { status: 409 },
       )
     }
     return HttpResponse.json({ message: 'ok', data: true, code: 200 })

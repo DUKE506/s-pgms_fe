@@ -25,6 +25,20 @@ import type { Worker } from '../../company/api/workers'
 // 조립해 통합 기본정보 카드(CaseBaseInfoCard)의 조치·배치시간을 채운다(issues #13 해소).
 // 배정 이후 상태(경호취소/연장·단축/종결)는 matrix 9번 이후 재검증.
 
+// 문서함 항목(파기확인서·경호계획서). 파기확인서는 drtFileName/drtFileExt로 오고
+// (2026-09-09 실측), 경호계획서(docGuardDetail)는 실측 데이터가 없어 필드명 미확정.
+interface DeployDocDetail {
+  drtFileName?: string | null
+  drtFileExt?: string | null
+  docFileName?: string | null
+  fileName?: string | null
+}
+
+function docFileNameOf(detail: DeployDocDetail | null | undefined): string | null {
+  if (!detail) return null
+  return detail.drtFileName ?? detail.docFileName ?? detail.fileName ?? null
+}
+
 // GetDeployDetail 응답 data 형태.
 interface DeployDetailData {
   deployReqSeq: number
@@ -67,6 +81,15 @@ interface DeployDetailData {
   // 대표근무자 — 이름뿐(guardSeq 없음). 피전은 근무자 마스터 접근 권한이 없어
   // (issues #6) 카드에 근무자를 그리지 않으므로 지금은 소비하지 않는다.
   guardUserList?: { guardName: string }[]
+
+  // 문서함 — 본사가 업로드하면 채워진다(2026-09-09 실측). 파기확인서는
+  // docDestructionDetail.drtFileName, 경호계획서는 docGuardDetail(현재 실측 데이터가
+  // null이라 필드명 미확정 — 흔한 후보 세 개를 함께 본다). docAgreeDetail은 근무자별
+  // 동의서 배열(findings #6 요청 3, 후속).
+  docGuardDetail?: DeployDocDetail | null
+  docDestructionDetail?: DeployDocDetail | null
+  docAgreeDetail?: unknown[]
+  downloadYn?: boolean
 
   // 테스트 더블(mocks/handlers/deploy.ts)만 채우는 필드 — 실제 응답엔 없다.
   // 배정 이후 상태(baseInfo/schedule/attachments/pending·closure·cancel)까지
@@ -153,6 +176,15 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
     // baseInfo 없이 통합 카드가 "-"로 렌더(기존 동작 불변). 본사 getSecurityCase의
     // planRegistered 판정(detail.startDate != null)과 같은 신호.
     baseInfo: d.startDate != null ? toBaseInfo(d) : undefined,
+    // 문서함 — 본사 업로드분(파기확인서/경호계획서). 파기확인서 유무 + 다운로드 여부가
+    // 종결 버튼 활성 조건이라(SecurityCaseDetailPage canClose) 여기서 채워줘야 피전이
+    // 종결할 수 있다.
+    attachments: {
+      securityPlanFileName: docFileNameOf(d.docGuardDetail),
+      workerConsentFileNames: {},
+      destructionCertFileName: docFileNameOf(d.docDestructionDetail),
+    },
+    destructionCertDownloaded: d.downloadYn ?? false,
   }
 }
 
@@ -161,6 +193,33 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
 // 정수로 바꾸고 그 외엔 원본 문자열을 넘긴다.
 export function toSeq(id: string): number | string {
   return /^\d+$/.test(id) ? Number(id) : id
+}
+
+// 파기확인서 다운로드 — GET Deploy/Police/W/GetDestroyDocDownload?caseSeq=.
+// ⚠️ 파라미터가 caseSeq다(deployReqSeq 아님) — CloseGuardCase와 동일하게 GetDeployDetail이
+// caseSeq를 안 줘서 resolveCaseSeq로 변환한다. 이 다운로드를 받아야 서버의
+// DESTROY_DOC_DOWNLOAD_YN이 켜지고 그게 종결(CloseGuardCase)의 선결조건이다 — 안 받고
+// 종결하면 409. Authorization 헤더가 필요해 <a href> 대신 blob으로 받아 저장 트리거한다.
+export async function downloadDestructionCert(id: number | string): Promise<void> {
+  const caseSeq = await resolveCaseSeq(String(id))
+  const res = await apiFetch(
+    `/v1/Deploy/Police/W/GetDestroyDocDownload?caseSeq=${caseSeq}`,
+  )
+  if (!res.ok) {
+    throw new Error('파기확인서를 불러오지 못했습니다')
+  }
+  const blob = await res.blob()
+  const disposition = res.headers.get('content-disposition') ?? ''
+  const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)
+  const fileName = match ? decodeURIComponent(match[1]) : `파기확인서_${caseSeq}.pdf`
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 export async function getSecurityCase(id: string): Promise<SecurityCase> {
@@ -379,11 +438,31 @@ export async function requestPeriodChange(
   }
 }
 
-// 종결: POST Deploy/Police/W/CloseGuardCase. 실제 DTO는 {caseSeq, endReason}으로
-// 종결사유가 자유텍스트 단일 필드다 — 프론트의 ClosureReason(+상세)를 한 문자열로
-// 합쳐 보낸다. ⚠️ caseSeq는 GetDeployDetail이 주지 않으므로 배정 이후 상세
-// (GetGuardCaseDetail) 연동 전까지는 deployReqSeq를 그대로 넘긴다 — matrix 12번에서
-// 재검증/수정(경호완료 상태에서만 열리는 화면이라 지금은 실측 불가).
+// ⚠️ 임시 우회: CloseGuardCaseDto는 caseSeq(경호건 시퀀스)를 요구하는데 GetDeployDetail
+// 응답엔 caseSeq가 없다(deployReqSeq만). 경호목록(GetDeployList)은 행에 {deploySeq, caseSeq}를
+// 둘 다 주므로 거기서 deployReqSeq → caseSeq를 매핑한다. 백엔드가 GetDeployDetail 응답에
+// caseSeq를 추가하면 이 조회는 제거한다(findings — GetDeployDetail.caseSeq 요청).
+async function resolveCaseSeq(deployReqSeq: string): Promise<number> {
+  const groupSeq = useAuthStore.getState().user?.groupSeq
+  const query = groupSeq != null ? `?groupSeq=${groupSeq}` : ''
+  const res = await apiFetch(`/v1/Deploy/Police/W/GetDeployList${query}`)
+  if (!res.ok) {
+    throw new Error('경호건 정보를 확인하지 못했습니다')
+  }
+  const rows = await unwrapEnvelope<{ deploySeq: number; caseSeq: number | null }[]>(res)
+  // 실백엔드 id는 String(deploySeq)지만 테스트 더블 id는 문자열('case-seed-8')이라
+  // 숫자부만 비교한다(mock GetDeployList의 deploySeq 규칙과 동일).
+  const key = Number(String(deployReqSeq).replace(/\D/g, ''))
+  const row = rows.find((r) => r.deploySeq === key)
+  if (!row || row.caseSeq == null) {
+    throw new Error('경호건 시퀀스를 찾지 못했습니다')
+  }
+  return row.caseSeq
+}
+
+// 종결: POST Deploy/Police/W/CloseGuardCase { caseSeq, endReason }. 종결사유가 자유텍스트
+// 단일 필드라 프론트의 ClosureReason(+상세)를 한 문자열로 합쳐 보낸다. id는 라우트
+// 파라미터(=deployReqSeq)라 실제 caseSeq로 변환해서 보낸다(위 resolveCaseSeq).
 export async function closeCase(
   id: string,
   closureReason: ClosureReason,
@@ -393,10 +472,11 @@ export async function closeCase(
     closureReason === '기타' && closureReasonDetail?.trim()
       ? `${closureReason} - ${closureReasonDetail.trim()}`
       : closureReason
+  const caseSeq = await resolveCaseSeq(id)
   const res = await apiFetch('/v1/Deploy/Police/W/CloseGuardCase', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ caseSeq: toSeq(id), endReason }),
+    body: JSON.stringify({ caseSeq, endReason }),
   })
   if (!res.ok) {
     throw new Error('종결 처리에 실패했습니다')

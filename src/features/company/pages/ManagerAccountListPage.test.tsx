@@ -57,17 +57,19 @@ describe('ManagerAccountListPage', () => {
     expect(withinTable().getAllByRole('row')).toHaveLength(7)
   })
 
-  // 실서버 GetStecUserList는 본부관리자 토큰에 403 — 이 화면은 운영/시스템관리자
-  // 전용이다. 본부관리자가 이 화면에 들어와야 하는지(route/메뉴 제외 vs 백엔드가
-  // 본인 행만 반환) 자체는 matrix #12에서 결정. 지금은 안내 문구만.
-  it('본부관리자로 로그인하면 목록 대신 접근 제한 안내가 뜬다', async () => {
+  // 2026-09-09 스웨거 회신: 본부관리자도 GetStecUserList 조회 가능(담당부서 필터용,
+  // 내용 동일). 목록은 보이되 수정·등록은 여전히 운영·시스템만(canEdit).
+  it('본부관리자로 로그인하면 목록은 보이지만 남의 행에 수정 메뉴가 없다', async () => {
     loginAs('hqmanager1')
     renderPage()
 
-    expect(
-      await screen.findByText('이 화면은 운영·시스템관리자만 이용할 수 있습니다'),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    await screen.findAllByText('운영 관리자')
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.queryByText('이 화면은 운영·시스템관리자만 이용할 수 있습니다')).not.toBeInTheDocument()
+
+    // 남의 행에는 수정 권한이 없어 메뉴(더보기) 자체가 없다 — canEdit은 운영·시스템만.
+    const opRow = withinTable().getByText('운영 관리자').closest('tr')!
+    expect(within(opRow).queryByRole('button', { name: '더보기' })).not.toBeInTheDocument()
   })
 
   it('시스템관리자는 운영관리자의 정보수정 메뉴가 없고 비밀번호 초기화만 가능하다', async () => {

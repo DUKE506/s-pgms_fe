@@ -395,6 +395,8 @@ export async function getSecurityCase(id: string): Promise<SecurityCase> {
   const planRegistered = detail.startDate != null
   const result: SecurityCase = {
     ...header,
+    // deployReqSeq — 경호취소(CancelGuardCase)가 caseSeq가 아닌 이 값을 키로 받는다.
+    deploySeq: doc.deploySeq,
     baseInfo: planRegistered ? toBaseInfo(detail, guards) : undefined,
     workSchedule: scheduleDays.length > 0 ? toWorkSchedule(scheduleDays, meeting) : undefined,
     attachments: toAttachments(doc),
@@ -557,13 +559,24 @@ export async function deleteScheduleGroup(id: string, groupSeq: string): Promise
   }
 }
 
-// 경호취소: 본사(Stec) 토큰으로 호출 가능한 케이스 취소 API가 없다 — 유일한
-// Deploy/Police/W/CancelGuardCase는 본사 토큰에 403(2026-09-04 실측). issues #9.
-// UI는 비활성(SecurityCaseDetailPage) — 시그니처만 유지한다.
-export async function cancelAssignedCase(_id: string, _reason: string): Promise<void> {
-  void _id
-  void _reason
-  throw new Error('경호취소 API가 아직 없습니다')
+// 경호취소 — POST GuardCase/Stec/W/CancelGuardCase { deployReqSeq, reason }.
+// 경찰용(Deploy/Police/W/CancelGuardCase)과 동작이 같고, 서버가 배정 여부로 접수취소/
+// 경호취소를 갈라 처리한다(2026-09-09 신설, findings #9). 배정 이후라 reason이
+// CANCEL_REASON에 남으므로 필수. 키는 caseSeq가 아니라 deployReqSeq(접수 단계엔 경호건이
+// 없어서) — 본사 상세는 SecurityCase.deploySeq로 갖고 있다. 본부관리자는 자기 배정 건만
+// (아니면 403 "담당하지 않는 경호건입니다"). 종결·경호취소 상태면 409.
+export async function cancelAssignedCase(
+  deployReqSeq: number | string,
+  reason: string,
+): Promise<void> {
+  const res = await apiFetch('/v1/GuardCase/Stec/W/CancelGuardCase', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deployReqSeq: Number(deployReqSeq), reason }),
+  })
+  if (!res.ok) {
+    throw new Error('경호취소에 실패했습니다')
+  }
 }
 
 // 사전미팅 저장/수정/삭제 — PUT SaveCaseMeeting.

@@ -158,6 +158,10 @@ export interface SecurityCase {
   // 그대로 표시한다. mock 경로는 assigneeId 조인을 계속 쓴다.
   assigneeName?: string
   securityCode?: string
+  // 배치요구서 시퀀스(deployReqSeq). 배치요청 목록은 id 자체가 deploySeq지만, 경호목록/
+  // 상세는 id=caseSeq라 별도로 담는다 — 취소(GuardCase/Stec/W/CancelGuardCase)가 caseSeq가
+  // 아니라 deployReqSeq를 키로 받기 때문(본사 getSecurityCase가 GetCaseDoc.deploySeq로 채움).
+  deploySeq?: number
   baseInfo?: CaseBaseInfo
   workSchedule?: WorkSchedule
   attachments?: CaseAttachments
@@ -169,6 +173,10 @@ export interface SecurityCase {
   closureReason?: ClosureReason
   closureReasonDetail?: string
   closedAt?: string
+  // 파기확인서를 피전이 다운로드했는지(GetDeployDetail.downloadYn = DESTROY_DOC_DOWNLOAD_YN).
+  // 다운로드가 최종 종결(CloseGuardCase)의 선결조건이라 — 안 받고 종결하면 서버가 409 —
+  // 경호 상세의 종결 버튼 활성 조건에 포함된다.
+  destructionCertDownloaded?: boolean
   // 이력 조회 목록(History/*/GetHistoryList)이 서버에서 집계해 내려주는 총근무시간(분).
   // mock 경로는 workSchedule에서 computeCaseHistorySummary로 계산하지만, 실 API는
   // 이 값을 직접 준다(종결 건만 실값, 취소 건은 null → undefined).

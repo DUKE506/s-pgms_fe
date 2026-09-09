@@ -35,7 +35,7 @@ function ManagerAssignedCasesDialog({
             <DialogHeader>
               <DialogTitle>담당경호</DialogTitle>
               <p className="text-xs text-muted-foreground">
-                {target.name} 본부관리자{target.branch ? ` · ${target.branch}` : ''}
+                {target.name} 본부관리자
               </p>
             </DialogHeader>
 

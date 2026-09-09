@@ -10,15 +10,14 @@ export interface ManagerAccount {
   userSeq: number
   name: string
   role: Role
-  // 소속 본부 — GetStecUserList 응답에 없다(groupSeq/groupName 전부 null). issues.md
-  // #1(본부 소속 구조화 저장 없음) 반영 전까지 항상 undefined → 화면에서 "-".
-  branch?: string
-  // 연락처 — 실제 스키마상 "대표번호" 용도(issues.md #1). 값이 있으면 표시/수정한다.
+  // 연락처 — 실제 스키마상 "대표번호" 용도. 값이 있으면 표시/수정한다.
   phone?: string
   // 사용중 여부. 현재 화면엔 상태 열이 없어 표시하지 않지만, 정지/재활성화(useYn)
   // 연동 시 쓰려고 실어둔다.
   useYn: boolean
 }
+// ※ "소속 본부" 열은 제외됨(2026-09-09 결정) — USER_INFO.groupSeq/groupName은
+//   경찰 관계자용 공유 컬럼이라 본사 계정은 항상 null. findings #1 본부 파트 종결.
 
 // GET /api/v1/User/Stec/W/GetStecUserList 의 항목 형태
 // (docs/backend-integration/responses/User-Stec-GetStecUserList.md 실측).
@@ -37,10 +36,10 @@ interface StecUserRow {
   pwChangedYn: boolean
 }
 
-// 본부관리자 토큰으로 GetStecUserList 를 부르면 서버가 403 을 준다(운영/시스템관리자
-// 전용). 화면이 일반 에러와 구분해 안내 문구를 다르게 보여주려고 별도 타입으로 던진다.
-// 본부관리자가 이 화면에 들어와야 하는지(route/메뉴에서 제외 vs 백엔드가 본인 행만
-// 반환) 자체는 matrix #12 에서 결정 — 지금은 안내만.
+// 예전엔 본부관리자 토큰이 GetStecUserList 에 403 이었으나, 2026-09-09 스웨거 회신으로
+// 세 권한 모두 조회 가능(담당부서 필터를 채우려면 목록이 필요해서 — 내려가는 내용은
+// 동일). 이 타입은 혹시 남아 있을 수 있는 403 을 일반 에러와 구분해 안내하려는 안전망
+// 으로만 존치한다. 수정/등록 권한은 여전히 운영·시스템만(화면 canEdit).
 export class ManagerListForbiddenError extends Error {
   constructor() {
     super('관리자 계정 목록 조회 권한이 없습니다')
@@ -48,8 +47,7 @@ export class ManagerListForbiddenError extends Error {
   }
 }
 
-// 화면: [본사] 관리자 계정 관리. 운영/시스템관리자는 전체 본사 계정을 조회한다
-// (본부관리자는 서버가 403 — matrix 12번 스코프 재검증 대상).
+// 화면: [본사] 관리자 계정 관리. 세 권한 모두 전체 본사 계정을 조회한다(내용 동일).
 export async function listManagerAccounts(): Promise<ManagerAccount[]> {
   const res = await apiFetch('/v1/User/Stec/W/GetStecUserList')
   if (res.status === 403) {

@@ -95,7 +95,7 @@ function AssignManagerDialog({ targetCase, managers, onOpenChange }: AssignManag
                         <Circle className="size-5 shrink-0 text-muted-foreground/40" />
                       )}
                       <span className={cn('font-medium text-foreground', !selected && 'font-normal')}>
-                        {manager.name} 본부관리자{manager.branch ? ` · ${manager.branch}` : ''}
+                        {manager.name} 본부관리자
                       </span>
                     </span>
                     {manager.assignedCount != null && (

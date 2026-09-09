@@ -145,12 +145,16 @@ export async function assignManager(caseId: string, managerId: string): Promise<
   }
 }
 
-// ⚠️ 배치요청 "취소" API가 아직 없다 — GuardCase/Stec/W/CancelGuardCase는 스웨거에
-// 없고, 유일한 취소 엔드포인트 Deploy/Police/W/CancelGuardCase는 Police 태그라 본사
-// 토큰으로 호출 불가(issues.md에 신규 이슈로 기록, 섹션 일괄 요청 대상). 반영 전까지
-// RequestListPage의 "취소" 메뉴는 disabled — 이 함수는 호출되지 않는다.
+// 배치요청 취소(미배정 반려) — POST GuardCase/Stec/W/CancelGuardCase { deployReqSeq }
+// (2026-09-09 신설, findings #9). 배정 전이라 서버가 접수취소로 처리 — 배치요구서 행을
+// 통째로 삭제하며 reason은 받지 않는다(REQ-008). 접수취소는 시스템·운영관리자만 가능
+// (본부관리자 토큰은 403). caseId는 GetDeployRequestList 행의 id = deploySeq.
 export async function cancelPendingRequest(caseId: string): Promise<void> {
-  const res = await apiFetch(`/security-cases/${caseId}`, { method: 'DELETE' })
+  const res = await apiFetch('/v1/GuardCase/Stec/W/CancelGuardCase', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deployReqSeq: Number(caseId) }),
+  })
   if (!res.ok) {
     throw new Error('배치요청 취소에 실패했습니다')
   }

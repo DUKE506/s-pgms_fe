@@ -1,5 +1,8 @@
 import { useNavigate } from 'react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { FileText } from 'lucide-react'
+import { downloadDestructionCert } from '../api/securityCaseDetail'
+import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { SecurityCase } from '../types/securityCase'
 
 interface DocRowProps {
@@ -47,9 +50,22 @@ interface DocumentsCardProps {
 
 function DocumentsCard({ securityCase, readOnly }: DocumentsCardProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const showToast = useToastStore((state) => state.show)
   const isPending = securityCase.status === '접수'
   const securityPlanFileName = securityCase.attachments?.securityPlanFileName
   const destructionCertFileName = securityCase.attachments?.destructionCertFileName
+
+  async function handleDownloadDestructionCert() {
+    try {
+      // 피전 경호상세의 id는 deployReqSeq다(라우트 /security-cases/:id).
+      await downloadDestructionCert(securityCase.id)
+      // 다운로드하면 서버 DESTROY_DOC_DOWNLOAD_YN이 켜진다 — 재조회해 종결 버튼 활성 갱신.
+      queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
+    } catch {
+      showToast('파기확인서를 불러오지 못했습니다', 'error')
+    }
+  }
 
   return (
     <div className="rounded-xl border border-border bg-card p-5.5">
@@ -77,7 +93,7 @@ function DocumentsCard({ securityCase, readOnly }: DocumentsCardProps) {
             <DocRow
               title={destructionCertFileName}
               subtitle="본사 업로드"
-              action={{ label: '다운로드', onClick: () => {} }}
+              action={{ label: '다운로드', onClick: handleDownloadDestructionCert }}
             />
           ) : (
             <DocRow title="파기확인서" subtitle="경호완료 후 본사에서 업로드 예정" pending />

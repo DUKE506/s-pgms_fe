@@ -103,15 +103,31 @@ describe('RequestListPage', () => {
     expect(within(dialog).getByText(/분당경찰서/)).toBeInTheDocument()
   })
 
-  it('취소 메뉴는 취소 API가 없어 비활성화되어 있다', async () => {
+  it('취소 메뉴로 접수취소하면 해당 배치요청이 목록에서 사라진다', async () => {
     loginAsAdmin()
+    // 다른 테스트에 영향 없도록 전용 접수 건을 추가한다.
+    const base = securityCases.find((c) => c.receiptNumber === '26-02-서초경찰서')!
+    // 고유한 숫자부(deploySeqOf 규칙)를 갖도록 id를 숫자 접미사로 둔다.
+    securityCases.push({
+      ...base,
+      id: 'case-90007',
+      receiptNumber: '26-08-테스트경찰서',
+    })
     renderPage()
-    await screen.findAllByText('26-02-서초경찰서')
-    const seochoRow = withinTable().getByText('26-02-서초경찰서').closest('tr')!
+    await screen.findAllByText('26-08-테스트경찰서')
+    const row = withinTable().getByText('26-08-테스트경찰서').closest('tr')!
 
-    fireEvent.pointerDown(within(seochoRow).getByRole('button', { name: '더보기' }))
-
+    fireEvent.pointerDown(within(row).getByRole('button', { name: '더보기' }))
     const cancelItem = await screen.findByRole('menuitem', { name: '취소' })
-    expect(cancelItem).toHaveAttribute('aria-disabled', 'true')
+    expect(cancelItem).not.toHaveAttribute('aria-disabled', 'true')
+    fireEvent.click(cancelItem)
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: '접수취소' }))
+
+    await waitFor(() =>
+      expect(screen.queryByText('26-08-테스트경찰서')).not.toBeInTheDocument(),
+    )
+    expect(securityCases.find((c) => c.id === 'case-90007')).toBeUndefined()
   })
 })

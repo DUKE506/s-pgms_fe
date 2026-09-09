@@ -94,13 +94,11 @@ function SecurityCaseDetailPage() {
                 스크롤 맨 아래 전체폭 버튼으로 배치 */}
             {securityCase.status === '배정' && (
               <div className="hidden xl:flex">
-                {/* 본사(Stec) 토큰으로 호출 가능한 경호취소 API가 없다(issues #9,
-                    2026-09-04 실측 403) — API가 생기면 disabled 제거. */}
+                {/* 경호취소 — POST GuardCase/Stec/W/CancelGuardCase (findings #9, 2026-09-09).
+                    현재 배정 상태만 노출(스웨거상 경호중·경호완료도 허용 — 확장은 별도 논의). */}
                 <Button
                   type="button"
                   variant="destructive"
-                  disabled
-                  title="경호취소 API가 아직 지원되지 않습니다"
                   onClick={() => setCancelOpen(true)}
                 >
                   경호취소
@@ -176,8 +174,6 @@ function SecurityCaseDetailPage() {
             type="button"
             variant="destructive"
             className="w-full"
-            disabled
-            title="경호취소 API가 아직 지원되지 않습니다"
             onClick={() => setCancelOpen(true)}
           >
             경호취소

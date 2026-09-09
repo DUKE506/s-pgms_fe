@@ -157,7 +157,6 @@ function ManagerAccountListPage() {
                   <TableHead>이름</TableHead>
                   <TableHead>아이디</TableHead>
                   <TableHead>역할</TableHead>
-                  <TableHead>본부</TableHead>
                   <TableHead>연락처</TableHead>
                   <TableHead>배정건수</TableHead>
                   <TableHead />
@@ -169,7 +168,6 @@ function ManagerAccountListPage() {
                     <TableCell>{a.name}</TableCell>
                     <TableCell>{a.id}</TableCell>
                     <TableCell>{a.role}</TableCell>
-                    <TableCell>{a.branch ?? '-'}</TableCell>
                     <TableCell>{a.phone ?? '-'}</TableCell>
                     <TableCell>{a.role === '본부관리자' ? assignedCountOf(a) : '-'}</TableCell>
                     <TableCell>
@@ -192,7 +190,6 @@ function ManagerAccountListPage() {
                     <span className="text-sm font-bold text-foreground">{a.name}</span>
                     <span className="text-xs text-muted-foreground">
                       {a.id} · {a.role}
-                      {a.branch ? ` · ${a.branch}` : ''}
                     </span>
                   </div>
                   {menuFor(a)}

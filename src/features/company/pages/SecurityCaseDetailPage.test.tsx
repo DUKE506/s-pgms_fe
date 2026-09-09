@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import SecurityCaseDetailPage from './SecurityCaseDetailPage'
@@ -56,13 +56,27 @@ describe('SecurityCaseDetailPage', () => {
     useAuthStore.setState({ user: null, accessToken: null, refreshToken: null })
   })
 
-  it('배정 상태면 경호취소 버튼이 보이지만, 본사 API가 없어 비활성이다 (issues #9)', async () => {
+  it('배정 상태에서 경호취소하면 사유가 저장되고 상태가 취소로 바뀐다 (findings #9)', async () => {
     loginAsAdmin()
-    renderPage(assignedCaseId())
+    const caseId = assignedCaseId()
+    renderPage(caseId)
 
     expect(await screen.findByText('기본정보가 등록되지 않았습니다')).toBeInTheDocument()
-    // 본사(Stec) 토큰으로 호출 가능한 케이스 취소 API가 없다(2026-09-04 실측 403).
-    expect(firstButton('경호취소')).toBeDisabled()
+    const cancelBtn = firstButton('경호취소')
+    expect(cancelBtn).not.toBeDisabled()
+    fireEvent.click(cancelBtn)
+
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('취소 사유'), {
+      target: { value: '대상자 요청으로 취소' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '경호취소' }))
+
+    await waitFor(() => {
+      const record = securityCases.find((c) => c.id === caseId)!
+      expect(record.status).toBe('취소')
+      expect(record.cancelReason).toBe('대상자 요청으로 취소')
+    })
   })
 
   it('기본정보 등록 → 스케줄 생성 → 그룹 수정까지 전체 흐름이 동작한다', async () => {
