@@ -56,7 +56,7 @@
 4. **[경찰서] 피전 — 경호 상세** (조회 + 접수취소/연장단축요청/종결) — △ **부분 연동
    (2026-09-03)**. 접수 상태 조회·접수취소는 실측 검증 완료. 배정 이후 4종(연장/단축/
    경호취소/종결)은 코드만 교체·미검증 → **9번(본사 경호 상세) 이후 재검증**. 근무 스케줄은
-   `GetDeployGuardSchedule`(issues #6 해결, 현재 `[]`)로 재연결 예정 — 화면 9 이후 데이터 확인.
+   `GetDeployGuardSchedule`로 재연결 완료(2026-09-09, findings #6).
    `GetDeployDetail`이 배치장소 4필드를 null로 줘서 상세의 배치장소 표시는 아직 빈 값
    (`GetDeployDetailUpdate` 전환 검토)
 5. **[경찰서] 피전 — 배치요구서 수정** — ✅ 연동 완료(2026-09-03, **블로커 해소 후**).
@@ -159,7 +159,7 @@
 | 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
 | 연장/단축 요청 | `requestPeriodChange` | `PATCH ExtendDeployPeriod` / `ShortenDeployPeriod` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
 | 종결 | `closeCase` | `POST CloseGuardCase` | △ 코드만 교체, **미검증**. ⚠️ DTO가 `caseSeq`를 요구하나 `GetDeployDetail`이 안 줘서 `deployReqSeq`를 임시 전송 → 그룹 B(#9 본사 경호 상세, `GetGuardCaseDetail`) 재검증/수정. 종결 시 배치요구서·첨부파일 3종이 실제로 삭제됨(mock은 안 지움) — 이력 화면 영향(analysis.md 6-5) |
-| 근무 스케줄 / 근무자 표시 | (mock `listWorkers` 조인) | `GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=` | issues #6 해결 — 엔드포인트 있음, 200(현재 `data: []` — 스케줄은 화면 9에서 생성). 화면4에서 이걸로 근무자 표시 재연결 예정, 화면 9 이후 데이터로 실측. 근무자별 동의서 조회(요청 3)는 아직 전용 GET 미확인 |
+| 근무 스케줄 / 근무자 표시 | `getDeployGuardSchedule`(신규, `securityCaseDetail.ts`) | `GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=` | ✅ 연동 완료(**2026-09-09**, findings #6 근무일정 파트). 평면 배열 `[{ dates, guardSchedule:[{guardSeq,name,phone,deptName,isWork}] }]` — 근무자 이름·연락처 인라인(피전은 근무자 마스터 접근 불가). 근무 시각은 응답에 없어 `baseInfo.workHours` 공통 적용. `SecurityCaseDetailPage`의 `workers: never[] = []` 제거 → `useQuery`로 병합, `enabled = status !== '접수'`. 브라우저 검증(SPoliceM5·SPoliceM1 `/security-cases/90`). 응답 샘플 `Deploy-Police-GetDeployGuardSchedule.md`. 근무자별 동의서 조회(요청 3)는 여전히 전용 GET 미확인 |
 
 #### 배치요구서 수정 (`/security-cases/:id/edit`) — ✅ 연동 완료(2026-09-03)
 
@@ -383,7 +383,7 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail?deployReqSeq=` | ✅ 이력 목록 행(진행중·접수)의 `id`=`deploySeq` → `historyTarget()`이 `/security-cases/:id`로 라우팅 → 경호상세 조회전용. `isReadOnlyViewer`가 액션 숨김. 브라우저 검증(SPoliceM1 → `/security-cases/90`, deployReqSeq 90 경호중). ⚠️ 근무일정 패널은 `GetDeployGuardSchedule` 미연결 상태 — 별도 후속(CARRYOVER D절) |
+| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail?deployReqSeq=` | ✅ 이력 목록 행(진행중·접수)의 `id`=`deploySeq` → `historyTarget()`이 `/security-cases/:id`로 라우팅 → 경호상세 조회전용. `isReadOnlyViewer`가 액션 숨김. 브라우저 검증(SPoliceM1 → `/security-cases/90`, deployReqSeq 90 경호중). 근무일정 패널도 `GetDeployGuardSchedule` 연결됨(2026-09-09) — 위 화면4 표 참고 |
 
 #### 대시보드 (`/dashboard`, 아직 미구현·Phase 4)
 

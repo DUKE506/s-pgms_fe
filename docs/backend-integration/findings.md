@@ -231,7 +231,7 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 
 ---
 
-## 6. 🟢 경호 상세 근무 스케줄 조회 API → **해결(엔드포인트 확인)** / 동의서 조회는 미확인
+## 6. 🟢 경호 상세 근무 스케줄 조회 API → **해결·연동 완료(2026-09-09)** / 동의서 조회(요청 3)는 여전히 미제공
 
 **전달**: 2026-09-03, 피전 경호관리 섹션 일괄 요청서
 (`docs/backend-integration-requests/2026-09-03-피전-경호관리.md` 요청 2·3 — 스케줄 조회 /
@@ -243,14 +243,21 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 개인정보동의서 조회) — 피전용 전용 GET은 아직 안 보임. `GetDeployDetail.docAgreeDetail`
 (현재 `[]`)이 후보. 화면 9 이후 데이터가 생기면 재확인 → 필요하면 섹션 종료 시 재요청.
 
-**요청 2 실측(2026-09-09, `_probe-C-reply` 후속)**: `GET Deploy/Police/W/GetDeployGuardSchedule?
+**요청 2 실측·연동 완료(2026-09-09)**: `GET Deploy/Police/W/GetDeployGuardSchedule?
 deployReqSeq=90`(경호중, 스케줄 생성됨) → **200 + 실데이터**. 응답 = 일자별 평면 배열
 `[{ dates: "YYYY-MM-DD", guardSchedule: [{ guardSeq, name, phone, deptName, isWork }] }]`
 (envelope 이중 래핑 없음). **근무자 `name`·`phone` 인라인** — 요청 1의 "표시정보 embed" 충족.
-근무 시각은 응답에 없음 → `GetDeployDetail`의 `startTime`/`endTime` 사용. 접수·배정(스케줄
-미생성) → `data: []`. 본청 토큰도 200. **→ 별도 후속 iteration에서 `SecurityCaseDetailPage`
-(#4)의 `workers: never[] = []` 제거하고 `WorkerAssignmentPanel`·`ConsentDocsCard` 재연결**
-(CARRYOVER D절, 사용자가 2026-09-09 커밋 후 착수하기로).
+근무 시각은 응답에 없음 → 경호계획 근무시간(`baseInfo.workHours`, 화면 공통) 적용. 접수·배정
+(스케줄 미생성) → `data: []`. 본청/지역청 토큰도 200.
+- **연동**: `police/api/securityCaseDetail.ts::getDeployGuardSchedule(id, workHours?)` 신설
+  (응답 → `WorkSchedule` + `workers: Worker[]` — id=`String(guardSeq)`). `SecurityCaseDetailPage`
+  의 `workers: never[] = []` 제거 → `useQuery`로 병합(`enabled = status !== '접수'`).
+  `WorkerAssignmentPanel`이 근무자 이름·시각·연락처를 다시 그린다. 테스트 더블
+  `mocks/handlers/deploy.ts`에 핸들러 추가.
+- **브라우저 검증(2026-09-09)**: SPoliceM5 `/security-cases/90` → 김가드·이가드 09:00~18:00·
+  연락처 렌더. SPoliceM1(조회전용) 동일. 접수 건(91)은 안내 문구 유지. 콘솔 에러 0.
+- 응답 샘플 `Deploy-Police-GetDeployGuardSchedule.md`. `ConsentDocsCard`(요청 3, 근무자별
+  동의서)는 전용 GET 없어 미연결 유지(`baseInfo.defaultWorkers` 빈 배열이라 표시 영향 없음).
 
 **발견 경위**: 화면4([경찰서] 피전 · 경호 상세) 연동 중(2026-09-02). 상세 페이지가
 근무자 배정 패널(`WorkerAssignmentPanel`)·개인정보동의서 카드(`ConsentDocsCard`)를

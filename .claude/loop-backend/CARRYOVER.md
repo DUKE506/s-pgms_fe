@@ -49,4 +49,6 @@ id만 링크되어 실사용 문제는 없고, 직접 URL 입력 방어선만 �
 
 | 항목 | 내용 | 상태 |
 |---|---|---|
-| 경찰 경호상세(#4) 근무일정 재연결 | `Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=` 이제 동작(findings #6). 응답 = 일자별 `{dates, guardSchedule:[{guardSeq,name,phone,deptName,isWork}]}` 평면 배열, 시각은 `GetDeployDetail`의 `startTime`/`endTime`. `SecurityCaseDetailPage`의 `workers: never[] = []` 제거 → `WorkerAssignmentPanel`·`ConsentDocsCard` 재연결. 3역할(경찰서/본청/지역청) 진행중 건 상세에서 근무일정 보이게 | 프로브 완료, 사용자가 커밋 후 착수하기로(2026-09-09) |
+| 경찰 경호상세(#4) 근무일정 재연결 | `getDeployGuardSchedule` 신설 → `SecurityCaseDetailPage` `WorkerAssignmentPanel` 재연결. 브라우저 검증(SPoliceM5·SPoliceM1 `/security-cases/90`). findings #6 근무일정 파트 종료 | ✅ **완료(2026-09-09)** — 커밋은 이 iteration |
+| B-2 부분 반영 | `GuardCase/Stec/W/CancelGuardCase`(본사 취소 — #7 배치요청 목록·#9 경호상세 활성화) + `GetStecUserList` 본부관리자 허용(#11 안내 제거) + "본부" 열 제외 확정 정리. 나머지 B-2(userSeq 조인·isRepresentative·memo·사전미팅·deptName·거부 EP)는 운영팀 문의 대기 | 다음 순번(사용자 합의 2026-09-09) |
+| 근무자별 동의서(findings #6 요청 3) | `ConsentDocsCard`용 근무자별 보안서약·개인정보동의서 조회 전용 GET 없음. `baseInfo.defaultWorkers` 빈 배열이라 현재 표시 영향 없음 — EP/데이터 생기면 | 대기 |

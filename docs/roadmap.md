@@ -189,7 +189,7 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         `POST CancelGuardCase`, 연장/단축 `PATCH Extend|ShortenDeployPeriod`, 종결
         `POST CloseGuardCase` (2026-09-03). **접수 상태만 실측 검증**. 배정 이후 4종은
         코드만 교체·미검증 → 그룹 B(#9 본사 경호 상세) 이후 재검증. 근무 스케줄은
-        `GetDeployGuardSchedule`(issues #6 해결, 현재 `[]`)로 화면 9 이후 재연결.
+        `GetDeployGuardSchedule`로 재연결 완료(2026-09-09, findings #6).
         `GetDeployDetail`이 배치장소를 null로 줘서 상세 배치장소 표시는 빈 값. `완료`
         표시 보류(△).
       - [x] 배치요구서 수정 — `GET Deploy/Police/W/GetDeployDetailUpdate`(prefill) +
@@ -325,9 +325,10 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
 5. ~~배치요구서 배치장소 단일 필드~~ → **해결(2026-09-03)**: 백엔드가 `Add/UpdateDeployRequestDto`를
    `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드로 수정. 프론트 4필드
    매핑 교체, D-2 제거. 남은 것: `GetDeployDetail`(상세용)은 아직 null 반환
-6. ~~경호 상세 근무 스케줄 조회 API 누락~~ → **해결(2026-09-03)**: `GET Deploy/Police/W/
-   GetDeployGuardSchedule` 있음, 200(현재 `[]` — 스케줄은 화면 9에서 생성). 근무자별
-   동의서 조회(요청 3)는 전용 GET 미확인 — 화면 9 이후 재확인
+6. ~~경호 상세 근무 스케줄 조회 API 누락~~ → **해결·연동 완료(2026-09-09)**: `GET Deploy/
+   Police/W/GetDeployGuardSchedule`가 실데이터 반환(근무자 이름·연락처 인라인). 화면4
+   `getDeployGuardSchedule` 신설, `WorkerAssignmentPanel` 재연결(`workers: never[] = []`
+   제거). 브라우저 검증. 근무자별 동의서 조회(요청 3)는 여전히 전용 GET 미제공
 7. ~~배치요구서 수정 화면용 원본 상세조회 API 없음~~ → **해결(2026-09-03)**: `GET Deploy/
    Police/W/GetDeployDetailUpdate`가 배치요구서 원본 필드 전부 반환. 화면5 연동 완료
 8. 근무자 `deptName`이 조회 응답에 안 옴(2026-09-03) — DB(`GUARD_USER_INFO.DEPT_NM`,
