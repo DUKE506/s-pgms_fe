@@ -2,10 +2,7 @@ import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
-import { useAuthStore } from '../../auth/store/authStore'
-import { getPoliceStationHistoryDetail, getSecurityCaseHistoryDetail } from '../api/history'
-import { listWorkers } from '../api/workers'
-import { computeCaseHistorySummary } from '../lib/historySummary'
+import { getPoliceStationHistoryDetail } from '../api/history'
 import type { MeasurePeriod } from '../types/securityCase'
 
 function formatDate(dateLike: string) {
@@ -38,32 +35,20 @@ function Field({ label, value }: { label: string; value: string }) {
 
 // 화면 8h/8hm: 종결 이력 상세. 취소 건은 목업에 전용 화면이 없어 같은 템플릿을
 // 재사용하되 우측 카드만 "종결 정보" 대신 "취소 정보"로 바꾼다(2026-08-27 결정).
-// 취소는 배정 단계에서 바로 전환돼 baseInfo/workSchedule이 없으므로 대상자·배치
-// 장소·경찰관정보(접수 시점부터 있는 데이터)만 표시하고, 경호시작/종료/총경호
-// 시간은 목록과 같은 규칙으로 "-" 처리, 근무자 배정 이력은 빈 상태 문구로 대체한다.
-// 레이아웃은 본사 이력 상세(features/company/pages/HistoryDetailPage)와 통일해
-// 기본정보를 좌측, 종결/취소 정보를 우측에 나란히 배치한다(2026-08-27, 사용자
-// 요청). 기본정보에는 사건유형(caseType)과 5개 조치(안전/긴급응급/잠정/긴급임시/
-// 임시조치)도 함께 표시 — 사건유형은 접수 시점부터 있는 데이터, 5개 조치는
-// baseInfo가 있는 종결 건만 실값이고 취소 건은 baseInfo 자체가 없어 "-".
+// 3역할(경찰서·본청·지역청) 모두 실 API(History/Police/W/GetHistoryDetail)를 쓴다 —
+// 응답의 guards[]에 근무자 이름·근무일수·근무분이 인라인이라 근무자 명단을 따로
+// 조회하지 않는다. 사건유형·5개 조치·배치장소는 이 응답에 없어 "-"로 표시된다
+// (exclusions — 배치장소는 이 화면이 원래 미표시, 2026-08-27). 진행중·접수 건은
+// 이력 목록에서 경호상세(/security-cases/:id)로 라우팅되므로 여기 도달하지 않는다.
 function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const role = useAuthStore((state) => state.user?.role)
-  const isStation = role === '경찰서'
-  // 경찰서는 실 API(GetHistoryDetail), 본청/지역청은 아직 mock — 컴포넌트 공유(#15에서 전환).
   const caseQuery = useQuery({
-    queryKey: ['security-case-history', role, id],
-    queryFn: () => (isStation ? getPoliceStationHistoryDetail(id!) : getSecurityCaseHistoryDetail(id!)),
+    queryKey: ['security-case-history', id],
+    queryFn: () => getPoliceStationHistoryDetail(id!),
     enabled: Boolean(id),
   })
-  // mock 경로만 근무자 명단 조인이 필요하다 — 실 API는 guards[]에 이름이 들어있다.
-  const workersQuery = useQuery({
-    queryKey: ['workers'],
-    queryFn: listWorkers,
-    enabled: !isStation,
-  })
 
-  if (caseQuery.isLoading || workersQuery.isLoading) {
+  if (caseQuery.isLoading) {
     return (
       <main className="p-4 sm:p-8">
         <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
@@ -80,26 +65,15 @@ function HistoryDetailPage() {
   }
 
   const c = caseQuery.data
-  const workers = workersQuery.data ?? []
   const isCanceled = c.status === '취소'
   const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
-  const summary = computeCaseHistorySummary(c.workSchedule)
-  // 총경호시간·근무자 배정 이력 — 경찰서(실 API)는 서버가 준 값(totalGuardMinutes·
-  // historyGuards)을, 본청/지역청(mock)은 workSchedule 계산값을 쓴다.
-  const totalHours = c.totalGuardMinutes != null ? c.totalGuardMinutes / 60 : summary.totalHours
-  const guardRows = c.historyGuards
-    ? c.historyGuards.map((g) => ({
-        key: String(g.guardSeq),
-        name: g.guardName,
-        workedDays: g.workDays,
-        totalHours: g.totalMinutes / 60,
-      }))
-    : summary.workers.map((w) => ({
-        key: w.workerId,
-        name: workers.find((worker) => worker.id === w.workerId)?.name ?? w.workerId,
-        workedDays: w.workedDays,
-        totalHours: w.totalHours,
-      }))
+  const totalHours = c.totalGuardMinutes != null ? c.totalGuardMinutes / 60 : 0
+  const guardRows = (c.historyGuards ?? []).map((g) => ({
+    key: String(g.guardSeq),
+    name: g.guardName,
+    workedDays: g.workDays,
+    totalHours: g.totalMinutes / 60,
+  }))
   const baseInfo = c.baseInfo
 
   return (

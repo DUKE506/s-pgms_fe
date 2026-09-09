@@ -5,14 +5,15 @@ import { workers } from '../data/workers'
 import { computeCaseHistorySummary } from '../../features/police/lib/historySummary'
 import type { SecurityCase } from '../../features/police/types/securityCase'
 
-// ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — [경찰서] 이력 조회는
-// 실제 백엔드(GET /api/v1/History/Police/W/GetHistoryList · GetHistoryDetail)로 연동
-// 완료됐다(docs/backend-integration/responses/History-Police-Get*.md). 브라우저 dev에서는
+// ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — 이력 조회는 실제
+// 백엔드(GET /api/v1/History/Police/W/GetHistoryList · GetHistoryDetail)로 연동 완료됐다
+// (docs/backend-integration/responses/History-Police-Get*.md, #14·#15). 브라우저 dev에서는
 // 이 경로를 MSW 미등록으로 두고 vite 프록시가 실제 백엔드로 보낸다. 여기서는 실제 응답
-// envelope·항목 필드를 흉내내 vitest가 매핑 로직을 오프라인으로 검증하게 한다. groupSeq
-// 필터는 실제 백엔드 몫이라 Bearer 토큰으로 소속 경찰서를 판별한다.
+// envelope·항목 필드를 흉내내 vitest가 매핑 로직을 오프라인으로 검증하게 한다. 역할
+// 스코프(본청=전국 / 지역청=관할 이하 / 피전=자기 경찰서, groupSeq 필터)는 실제
+// 백엔드 몫이라 Bearer 토큰의 소속·역할로 판별한다.
 
-function stationFromBearer(request: Request) {
+function policeAccountFromBearer(request: Request) {
   const token = (request.headers.get('authorization') ?? '').replace(/^Bearer /, '')
   const accountId = token.split('.')[1]
   return allPoliceLoginAccounts().find((a) => a.id === accountId)
@@ -26,6 +27,24 @@ function isTerminal(c: SecurityCase) {
   return c.status === '종결' || c.status === '취소'
 }
 
+// 한글 상태 → 실 API status 코드(접수는 null).
+function statusCodeOf(c: SecurityCase): number | null {
+  switch (c.status) {
+    case '배정':
+      return 0
+    case '경호중':
+      return 1
+    case '경호완료':
+      return 2
+    case '종결':
+      return 3
+    case '취소':
+      return 4
+    default:
+      return null
+  }
+}
+
 // 근무자별 투입실적 — 실제 응답의 guards[]는 이름이 인라인이라, mock seed의
 // workSchedule을 computeCaseHistorySummary로 집계하고 workers에서 이름을 붙인다.
 function guardsOf(c: SecurityCase) {
@@ -37,11 +56,22 @@ function guardsOf(c: SecurityCase) {
   }))
 }
 
+// 역할별 조회 범위 + 대상 상태. 본청/지역청은 접수·진행중·종결·취소 전 구간,
+// 피전은 끝난 건(종결·취소)만(HIST-001).
+function scopedCases(account: { role?: string; jurisdiction?: string; name?: string }) {
+  if (account.role === '본청') return securityCases
+  if (account.role === '지역청') {
+    return securityCases.filter((c) => c.jurisdiction === account.jurisdiction)
+  }
+  // 경찰서(피전) / 게스트 등 — 자기 경찰서의 끝난 건만
+  return securityCases.filter((c) => c.policeStation === account.name && isTerminal(c))
+}
+
 export const historyTestHandlers = [
   // 이력 목록 — GET History/Police/W/GetHistoryList.
-  // 로그인한 경찰서의 종결·취소 건만. 응답은 {meta, data:[...]}를 envelope로 감싼다.
+  // 응답은 {meta, data:[...]}를 envelope로 감싼다. 행에 deploySeq·status(int)가 함께 온다.
   http.get('/api/v1/History/Police/W/GetHistoryList', ({ request }) => {
-    const account = stationFromBearer(request)
+    const account = policeAccountFromBearer(request)
     if (!account) {
       return HttpResponse.json(
         { message: '인증이 필요합니다.', data: null, code: 401 },
@@ -51,21 +81,26 @@ export const historyTestHandlers = [
     const url = new URL(request.url)
     const pageNumber = Number(url.searchParams.get('pageNumber') ?? '1')
     const pageSize = Number(url.searchParams.get('pageSize') ?? '10')
-    // groupSeq 필수(없으면 빈 목록)는 실제 백엔드가 강제하는 규칙이라 이 더블에서는
-    // 재현하지 않고 Bearer 토큰의 소속 경찰서로 판별한다(GetDeployList 더블과 동일).
-    const scoped = securityCases.filter((c) => c.policeStation === account.name && isTerminal(c))
 
-    const all = scoped.map((c) => {
+    const all = scopedCases(account).map((c) => {
       const canceled = c.status === '취소'
+      const terminal = isTerminal(c)
+      const pending = c.status === '접수'
       return {
-        caseSeq: caseSeqOf(c),
-        mgmtNo: `${c.receiptNumber} ${c.securityCode}`,
+        // 접수 행은 caseSeq 없음, 종결·취소 행은 deploySeq 없음.
+        caseSeq: pending ? null : caseSeqOf(c),
+        deploySeq: terminal ? null : caseSeqOf(c),
+        mgmtNo: `${c.receiptNumber} ${pending ? '접수' : (c.securityCode ?? '접수')}`,
         groupName: c.policeStation,
         parentGroupName: c.jurisdiction,
-        startDt: canceled ? null : c.startDate,
-        endDt: canceled ? null : c.endDate,
-        totalMin: canceled ? null : Math.round(computeCaseHistorySummary(c.workSchedule).totalHours * 60),
-        statusName: canceled ? '경호취소' : '종결',
+        startDt: canceled ? null : (c.startDate ?? null),
+        endDt: canceled ? null : (c.endDate ?? null),
+        totalMin:
+          c.status === '종결'
+            ? Math.round(computeCaseHistorySummary(c.workSchedule).totalHours * 60)
+            : null,
+        status: statusCodeOf(c),
+        statusName: canceled ? '경호취소' : c.status,
         remark: canceled ? (c.cancelReason ?? null) : (c.closureReason ?? null),
       }
     })
@@ -87,8 +122,9 @@ export const historyTestHandlers = [
   }),
 
   // 이력 상세 — GET History/Police/W/GetHistoryDetail?caseSeq=.
+  // 실 API는 상태를 가리지 않으나(진행중도 200) 화면은 종결·취소 건만 이 경로로 온다.
   http.get('/api/v1/History/Police/W/GetHistoryDetail', ({ request }) => {
-    const account = stationFromBearer(request)
+    const account = policeAccountFromBearer(request)
     if (!account) {
       return HttpResponse.json(
         { message: '인증이 필요합니다.', data: null, code: 401 },
@@ -99,9 +135,9 @@ export const historyTestHandlers = [
     const c =
       securityCases.find((x) => x.id === seq) ??
       securityCases.find((x) => String(caseSeqOf(x)) === seq)
-    if (!c || !isTerminal(c)) {
+    if (!c) {
       return HttpResponse.json(
-        { message: '이력을 찾을 수 없습니다.', data: null, code: 404 },
+        { message: '존재하지 않는 경호건입니다.', data: null, code: 404 },
         { status: 404 },
       )
     }
@@ -110,14 +146,15 @@ export const historyTestHandlers = [
       message: 'ok',
       data: {
         caseSeq: caseSeqOf(c),
-        mgmtNo: `${c.receiptNumber} ${c.securityCode}`,
-        statusName: canceled ? '경호취소' : '종결',
+        mgmtNo: `${c.receiptNumber} ${c.securityCode ?? '접수'}`,
+        statusName: canceled ? '경호취소' : c.status,
         suspectUserName: c.subject.nameInitial,
         startDate: canceled ? null : c.startDate,
         endDate: canceled ? null : c.endDate,
-        totalGuardWorkMinutes: canceled
-          ? null
-          : Math.round(computeCaseHistorySummary(c.workSchedule).totalHours * 60),
+        totalGuardWorkMinutes:
+          c.status === '종결'
+            ? Math.round(computeCaseHistorySummary(c.workSchedule).totalHours * 60)
+            : null,
         investigator: c.policeContact.investigator || null,
         responsibleOfficer: c.policeContact.victimOfficer || null,
         endDt: (canceled ? c.canceledAt : c.closedAt) ?? null,

@@ -23,7 +23,6 @@ import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { useAuthStore, type Role } from '../../auth/store/authStore'
 import { listPoliceStationHistory, listSecurityCaseHistory } from '../api/history'
-import { computeCaseHistorySummary } from '../lib/historySummary'
 import type { SecurityCase, SecurityCaseStatus } from '../types/securityCase'
 
 const ALL = '전체'
@@ -47,16 +46,16 @@ function formatHours(hours: number) {
   return Number.isInteger(hours) ? `${hours}시간` : `${hours.toFixed(1)}시간`
 }
 
-// 총경호시간 — 경찰서(실 API) 경로는 서버가 준 totalGuardMinutes(분)를 쓰고,
-// 본청/지역청(mock) 경로는 workSchedule에서 계산한다.
+// 총경호시간 — 실 API(GetHistoryList)가 서버 집계값 totalGuardMinutes(분)를 직접 준다
+// (종결 건만 실값, 취소·진행중·접수는 undefined → 목록에서 "-").
 function totalHoursOf(c: SecurityCase) {
-  if (c.totalGuardMinutes != null) return c.totalGuardMinutes / 60
-  return computeCaseHistorySummary(c.workSchedule).totalHours
+  return c.totalGuardMinutes != null ? c.totalGuardMinutes / 60 : 0
 }
 
-// 본청/지역청 이력 목록에는 진행중 건도 섞여 있다 — 종결/취소는 이 화면 자체의
-// 상세(/history/:id)로, 아직 끝나지 않은 건은 기존 경호 상세 화면
-// (/security-cases/:id, 조회 전용)으로 보낸다(2026-08-27 결정).
+// 본청/지역청 이력 목록에는 진행중·접수 건도 섞여 있다 — 종결/취소는 이 화면 자체의
+// 상세(/history/:id, id=caseSeq → GetHistoryDetail)로, 아직 끝나지 않은 건은 경호 상세
+// 화면(/security-cases/:id, id=deploySeq → GetDeployDetail, 조회 전용)으로 보낸다
+// (2026-08-27 결정). id는 api 계층에서 상태에 맞게 채워져 온다.
 function historyTarget(c: SecurityCase): string {
   return c.status === '종결' || c.status === '취소' ? `/history/${c.id}` : `/security-cases/${c.id}`
 }
@@ -71,7 +70,9 @@ function historyTarget(c: SecurityCase): string {
 function HistoryListPage() {
   const user = useAuthStore((state) => state.user)
   const navigate = useNavigate()
-  // 경찰서는 실 API(GetHistoryList), 본청/지역청은 아직 mock — 컴포넌트 공유(#15에서 전환).
+  // 3역할 모두 실 API(History/Police/W/GetHistoryList). 경찰서는 세션 groupSeq를 붙여
+  // 자기 경찰서 종결·취소만, 본청/지역청은 groupSeq 없이 호출해 관할 이하 전 구간을
+  // 받는다(서버가 토큰 역할로 스코프).
   const historyQuery = useQuery({
     queryKey: ['police-history', user?.role],
     queryFn: user?.role === '경찰서' ? listPoliceStationHistory : listSecurityCaseHistory,

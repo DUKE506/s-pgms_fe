@@ -9,6 +9,7 @@ import {
   approvePeriodRequest as mockApprovePeriodRequest,
   securityCases,
 } from '../data/securityCases'
+import { workers } from '../data/workers'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../features/police/types/securityCase'
 import type { SecurityCase } from '../../features/police/types/securityCase'
 import { computeCaseHistorySummary } from '../../features/police/lib/historySummary'
@@ -307,6 +308,59 @@ export const guardCaseTestHandlers = [
           totalPages: Math.max(1, Math.ceil(all.length / pageSize)),
         },
         data: all.slice(start, start + pageSize),
+      },
+      code: 200,
+    })
+  }),
+
+  // 이력 상세 — GET History/Stec/W/GetHistoryDetail?caseSeq= (2026-09-09 신설).
+  // 경찰용(History/Police/W/GetHistoryDetail) 응답 + groupName·parentGroupName. 상태를
+  // 가리지 않으나 화면은 종결·취소 건만 이 경로로 온다. 본부관리자는 본인 배정 건만
+  // (범위 밖이면 404 — 없는 건과 동일).
+  http.get('/api/v1/History/Stec/W/GetHistoryDetail', ({ request }) => {
+    const account = stecUserFromBearer(request)
+    if (!account) {
+      return HttpResponse.json(
+        { message: '인증이 필요합니다.', data: null, code: 401 },
+        { status: 401 },
+      )
+    }
+    const seq = new URL(request.url).searchParams.get('caseSeq') ?? ''
+    const c =
+      securityCases.find((x) => x.id === seq) ??
+      securityCases.find((x) => String(caseSeqOf(x)) === seq)
+    if (!c || (account.role === '본부관리자' && c.assigneeId !== account.id)) {
+      return HttpResponse.json(
+        { message: '존재하지 않는 경호건입니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    const canceled = c.status === '취소'
+    return HttpResponse.json({
+      message: 'ok',
+      data: {
+        caseSeq: caseSeqOf(c),
+        mgmtNo: `${c.receiptNumber} ${c.securityCode ?? '접수'}`,
+        statusName: canceled ? '경호취소' : c.status,
+        groupName: c.policeStation,
+        parentGroupName: c.jurisdiction,
+        suspectUserName: c.subject.nameInitial,
+        startDate: canceled ? null : c.startDate,
+        endDate: canceled ? null : c.endDate,
+        totalGuardWorkMinutes:
+          c.status === '종결'
+            ? Math.round(computeCaseHistorySummary(c.workSchedule).totalHours * 60)
+            : null,
+        investigator: c.policeContact.investigator || null,
+        responsibleOfficer: c.policeContact.victimOfficer || null,
+        endDt: (canceled ? c.canceledAt : c.closedAt) ?? null,
+        remark: (canceled ? c.cancelReason : c.closureReason) ?? null,
+        guards: computeCaseHistorySummary(c.workSchedule).workers.map((w) => ({
+          guardSeq: Number(w.workerId.replace(/\D/g, '')) || 0,
+          guardName: workers.find((worker) => worker.id === w.workerId)?.name ?? w.workerId,
+          workDays: w.workedDays,
+          totalMinutes: Math.round(w.totalHours * 60),
+        })),
       },
       code: 200,
     })

@@ -1,36 +1,174 @@
-import { useNavigate } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
 import { ArrowLeft } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useQuery } from '@tanstack/react-query'
+import StatusBadge from '@/shared/components/StatusBadge'
+import { formatManagementNumber } from '@/shared/lib/managementNumber'
+import { getCompanyHistoryDetail } from '../api/history'
 
-// 화면 13: 본사 이력 상세. 본사(Stec)용 이력 상세 조회 엔드포인트가 아직 없다 —
-// History/Stec/W/GetHistoryDetail은 404, History/Police/W/GetHistoryDetail은 본사
-// 토큰에 403(2026-09-08 실측, docs/backend-integration/findings.md / issues.md).
-// 목록(GetHistoryList)만 실 API로 연동돼 있고, 상세는 EP가 생기면 붙인다.
-// 그때까지 이 화면은 안내만 보여준다(목록 행 클릭 시 진입).
+function formatDate(dateLike: string) {
+  const d = new Date(dateLike)
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}.${mm}.${dd}`
+}
+
+function formatHours(hours: number) {
+  return Number.isInteger(hours) ? `${hours}시간` : `${hours.toFixed(1)}시간`
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="mb-1 text-xs text-muted-foreground">{label}</div>
+      <div className="text-sm font-semibold text-foreground">{value || '-'}</div>
+    </div>
+  )
+}
+
+// 화면 13: 본사 이력 상세. 실 API(History/Stec/W/GetHistoryDetail — 2026-09-09 신설).
+// 목록이 종결·취소 건만 담으므로 이 화면도 두 상태만 도달한다. 레이아웃은 경찰 이력
+// 상세(features/police/pages/HistoryDetailPage)와 통일 — 기본정보 좌측, 종결/취소
+// 정보 우측. 근무자별 투입실적은 응답 guards[]에 이름이 인라인이라 별도 조회 없음.
+// 사건유형·배치장소는 이 응답에 없어 미표시(exclusions).
 function HistoryDetailPage() {
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const caseQuery = useQuery({
+    queryKey: ['company-history-detail', id],
+    queryFn: () => getCompanyHistoryDetail(id!),
+    enabled: Boolean(id),
+  })
+
+  const backButton = (
+    <button
+      type="button"
+      onClick={() => navigate('/admin/history')}
+      className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="size-4" />
+      이력 조회
+    </button>
+  )
+
+  if (caseQuery.isLoading) {
+    return (
+      <main className="flex flex-col gap-5 p-4 sm:p-8">
+        {backButton}
+        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
+      </main>
+    )
+  }
+
+  if (caseQuery.isError || !caseQuery.data) {
+    return (
+      <main className="flex flex-col gap-5 p-4 sm:p-8">
+        {backButton}
+        <p className="py-8 text-center text-sm text-destructive">이력을 불러오지 못했습니다</p>
+      </main>
+    )
+  }
+
+  const c = caseQuery.data
+  const isCanceled = c.status === '취소'
+  const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
+  const totalHours = c.totalGuardMinutes != null ? c.totalGuardMinutes / 60 : 0
+  const guardRows = (c.historyGuards ?? []).map((g) => ({
+    key: String(g.guardSeq),
+    name: g.guardName,
+    workedDays: g.workDays,
+    totalHours: g.totalMinutes / 60,
+  }))
 
   return (
     <main className="flex flex-col gap-5 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <button
-        type="button"
-        onClick={() => navigate('/admin/history')}
-        className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        이력 조회
-      </button>
+      {backButton}
 
-      <div className="rounded-xl border border-border bg-card p-8 text-center">
-        <p className="text-sm font-semibold text-foreground">
-          이력 상세 조회는 준비 중입니다
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          본사 이력 상세 조회 API가 아직 제공되지 않아 목록만 이용할 수 있습니다.
-        </p>
-        <Button variant="outline" className="mt-5" onClick={() => navigate('/admin/history')}>
-          목록으로 돌아가기
-        </Button>
+      <p className="text-xs text-muted-foreground">
+        {[c.jurisdiction, c.policeStation].filter(Boolean).join(' / ')} / 이력 조회
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3.5">
+        <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
+        <StatusBadge status={c.status} />
+      </div>
+
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+        <div className="flex min-w-0 flex-1 flex-col gap-5">
+          <div className="rounded-xl border border-border bg-card p-5.5">
+            <div className="mb-4 text-sm font-bold text-foreground">기본정보</div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <Field label="대상자명" value={c.subject.nameInitial} />
+              <Field label="경찰서" value={c.policeStation} />
+              <Field label="경찰관 정보" value={c.policeContact.victimOfficer} />
+              <Field label="경호시작" value={isCanceled ? '' : formatDate(c.startDate)} />
+              <Field label="경호종료" value={isCanceled ? '' : formatDate(c.endDate)} />
+              <Field label="총경호시간" value={isCanceled ? '' : formatHours(totalHours)} />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5.5">
+            <div className="mb-4 text-sm font-bold text-foreground">근무자 배정 이력</div>
+            {guardRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">배정된 근무자가 없습니다</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-3 gap-2 border-b border-border/60 pb-2 text-[11px] font-semibold text-muted-foreground">
+                  <span>근무자</span>
+                  <span>근무일수</span>
+                  <span>총근무시간</span>
+                </div>
+                {guardRows.map((w) => (
+                  <div key={w.key} className="grid grid-cols-3 gap-2 py-1.5 text-sm text-foreground">
+                    <span className="font-bold">{w.name}</span>
+                    <span>{w.workedDays}일</span>
+                    <span>{formatHours(w.totalHours)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full rounded-xl border border-border bg-card p-6 xl:w-96 xl:shrink-0">
+          {isCanceled ? (
+            <>
+              <div className="mb-3.5 text-sm font-bold text-foreground">취소 정보</div>
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">취소일자</span>
+                  <span className="font-semibold text-foreground">
+                    {c.canceledAt ? formatDate(c.canceledAt) : '-'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="shrink-0 text-muted-foreground">취소사유</span>
+                  <span className="text-right font-semibold text-foreground">
+                    {c.cancelReason || '-'}
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-3.5 text-sm font-bold text-foreground">종결 정보</div>
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">종결일자</span>
+                  <span className="font-semibold text-foreground">
+                    {c.closedAt ? formatDate(c.closedAt) : '-'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="shrink-0 text-muted-foreground">종결 사유</span>
+                  <span className="text-right font-semibold text-foreground">
+                    {c.closureReason ?? '-'}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </main>
   )

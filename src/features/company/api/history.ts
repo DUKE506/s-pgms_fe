@@ -1,11 +1,15 @@
 import { apiFetch } from '../../auth/api/client'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
+import {
+  detailRowToSecurityCase,
+  type HistoryDetailRow,
+} from '../../police/api/history'
 import type { SecurityCase, SecurityCaseStatus } from '../../police/types/securityCase'
 
-// 화면 13: [본사] 이력 조회. 경찰 쪽 history.ts(listSecurityCaseHistory)는 아직 mock을
-// 쓰는 경찰서/본청/지역청 이력 화면(#14·#15)이 공유하므로 건드리지 않고, 본사용만
-// 여기로 분리한다(8·10·11에서 쓴 회귀 차단 패턴과 동일).
+// 화면 13: [본사] 이력 조회. 목록은 본사 전용 엔드포인트(History/Stec/W/GetHistoryList),
+// 상세는 History/Stec/W/GetHistoryDetail(2026-09-09 신설 — 경찰용 응답 + groupName·
+// parentGroupName). 매핑은 경찰 쪽(detailRowToSecurityCase)을 공유한다.
 
 // GET /api/v1/History/Stec/W/GetHistoryList 항목 형태 (실측:
 // docs/backend-integration/responses/History-Stec-GetHistoryList.md).
@@ -20,6 +24,9 @@ interface HistoryRow {
   endDt: string | null
   // 서버 집계 총근무시간(분) — 종결 건만 실값, 취소 건은 null.
   totalMin: number | null
+  // 3:종결 / 4:경호취소 (statusName과 함께 옴). 매핑은 statusName으로 하고 이 값은
+  // status 파라미터 필터용 — 목록량이 작아 현재는 클라이언트 필터 유지(exclusions).
+  status: number | null
   // "경호취소" / "종결". 프론트 라벨('취소'/'종결')로 좁힌다.
   statusName: string
   // 종결이면 종결 코드(END_REASON), 취소면 취소 사유(CANCEL_REASON).
@@ -95,16 +102,13 @@ export async function listCompanyHistory(): Promise<SecurityCase[]> {
   return rows.map(toSecurityCase)
 }
 
-// 본사(Stec)용 이력 상세 조회 엔드포인트가 없다 — History/Stec/W/GetHistoryDetail은
-// 404, History/Police/W/GetHistoryDetail은 본사 토큰에 403(2026-09-08 실측).
-// issues.md / blockers.md 참고. EP가 생기면 여기서 연동한다.
-export class CompanyHistoryDetailUnavailableError extends Error {
-  constructor() {
-    super('본사 이력 상세 조회 API가 아직 제공되지 않습니다')
-    this.name = 'CompanyHistoryDetailUnavailableError'
+// 화면 13: 본사 이력 상세. id = caseSeq. 상태를 가리지 않으나(진행중 건도 200) 이
+// 화면은 종결·취소 건만 도달한다(목록이 끝난 건만). 운영/시스템=전국, 본부관리자=
+// 본인 배정 건, 범위 밖이면 404(실측).
+export async function getCompanyHistoryDetail(id: string): Promise<SecurityCase> {
+  const res = await apiFetch(`/v1/History/Stec/W/GetHistoryDetail?caseSeq=${id}`)
+  if (!res.ok) {
+    throw new Error('이력 상세를 불러오지 못했습니다')
   }
-}
-
-export function getCompanyHistoryDetail(): Promise<SecurityCase> {
-  return Promise.reject(new CompanyHistoryDetailUnavailableError())
+  return detailRowToSecurityCase(await unwrapEnvelope<HistoryDetailRow>(res))
 }
