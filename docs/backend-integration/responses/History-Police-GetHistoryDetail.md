@@ -58,3 +58,15 @@
   적용기간). 화면엔 칸이 있으나 → "-". 취소 건은 원래 없던 값이라 무관, 종결 건은 갭 → exclusions,
   종결 데이터 생기면 재확인(필요 시 issues).
 - `data`가 `{meta, data}` 이중 래핑이 아니라 객체 하나(`unwrapEnvelope`만 하면 됨).
+
+## 회신 반영 (2026-09-09, `_probe-C-reply.sh`)
+
+- ⚠️ **스웨거↔실제 불일치(제외 처리)**: 스웨거 개정 설명은 "경찰용은 **여전히 종결·경호취소만
+  열린다**"인데, 실측은 `caseSeq=51`(경호중)을 `SPoliceM5`·`SPoliceM1` 둘 다 **HTTP 200**(전체
+  데이터 반환) — 진행중 건도 열린다. 화면은 진행중 건을 `/security-cases/:id`(경호상세
+  조회전용)로 라우팅해 이 EP엔 종결·취소 `caseSeq`만 도달하므로 **영향 없음**. findings에
+  "스웨거 부정확(구현이 더 관대)" 기록.
+- 본청/지역청 상세 스코프(타 관할 `caseSeq` 차단) 여부는 데이터가 동래 건뿐이라 여전히
+  미검 → CARRYOVER "URL 직접 접근 스코프 일괄 테스트"로 이관(사용자 결정).
+- Police 상세 응답엔 `groupName`/`parentGroupName` 없음(본사용 `History/Stec/W/GetHistoryDetail`
+  에만 붙음 — `History-Stec-GetHistoryDetail.md` 참고).

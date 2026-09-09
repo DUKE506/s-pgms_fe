@@ -278,21 +278,30 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
         `History/Stec/W/GetHistoryDetail` 404, Police EP는 본사 토큰 403(issues #14) →
         `/admin/history/:id`는 "준비 중" 안내. 종결 건(종결코드 매핑·`totalMin` 실값) 재검증
         보류 — 사용자가 종결 데이터 생성 후.
+        **→ 2026-09-09 회신 반영**: 백엔드가 `GET History/Stec/W/GetHistoryDetail?caseSeq=`
+        신설(경찰용 shape + `groupName`·`parentGroupName`) → 상세 실 API 배선, "준비 중"
+        placeholder·`CompanyHistoryDetailUnavailableError` 제거, `HistoryDetailPage`(company)
+        실제 상세 렌더. 브라우저 검증. issues #14 종료. △ 유지 = 종결 데이터 대기만.
       - [~] [경찰서] 이력 조회 — **부분 연동(2026-09-08, △)**. 목록 `GET History/Police/W/GetHistoryList`
         + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail`
         신규 분리 — 본청·지역청 #15는 mock 유지, `role === '경찰서'` 분기). `groupSeq`(세션) 필수,
         끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드로 근무자
         배정 이력 표. `caseType`·5개 조치·배치장소는 응답에 없어 축소(exclusions). 브라우저
-        검증(SPoliceM5 동래, 취소 5건 + 상세). 종결 건 재검증 보류(#13과 동일). 본청·지역청
-        `groupSeq` 캐스케이드·진행중 EP는 #15.
-      - [~] [본청]/[지역청] 이력 조회 + 진행중 건 상세 — **부분 연동(2026-09-08, △)** —
-        본청/지역청 경로는 **mock 유지**. 착수 프로브에서 전환 불가 확정: `GetHistoryList`·
-        `Deploy/Police/GetDeployList` 둘 다 `groupSeq`가 경찰서(leaf)일 때만 데이터(부모 노드
-        → 0건, 캐스케이드 없음), `GetHistoryList`는 종결·취소만(진행중 토글 없음). `Login/W/
-        GetGroupTree`(3역할 공통 200, 서브트리)로 클라 팬아웃은 가능하나 임시방편이라
-        미채택(사용자 결정). 진행중 건 상세 EP(`GetDeployDetail`)는 본청/지역청 토큰에 200 —
-        목록 전환 시 코드 변경 최소. 백엔드 요청서 전달 → `docs/backend-integration/requests/
-        2026-09-08-이력-C.md`(issues #14·#15). 그룹 C 섹션 종료.
+        검증(SPoliceM5 동래, 취소 5건 + 상세). 종결 건 재검증 보류(#13과 동일).
+        **→ 2026-09-09 회신 반영**: 목록 매퍼에 `deploySeq`·`status`(int) 추가,
+        `SecurityCase.id`를 종결·취소면 `caseSeq`/그 외면 `deploySeq`로 분리(#15 라우팅용).
+        `getPoliceStationHistoryDetail`을 3역할 공통으로 통합, `detailRowToSecurityCase`
+        export해 본사(#13)와 매퍼 공유. 경찰서 경로 groupSeq 유지 → 회귀 0.
+      - [~] [본청]/[지역청] 이력 조회 + 진행중 건 상세 — **실 API 전환 완료(2026-09-09, △)** —
+        착수 프로브(2026-09-08)에선 전환 불가로 mock 유지했으나, **2026-09-09 스웨거 개정
+        회신**으로 `GET History/Police/W/GetHistoryList`가 `groupSeq` **없이** 부르면 서버가
+        토큰 역할대로 캐스케이드(본청=전국·지역청=관할 이하·전 구간) → `listSecurityCaseHistory`
+        /`getSecurityCaseHistoryDetail` 실 API 전환. 접수·진행중 행은 `deploySeq`로 경호상세
+        (`/security-cases/:id`), 종결·취소는 `caseSeq`로 이력상세(`/history/:id`). mock
+        `/security-cases/history*` 제거. 브라우저 검증(SPoliceM1 전국 9건 / SPoliceM3 관할
+        7건 / 진행중→`/security-cases/90` / 취소→`/history/46`). 요청서 회신 마킹 →
+        `docs/backend-integration/requests/2026-09-08-이력-C.md`. issues #14·#15 🟢. 그룹 C
+        섹션 종료. △ = 종결 건 데이터 대기 + URL 직접 접근 스코프 일괄 테스트(CARRYOVER).
 - [x] **그룹 D — 게스트** — **완료(2026-09-08, #16·#17)**. 그룹 D 섹션 종료 → 백엔드
       일괄 요청서 `docs/backend-integration/requests/2026-09-08-게스트-D.md`.
       - [x] [경찰서] 게스트 계정 관리 — **연동 완료(2026-09-08, #16)**. `User/Police/W/`
@@ -329,15 +338,12 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
    토큰으로 호출 불가(403). 배치요청 목록 "취소" 메뉴 비활성화. 본사용 취소 API 신설
    요청 예정(그룹 B 섹션 #12에서 일괄)
 10~13. issues.md 참고(#10·#13은 해결, #11·#12는 B-2 요청서로 전달).
-14. [본사] 이력 조회 상세 API 없음(2026-09-08) — `History/Stec/W/GetHistoryDetail`은 404,
-    `History/Police/W/GetHistoryDetail`은 본사 토큰에 403(피전 토큰만 200). 목록
-    (`GetHistoryList`)만 연동, `/admin/history/:id`는 "준비 중" 안내. 본사용 상세 EP
-    신설/권한확장 요청 → 전달됨(`requests/2026-09-08-이력-C.md`)
-15. [본청]/[지역청] 이력 조회 — 관할 전체·진행중 조회 경로 없음(2026-09-08) —
-    `GetHistoryList`·`Deploy/Police/GetDeployList`가 경찰서(leaf) `groupSeq` 단위라 부모
-    노드(본청·지방청)로 관할 전체를 못 받음(캐스케이드 없음) + `GetHistoryList`는 종결·취소만.
-    본청/지역청 이력은 mock 유지, #15 부분완료(△). 부모 groupSeq 캐스케이드/통합 EP 요청 →
-    전달됨(`requests/2026-09-08-이력-C.md`)
+14. [본사] 이력 조회 상세 API 없음(2026-09-08) → **해결(2026-09-09)** —
+    `GET History/Stec/W/GetHistoryDetail?caseSeq=` 신설, 상세 실 API 연동 완료.
+15. [본청]/[지역청] 이력 조회 — 관할 전체·진행중 조회 경로 없음(2026-09-08) →
+    **해결(2026-09-09)** — 스웨거 개정으로 `GetHistoryList`를 `groupSeq` 없이 부르면 서버가
+    역할 캐스케이드(본청=전국·지역청=관할 이하·전 구간). 본청/지역청 이력 실 API 전환 완료.
+    (△ = 종결 건 데이터 대기, URL 직접 접근 스코프 일괄 테스트는 CARRYOVER)
 
 **발견된 후속 항목 (이번 범위 밖, 별도 진행 예정)**:
 

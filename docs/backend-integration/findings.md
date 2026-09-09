@@ -243,6 +243,15 @@ deploymentPlace`)만 단일**이다. 게다가 #3에서 D-2로 `deploymentPlace`
 개인정보동의서 조회) — 피전용 전용 GET은 아직 안 보임. `GetDeployDetail.docAgreeDetail`
 (현재 `[]`)이 후보. 화면 9 이후 데이터가 생기면 재확인 → 필요하면 섹션 종료 시 재요청.
 
+**요청 2 실측(2026-09-09, `_probe-C-reply` 후속)**: `GET Deploy/Police/W/GetDeployGuardSchedule?
+deployReqSeq=90`(경호중, 스케줄 생성됨) → **200 + 실데이터**. 응답 = 일자별 평면 배열
+`[{ dates: "YYYY-MM-DD", guardSchedule: [{ guardSeq, name, phone, deptName, isWork }] }]`
+(envelope 이중 래핑 없음). **근무자 `name`·`phone` 인라인** — 요청 1의 "표시정보 embed" 충족.
+근무 시각은 응답에 없음 → `GetDeployDetail`의 `startTime`/`endTime` 사용. 접수·배정(스케줄
+미생성) → `data: []`. 본청 토큰도 200. **→ 별도 후속 iteration에서 `SecurityCaseDetailPage`
+(#4)의 `workers: never[] = []` 제거하고 `WorkerAssignmentPanel`·`ConsentDocsCard` 재연결**
+(CARRYOVER D절, 사용자가 2026-09-09 커밋 후 착수하기로).
+
 **발견 경위**: 화면4([경찰서] 피전 · 경호 상세) 연동 중(2026-09-02). 상세 페이지가
 근무자 배정 패널(`WorkerAssignmentPanel`)·개인정보동의서 카드(`ConsentDocsCard`)를
 채우려고 근무자 마스터 목록(`GET /api/workers`, mock 전용)을 호출하고 있었는데, 실제
@@ -642,7 +651,17 @@ CCTV / 잠정조치 1호" 렌더 확인. 응답 샘플: `Deploy-Police-GetDeploy
 현재 `baseInfo` 자체를 만들지 않음), `shared/components/CaseBaseInfoCard.tsx`,
 `features/police/pages/SecurityCaseDetailPage.tsx`.
 
-## 14. 🔴 [본사] 이력 조회 — 상세 조회 API가 없음
+## 14. 🟢 [본사] 이력 조회 — 상세 조회 API가 없음 → **해결(2026-09-09, EP 신설)**
+
+**해결(2026-09-09)**: 백엔드가 `GET History/Stec/W/GetHistoryDetail?caseSeq=` 신설
+(스웨거 개정). 응답 = `History/Police/W/GetHistoryDetail` + `groupName`·`parentGroupName`.
+상태 안 가림(진행중도 200), 본부관리자 스코프(범위 밖 → 404). `getCompanyHistoryDetail`
+실 API 배선, `CompanyHistoryDetailUnavailableError`·"준비 중" placeholder 제거,
+`HistoryDetailPage`(company) 실제 상세 렌더. 브라우저 검증(StecM1, `/admin/history/46`).
+응답 샘플 `History-Stec-GetHistoryDetail.md`. blockers 종료. **남은 것**: 종결 건(status=3)
+데이터 없어 `totalGuardWorkMinutes`·종결코드 매핑 미검 → CARRYOVER B.
+
+---
 
 **발견 경위**: 화면13([본사] 이력 조회) 연동(2026-09-08). 목록(`History/Stec/W/GetHistoryList`)은
 정상 연동됐으나, 상세(`/admin/history/:id`)에 붙일 EP가 없다.
@@ -676,7 +695,20 @@ CCTV / 잠정조치 1호" 렌더 확인. 응답 샘플: `Deploy-Police-GetDeploy
 **영향받는 화면/코드**: `features/company/api/history.ts`(`getCompanyHistoryDetail`),
 `features/company/pages/HistoryDetailPage.tsx`.
 
-## 15. 🔴 [본청]/[지역청] 이력 조회 — 관할 전체를 한 번에 못 받고, 진행중 건이 안 나옴
+## 15. 🟢 [본청]/[지역청] 이력 조회 — 관할 전체를 한 번에 못 받고, 진행중 건이 안 나옴 → **해결(2026-09-09)**
+
+**해결(2026-09-09, `_probe-C-reply-b.sh`)**: 스웨거 개정으로 `GET History/Police/W/GetHistoryList`가
+`groupSeq` **없이** 부르면 서버가 토큰 역할대로 캐스케이드 — 본청 = 전국 전 구간(접수·진행중·
+종결·취소), 지역청 = 관할 이하 전 구간, 피전 = 자기 경찰서 끝난 건만. `groupSeq`는 leaf
+경찰서 필터로만 동작(부모 노드·권한 밖 → 0건). 행에 `deploySeq`·`status`(int) 추가, 접수행
+`caseSeq: null`. → `listSecurityCaseHistory`/`getSecurityCaseHistoryDetail` mock → 실 API 전환.
+접수·진행중 행은 `deploySeq`로 경호상세(`/security-cases/:id`), 종결·취소는 `caseSeq`로
+이력상세(`/history/:id`). 브라우저 검증(SPoliceM1 전국 9건 / SPoliceM3 관할 7건 / 진행중→
+`/security-cases/90` / 취소→`/history/46`). ⚠️ Police `GetHistoryDetail`은 스웨거 설명("종결/
+취소만")과 달리 진행중 건도 200이나 화면이 그 경로로 안 보내 **영향 없음**(제외). **남은 것**:
+종결 건 데이터 대기 + 타 관할 상세 스코프 차단 미검 → CARRYOVER B·C절.
+
+---
 
 **발견 경위**: 화면15([본청]/[지역청] 이력 조회 + 진행중 건 상세) 착수 프로브(2026-09-08,
 `_probe-15.sh`·`_probe-15b.sh`). 이 화면은 경찰서·본청·지역청이 role로 갈라 쓰고, #14에서

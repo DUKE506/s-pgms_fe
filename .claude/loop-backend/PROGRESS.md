@@ -42,9 +42,9 @@
 | 10 | B | [본사] 운영/시스템관리자 | 연장/단축 요청 목록 | 부분완료(△) | (이번 커밋) | `GetExtendRequestList`/`GetShortenRequestList`(조회)·`ConfirmCasePeriod`(승인) 실 API 전환, `SecurityCaseTabs` 연장/단축 배지 실카운트 배선. 거부는 EP 없어 UI 차단(issues #2, B-2 종료 시 요청). **테스트 데이터로만 검증** — 실백엔드에 경호중 건이 없어 배정 건에 연장/단축 요청을 만들어 승인 왕복 실측(원복 완료). **연장/단축 신청은 업무상 경호중 상태만 대상**이고, 피전이 경호상세에서 직접 신청하는 부분(matrix #4 `requestPeriodChange`, △)이 개발·검증돼야 실제 요청 데이터가 생긴다 → **피전 요청 영역 개발 이후 재검증**(4번 "배정 이후 재검증"과 함께). 완료 표시 보류 |
 | 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 완료 | (이번 커밋) | `GetStecUserList`(목록)·`UpdateUser`(정보수정·비번초기화) 실 API 전환. `loginId→id`·`userSeq` 신규. 빈 연락처는 `""` 전송(`null`은 백엔드가 무시 — 실측). 배정건수·담당경호는 `GetGuardCaseList`(실 API) 담당자명 매칭 — mock `listManagerAssignedCases`/`listMockSecurityCases` 제거, `handlers/companyAccounts.ts` 삭제. **본부관리자는 `GetStecUserList` 403** → "운영·시스템관리자만 이용" 안내(B, 사용자 확인). 접근 자체(route/메뉴 제외 vs 백엔드가 본인 행만)는 **#12에서 결정**. "본부" 열 "-"(issues #1). 실백엔드 검증: StecM1 목록·정보수정 왕복·비번초기화(StecM4)·담당경호(HS2본부→caseSeq 51·29), StecM2 403 안내. 응답 샘플 `User-Stec-UpdateUser.md` |
 | 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 검증완료·문서보류 | `a570869` (더블만) | **API 레벨 스코프 검증 완료(2026-09-08, StecM2·StecM3)**. 완료 표시·issues 전달상태 갱신·지역청 필터 프론트 후속은 **B-2 백엔드 회신 후** 재검증과 함께 처리. B-2 요청서 전달(`docs/backend-integration/requests/2026-09-08-본사-경호관리-B2.md`/`.xlsx`). 아래 로그 참고 |
-| 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Stec/W/GetHistoryList` 실 API 전환(`company/api/history.ts` 신규 분리 — 경찰 이력 #14·#15는 mock 유지). 이중 래핑·행 축소 매핑, `statusName`("경호취소"→'취소'), `totalMin`→`totalGuardMinutes`. **본부관리자 스코프(HIST-003) 실제 적용 확인**(StecM3 배정 0건→이력 0건, StecM2 동래 담당→5건). 실서버에 취소 건 5개 존재 → 브라우저 검증(StecM1 5건/StecM2 5건, 콘솔 에러 0). **상세 보류** — `History/Stec/W/GetHistoryDetail` 404, Police EP 본사 토큰 403(issues #14 신규, blockers) → `/admin/history/:id` "준비 중" 안내. **종결 건 재검증 보류** — 사용자가 오늘 날짜 경호건 생성→종결 후 status 코드 매핑·`totalMin` 실값 재확인. 안 되면 △ 유지. 응답 샘플 `History-Stec-GetHistoryList.md` |
-| 14 | C | [경찰서] 피전 | 이력 조회 | 부분완료(△) | (이번 커밋) | 목록 `GET History/Police/W/GetHistoryList` + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail` 신규 — 본청·지역청 #15는 mock, `role === '경찰서'` 분기). `groupSeq`(세션) 필수·끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드. `caseType`·5개 조치·배치장소 응답에 없음→축소(exclusions). 브라우저 검증(SPoliceM5 동래: 목록 취소 5건, 상세 대상자 마스킹·근무자 4명 투입실적·취소일/사유), 콘솔 에러 0. **종결 건 재검증 보류**(#13과 동일 — 사용자 종결 데이터 생성 후 종결코드·`totalGuardMinutes` 실값). 응답 샘플 `History-Police-GetHistoryList.md`·`-GetHistoryDetail.md` |
-| 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 부분완료(△) | `d236ec6` (문서만) | **프로브 결과 전환 불가 → 본청/지역청 이력은 mock 유지.** `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq` 경찰서(leaf) 단위 — 부모 노드(본청 22·지방청 24) → 0건, 캐스케이드 없음. `GetHistoryList`는 종결·취소만(status/includeActive/all/isEnd 무시), 진행중은 `GetDeployList?groupSeq=<leaf>`(본청/지역청 토큰도 200). 관할 전체 = `Login/W/GetGroupTree`(3역할 공통 200, 역할 서브트리)로 leaf 뽑아 팬아웃 가능하나 **임시방편이라 미채택(사용자 결정)**. 진행중 상세 `GetDeployDetail?deployReqSeq=`는 본청/지역청 토큰에 200(deployReqSeq 90) — 목록 전환 시 코드 변경 최소. `GetHistoryDetail`도 본청/지역청 200(스코프 미검, `guardWorkLoc`/`guardHomeLoc` 포함 — #14 exclusions와 배치, 논의항목). **그룹 C 섹션 종료 → 백엔드 일괄 요청서 전달**(`docs/backend-integration/requests/2026-09-08-이력-C.md`, issues #14·#15). 종결 건 재검증(#13·#14 공통)·본부관리자 이력 스코프 꼬리는 회신·데이터 후 |
+| 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 부분완료(△) | `536cd5e` (+2026-09-08 목록) | 목록 `GET History/Stec/W/GetHistoryList` 실 API 전환(`company/api/history.ts` 신규 분리 — 경찰 이력 #14·#15는 mock 유지). 이중 래핑·행 축소 매핑, `statusName`("경호취소"→'취소'), `totalMin`→`totalGuardMinutes`. **본부관리자 스코프(HIST-003) 실제 적용 확인**(StecM3 배정 0건→이력 0건, StecM2 동래 담당→5건). 실서버에 취소 건 5개 존재 → 브라우저 검증(StecM1 5건/StecM2 5건, 콘솔 에러 0). **상세 보류** — `History/Stec/W/GetHistoryDetail` 404, Police EP 본사 토큰 403(issues #14 신규, blockers) → `/admin/history/:id` "준비 중" 안내. **종결 건 재검증 보류** — 사용자가 오늘 날짜 경호건 생성→종결 후 status 코드 매핑·`totalMin` 실값 재확인. 안 되면 △ 유지. 응답 샘플 `History-Stec-GetHistoryList.md`. **2026-09-09 회신 반영**: 백엔드가 `History/Stec/W/GetHistoryDetail` 신설 → `getCompanyHistoryDetail` 실 API 배선, "준비 중" placeholder·`CompanyHistoryDetailUnavailableError` 제거, `HistoryDetailPage`(company) 실제 상세 렌더(경찰 이력상세 레이아웃, 매퍼 `detailRowToSecurityCase` 공유). 응답 = 경찰용 + `groupName`·`parentGroupName`. 스코프: StecM3(배정 0건)→404. 브라우저 검증(StecM1, `/admin/history/46`). blockers/issues #14 종료. 응답 샘플 `History-Stec-GetHistoryDetail.md`. 종결 건 `totalGuardMinutes`·코드 매핑은 여전히 데이터 대기(△ 유지) |
+| 14 | C | [경찰서] 피전 | 이력 조회 | 부분완료(△) | `536cd5e` (+2026-09-08) | 목록 `GET History/Police/W/GetHistoryList` + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail` 신규 — 본청·지역청 #15는 mock, `role === '경찰서'` 분기). `groupSeq`(세션) 필수·끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드. `caseType`·5개 조치·배치장소 응답에 없음→축소(exclusions). 브라우저 검증(SPoliceM5 동래: 목록 취소 5건, 상세 대상자 마스킹·근무자 4명 투입실적·취소일/사유), 콘솔 에러 0. **종결 건 재검증 보류**(#13과 동일 — 사용자 종결 데이터 생성 후 종결코드·`totalGuardMinutes` 실값). 응답 샘플 `History-Police-GetHistoryList.md`·`-GetHistoryDetail.md`. **2026-09-09 회신 반영**: 목록 매퍼에 `deploySeq`·`status`(int) 필드 추가, `SecurityCase.id`를 종결·취소면 `caseSeq`/그 외면 `deploySeq`로 분리(#15 라우팅용). `getPoliceStationHistoryDetail`을 3역할 공통으로 통합(role 분기 제거), `detailRowToSecurityCase` export해 본사(#13)와 공유. 경찰서 경로 groupSeq 유지 → **회귀 0**(브라우저 재검증 SPoliceM5, 목록 5건·상세 정상) |
+| 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 부분완료(△) | `d236ec6`·`536cd5e` | **프로브 결과 전환 불가 → 본청/지역청 이력은 mock 유지.** `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq` 경찰서(leaf) 단위 — 부모 노드(본청 22·지방청 24) → 0건, 캐스케이드 없음. `GetHistoryList`는 종결·취소만(status/includeActive/all/isEnd 무시), 진행중은 `GetDeployList?groupSeq=<leaf>`(본청/지역청 토큰도 200). 관할 전체 = `Login/W/GetGroupTree`(3역할 공통 200, 역할 서브트리)로 leaf 뽑아 팬아웃 가능하나 **임시방편이라 미채택(사용자 결정)**. 진행중 상세 `GetDeployDetail?deployReqSeq=`는 본청/지역청 토큰에 200(deployReqSeq 90) — 목록 전환 시 코드 변경 최소. `GetHistoryDetail`도 본청/지역청 200(스코프 미검, `guardWorkLoc`/`guardHomeLoc` 포함 — #14 exclusions와 배치, 논의항목). **그룹 C 섹션 종료 → 백엔드 일괄 요청서 전달**(`docs/backend-integration/requests/2026-09-08-이력-C.md`, issues #14·#15). 종결 건 재검증(#13·#14 공통)·본부관리자 이력 스코프 꼬리는 회신·데이터 후. **2026-09-09 회신 반영 → 실 API 전환 완료**: 스웨거 개정으로 `GetHistoryList`가 `groupSeq` **없이** 부르면 역할 캐스케이드(본청=전국·지역청=관할 이하·전 구간). `listSecurityCaseHistory`/`getSecurityCaseHistoryDetail` mock → 실 API. 접수·진행중 행은 `deploySeq`로 경호상세(`/security-cases/:id`), 종결·취소는 `caseSeq`로 이력상세(`/history/:id`). mock `/security-cases/history*` 제거. 브라우저 검증(SPoliceM1 전국 9건·진행중→`/security-cases/90`·취소→`/history/46` / SPoliceM3 관할 7건). ⚠️ Police `GetHistoryDetail`은 스웨거와 달리 진행중도 200이나 화면 미도달(제외). △ 유지 이유 = 종결 데이터 대기 + URL 직접접근 스코프 일괄 테스트(CARRYOVER) |
 | 16 | D | [경찰서] 피전 | 게스트 계정 관리 | 완료 | `1a6b4e7` | `User/Police/W/` 6종 실 API 전환(`GetGuestUserList` `groupSeq` 필수·평면 배열 / `GetGuestCaseList` 발급 후보 / `GetGuestCaseDetail` 수정 후보 `isAccess` / `AddGuestUser` `{name:"게스트"(고정),caseSeqs}` 응답 `{data:true}` / `UpdateGuestCaseInfo` / `DeleteGuestUser`). **아이디 미리보기 제거**(issues #3 → 🟢, 프론트 UX 변경 — 발급 후 목록 재조회, `previewNextGuestAccount`/`previewNextGuestId` 삭제). 발급 후보 조회를 `listGuestScopeSecurityCases`(mock `/security-cases`) 대신 전용 EP 2개로 분리. `handlers/guests.ts`(`guestTestHandlers`)를 실 6종 shape로 재작성 + `testOnlyHandlers`로 이동(브라우저는 실백엔드 프록시). `mocks/data/guests.ts`에 `userSeq` 필드 추가(로그인 계정 소스는 존치 — #17용). 중지 계정(`useYn`)은 화면 설계에 없어 숨김(exclusions, #17 종료 시 전달). 실백엔드 `SPoliceM5`(동래) 발급→조회권 수정(회수)→삭제 왕복 브라우저+curl 실측, `SPoliceM3` 403. 응답 샘플 `User-Police-Guest.md` |
 | 17 | D | [경찰서] 게스트 | 경호목록 + 상세(조회전용) | 완료 | `56e04e3` (테스트) + 문서 | **코드 신규 없음** — 피전 경호목록(`SecurityCaseListPage`)/상세(`SecurityCaseDetailPage`)를 role로만 갈라 재사용(이미 구현: `isReadOnlyViewer` 본청/지역청/게스트, 신규접수 버튼 `role !== '게스트'`). 프로브로 게스트 토큰 스코프 검증: `GetDeployList`가 게스트 토큰이면 **`?groupSeq=` 무시하고 `GUEST_CASE_ACCESS` 스코프만 적용**(groupSeq 32/22/999 다 동일 = 조회권 건만). `GetDeployDetail?deployReqSeq=` 조회권 건 200(피전과 동일 shape). 게스트 토큰 403: `CancelGuardCase`·`GuardCase/Stec/GetGuardCaseList`·`User/Police/GetGuestUserList`. 메뉴는 이미 `경호목록` 단일(`PoliceAppShell`). 브라우저(`SPoliceGuest3` 동래): 목록 1건→행클릭→상세(`/security-cases/90`) 기본정보/배치장소/조치5/문서함 렌더·액션버튼 0개, 콘솔 에러 0. `SecurityCaseDetailPage.test.tsx`에 게스트 읽기전용 테스트 1건 추가(122). **미검증(이월)**: 조회권 없는 활성 건 상세 차단 — 동래 활성 1건뿐. **그룹 D 섹션 종료 → 요청서 `requests/2026-09-08-게스트-D.md`**(useYn 중지 / 게스트 상세 스코프 확인 2개 논의). 응답 샘플 `Deploy-Police-GetDeployList.md` "#17 관찰" |
 | — | 보류 | [본사]/[본청]/[지역청] | 대시보드 | 보류 | | Phase 4 자체가 보류 중 |
@@ -52,6 +52,43 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-09: **C(이력) 회신 반영 iteration** (#13·#14·#15 걸침) — 새 화면 아님, 스웨거
+  개정분(2026-09-09) 반영. 유형 = 회신반영.
+  - **프로브**(`_probe-C-reply.sh`·`_probe-C-reply-b.sh`): ① `History/Stec/W/GetHistoryDetail`
+    신규 EP — 경찰용 shape + `groupName`·`parentGroupName`, 상태 안 가림, 본부관리자 스코프
+    (StecM3→404). ② `History/Police/W/GetHistoryList` 캐스케이드 동작 — `groupSeq` 없이
+    부르면 본청=전국 전 구간 9건·지역청=관할 7건·피전=자기 경찰서 끝난 건 5건. 행에
+    `deploySeq`·`status`(int) 추가, 접수행 `caseSeq:null`. pageSize 상한 100. ③ Police
+    `GetHistoryDetail` — 스웨거는 "종결/취소만"인데 실제 진행중도 200(불일치, 화면 미도달 →
+    제외).
+  - **G2 결정 0개** — 계획대로 구현.
+  - **#13**: `getCompanyHistoryDetail` 실 API(`History/Stec/W/GetHistoryDetail`),
+    `CompanyHistoryDetailUnavailableError`·"준비 중" placeholder 제거, `HistoryDetailPage`
+    (company) 실제 상세 렌더. 매퍼는 `police/api/history.ts::detailRowToSecurityCase` export해
+    공유(+groupName/parentGroupName optional).
+  - **#15**: `police/api/history.ts` mock `listSecurityCaseHistory`/`getSecurityCaseHistoryDetail`
+    → 실 API. 목록은 `GetHistoryList` groupSeq 없이(서버 role 스코프), 매퍼에 `deploySeq`·
+    `status` 반영. **`SecurityCase.id` = 종결·취소면 `caseSeq`(→`/history/:id`), 접수·진행중이면
+    `deploySeq`(→`/security-cases/:id`)**. `HistoryDetailPage`(police) 3역할 공통 통합
+    (role 분기·`workersQuery` 제거). mock `/security-cases/history*` 2개 제거.
+  - **#14 회귀 차단**: 경찰서 경로는 세션 groupSeq 계속 붙임(`listPoliceStationHistory`).
+  - **테스트 더블**: `mocks/handlers/history.ts` 3역할 스코프 + `deploySeq`/`status`,
+    `mocks/handlers/guardCase.ts`에 `History/Stec/W/GetHistoryDetail` 추가.
+  - 검증: `npm run test` **138/138**(company 이력상세 1→3) · lint(기존 warning 2) · build ·
+    `tsc -b` 통과. 실백엔드 `run-s-pgms`: #13 상세(StecM1 `/admin/history/46` — 근무자 배정
+    이력·취소 정보), #15 본청(SPoliceM1 전국 9건·진행중→`/security-cases/90`·취소→`/history/46`),
+    지역청(SPoliceM3 관할 7건), #14 회귀(SPoliceM5 취소 5건·상세). 콘솔 에러 0.
+  - **문서**: 응답샘플 `History-Stec-GetHistoryDetail.md` 신규 + `History-Police-GetHistoryList.md`
+    ·`-GetHistoryDetail.md` "회신 반영" 섹션. matrix·roadmap·findings(#14·#15 🟢)·CARRYOVER·
+    요청서 `2026-09-08-이력-C.md` 회신 마킹. 스웨거(`docs/api-swagger.json`)는 백엔드 회신분
+    포함.
+  - **이월**: (a) 종결 건(status=3) 데이터 없음 → `totalGuardMinutes`·종결코드 매핑 미검
+    (CARRYOVER B #13·#14·#15). (b) URL 직접 접근 스코프 일괄 테스트(이력 상세 타관할 차단
+    등) — 사용자 결정대로 추후 묶어서. (c) **후속 작업**: `Deploy/Police/W/GetDeployGuardSchedule`
+    이제 동작(findings #6) → 경찰 경호상세(#4) 근무일정 패널 재연결. 프로브 완료
+    (`_probe-C-reply` 이후 별도), 응답에 근무자 `name`·`phone` 인라인. 별도 iteration.
+  - **다음**: 커밋 후 → GetDeployGuardSchedule 후속(#4 근무일정).
 
 - 2026-09-09: **사건유형(`crimeType`) enum 전환** — 새 화면 아님, 백엔드 요청 동반 수정.
   배치요구서 등록 시 사건유형이 한글 라벨('스토킹')로 전송되던 것을, `DEPLOY_REQUEST.CRIME_TYPE`

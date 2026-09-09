@@ -87,3 +87,28 @@
   포함(#14 exclusions "배치장소 없음"과 배치 — 재확인 필요, #15 이월 메모).
 - → #15는 **부분완료(△)**, 본청/지역청 이력은 mock 유지. 백엔드 요청:
   `docs/backend-integration/requests/2026-09-08-이력-C.md` (issues #14·#15).
+
+## 회신 반영 (2026-09-09, `_probe-C-reply.sh`·`_probe-C-reply-b.sh`) — issues #15 해소
+
+백엔드가 스웨거 개정(2026-09-09). 재실측:
+
+- **역할 캐스케이드 동작** — `groupSeq` **안 보내면** 서버가 토큰 역할대로 스코프:
+  - 본청(`SPoliceM1`) 파라미터 없음 → **전국 전 구간 9건**(접수1/배정1/경호중1/경호완료1/취소5,
+    강남(서울청)+동래(부산청) 섞여서 반환).
+  - 지역청(`SPoliceM3`) 파라미터 없음 → **관할 이하 전체 7건**(동래만, 강남 제외).
+  - 피전(`SPoliceM5`) 파라미터 없음 → **자기 경찰서 끝난 건만 5건**(접수·진행중 안 옴).
+- `groupSeq`는 **leaf 경찰서 필터**로만 동작 — 부모 노드(본청 22·부산청 24) → 0건,
+  권한 밖 groupSeq → 0건(403 아님).
+- **pageSize 상한 100** — `pageSize=101` 이상 → HTTP 400 "잘못된 요청입니다".
+- **행 필드 신규**: `deploySeq`, `status`(int — 접수 `null`·배정 `0`·경호중 `1`·경호완료
+  `2`·종결 `3`·경호취소 `4`). 접수 행은 `caseSeq: null`·`mgmtNo: "…경찰서 접수"`(경호코드
+  자리 "접수")·`startDt`/`endDt` = 배치기간. **종결·취소만 `deploySeq: null`**, 나머지는
+  전부 `deploySeq` 있음.
+- **연동**: `police/api/history.ts` — 본청/지역청은 `listSecurityCaseHistory`가 groupSeq
+  없이 호출(서버 role 스코프), 경찰서(#14)는 세션 groupSeq 유지(회귀 0). `SecurityCase.id`는
+  종결·취소면 `caseSeq`(→이력 상세), 진행중·접수면 `deploySeq`(→경호 상세). `HistoryListPage`
+  `historyTarget()`이 상태로 라우팅.
+
+### 실패 예 (초기 프로브 오진 주의)
+`pageSize=200`으로 부르면 400이 떠서 "groupSeq 필수"로 착각할 수 있음 — 실제로는
+pageSize 상한(100) 초과 때문. `pageSize=100` 이하면 파라미터 없이도 200.

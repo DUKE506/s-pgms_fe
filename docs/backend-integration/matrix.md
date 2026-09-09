@@ -190,14 +190,18 @@
 #### 이력 조회 (`/history`, `/history/:id`)
 
 이 화면(과 상세)은 **경찰서·본청·지역청이 role로 갈라 공유**한다(`POLICE_HISTORY`).
-#14는 **경찰서 경로만** 실 API로 전환했고, 본청·지역청은 아직 mock(`listSecurityCaseHistory`)
-— #15에서 전환한다.
+#14(경찰서)·#15(본청·지역청) **모두 실 API로 전환 완료**(2026-09-09 회신 반영). 목록은
+`GetHistoryList`를 경찰서면 세션 groupSeq 붙여서, 본청/지역청은 groupSeq 없이 호출(서버가
+역할 캐스케이드). 상세는 종결·취소만 `GetHistoryDetail`, 진행중·접수는 `deploySeq`로
+경호상세(`/security-cases/:id`)로 라우팅.
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 (경찰서) | `listPoliceStationHistory`(신규, `police/api/history.ts` — 기존 함수에서 분리) | `GET History/Police/W/GetHistoryList` | ✅ 연동 완료(2026-09-08, **부분완료 △** — 종결 데이터 없어 취소 5건만 실측). `groupSeq`(세션 저장, `GetMyProfile`) 필수 — 없으면 빈 목록, 역할 스코프는 서버가 안 검. 끝난 건만(HIST-001). 응답 이중 래핑 `{meta,data:[...]}` → `unwrapEnvelope` + 페이지 순회. 행: `caseSeq`→id, `mgmtNo` `splitMgmtNo`, `groupName`/`parentGroupName`→경찰서/지역청, `startDt`/`endDt`(취소 건 null), `totalMin`→`totalGuardMinutes`, `statusName`("경호취소"→'취소'). `status`/`searchKey` 파라미터는 클라 필터로 대체(exclusions). 응답 샘플 `History-Police-GetHistoryList.md` |
-| 상세 조회 (경찰서) | `getPoliceStationHistoryDetail`(신규) | `GET History/Police/W/GetHistoryDetail?caseSeq=` | ✅ 연동(2026-09-08). 응답(이중 래핑 아님): `suspectUserName`(마스킹)→`nameInitial`, `responsibleOfficer`→"경찰관 정보", `startDate`/`endDate`(ISO)→날짜, `totalGuardWorkMinutes`→`totalGuardMinutes`, `endDt`→취소일/종결일, `remark`→취소사유/종결사유, `guards[]`(이름·일수·분 인라인)→신규 `historyGuards` 필드로 "근무자 배정 이력" 표. `caseType`·5개 조치·배치장소는 응답에 없음 → 표시 축소(exclusions). 3역할 모두 200(스코프 미검) — 본청/지역청 상세 스코프 차단은 #15 확인. 응답 샘플 `History-Police-GetHistoryDetail.md` |
-| 목록·상세 조회 (본청·지역청) | `listSecurityCaseHistory` / `getSecurityCaseHistoryDetail` | (미전환 — **mock 유지**) | #15 **부분완료(△)**, 2026-09-08 프로브. 전환 불가 확정 — ① `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq`가 **경찰서(leaf) 노드일 때만** 데이터(부모 노드 본청 22·지방청 24 → 0건, 캐스케이드 없음), ② `GetHistoryList`는 종결·취소만·진행중 토글 없음(본청/지역청 이력은 진행중도 표시해야 함). `Login/W/GetGroupTree`(3역할 공통 200, 서브트리)로 클라 팬아웃은 가능하나 임시방편이라 미채택(사용자 결정). 백엔드 요청 후 전환 → `docs/backend-integration/requests/2026-09-08-이력-C.md`(issues #15) |
+| 목록 조회 (경찰서) | `listPoliceStationHistory`(신규, `police/api/history.ts` — 기존 함수에서 분리) | `GET History/Police/W/GetHistoryList` | ✅ 연동 완료(2026-09-08, **부분완료 △** — 종결 데이터 없어 취소 5건만 실측). `groupSeq`(세션 저장, `GetMyProfile`) 필수 — 없으면 빈 목록, 역할 스코프는 서버가 안 검. 끝난 건만(HIST-001). 응답 이중 래핑 `{meta,data:[...]}` → `unwrapEnvelope` + 페이지 순회. 행: `caseSeq`→id, `mgmtNo` `splitMgmtNo`, `groupName`/`parentGroupName`→경찰서/지역청, `startDt`/`endDt`(취소 건 null), `totalMin`→`totalGuardMinutes`, `statusName`("경호취소"→'취소'). `status`/`searchKey` 파라미터는 클라 필터로 대체(exclusions). 응답 샘플 `History-Police-GetHistoryList.md`. **2026-09-09 회신 반영**: 매퍼에 `deploySeq`·`status`(int) 추가(공유 매퍼 `listRowToSecurityCase`). 경찰서 경로는 세션 groupSeq 유지 — 회귀 0 |
+| 상세 조회 (경찰서) | `getPoliceStationHistoryDetail` (3역할 공통) | `GET History/Police/W/GetHistoryDetail?caseSeq=` | ✅ 연동(2026-09-08). 응답(이중 래핑 아님): `suspectUserName`(마스킹)→`nameInitial`, `responsibleOfficer`→"경찰관 정보", `startDate`/`endDate`(ISO)→날짜, `totalGuardWorkMinutes`→`totalGuardMinutes`, `endDt`→취소일/종결일, `remark`→취소사유/종결사유, `guards[]`(이름·일수·분 인라인)→신규 `historyGuards` 필드로 "근무자 배정 이력" 표. `caseType`·5개 조치·배치장소는 응답에 없음 → 표시 축소(exclusions). **2026-09-09**: `detailRowToSecurityCase` export해 본사(#13)·본청/지역청(#15)과 매퍼 공유, `HistoryDetailRow`에 `groupName`·`parentGroupName` optional. 응답 샘플 `History-Police-GetHistoryDetail.md` |
+| 목록 조회 (본청·지역청) | `listSecurityCaseHistory` (실 API) | `GET History/Police/W/GetHistoryList` (groupSeq 없이) | ✅ 연동 완료(**2026-09-09 회신 반영**). `groupSeq` 없이 부르면 서버가 역할 캐스케이드 — 본청=전국 전 구간, 지역청=관할 이하 전 구간(접수·진행중·종결·취소). 행에 `deploySeq`·`status`(int) 추가, 접수행 `caseSeq: null`. `SecurityCase.id` = 종결·취소면 `caseSeq`, 그 외면 `deploySeq`. pageSize 상한 100. 응답 샘플 `History-Police-GetHistoryList.md` "회신 반영" 섹션. △ = 종결 데이터 대기 |
+| 상세 조회 (본청·지역청, 종결·취소) | `getSecurityCaseHistoryDetail` → `getPoliceStationHistoryDetail`로 통합 | `GET History/Police/W/GetHistoryDetail?caseSeq=` | ✅ 3역할 공통 함수로 통합(role 분기 제거). 본청/지역청 토큰도 관할 건이면 200. ⚠️ 스웨거는 "종결·취소만"인데 진행중도 200(화면 미도달 → 제외). 타 관할 차단은 CARRYOVER C절 |
+| 상세 조회 (본청·지역청, 진행중·접수) | `getSecurityCase` (경호상세 재사용) | `GET Deploy/Police/W/GetDeployDetail?deployReqSeq=` | 이력 목록 행(진행중·접수)의 `id`=`deploySeq` → `/security-cases/:id` 라우팅 → 경호상세 조회전용. `isReadOnlyViewer`가 액션 숨김. 브라우저 검증(SPoliceM1 → `/security-cases/90`) |
 
 #### 대시보드 (`/dashboard`, 아직 미구현·Phase 4)
 
@@ -331,7 +335,7 @@
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
 | 목록 조회 | `listCompanyHistory`(신규, `company/api/history.ts` — 경찰 쪽 `listSecurityCaseHistory`에서 분리) | `GET History/Stec/W/GetHistoryList` | ✅ 연동 완료(2026-09-08). 응답 이중 래핑 `{meta, data:[...]}` → `unwrapEnvelope` + `.data`, `pageSize` 100 순회(경호목록과 동일). 행 축소: `{caseSeq, mgmtNo, groupName, parentGroupName, startDt, endDt, totalMin, statusName, remark}` → `caseSeq`→id, `splitMgmtNo`, `groupName/parentGroupName`→경찰서/지역청, `statusName`("경호취소"→'취소'), `totalMin`→`totalGuardMinutes`(분, 종결만 실값), `remark`→취소사유/종결코드. 종결·취소만 반환(HIST-001). **본부관리자 스코프(HIST-003) 실제 적용됨** — StecM3(배정 0건)→이력 0건, StecM2(동래 담당)→동래 취소 5건. `status`/`searchKey` 파라미터는 클라 필터로 대체(exclusions). 응답 샘플: `History-Stec-GetHistoryList.md` |
-| 상세 조회 | `getCompanyHistoryDetail`(신규, 항상 throw) | ⚠️ **없음** | issues #14 — `History/Stec/W/GetHistoryDetail`은 404, `History/Police/W/GetHistoryDetail`은 본사 토큰에 403(피전 토큰만 200). `/admin/history/:id`는 "준비 중" 안내만 표시, `getCompanyHistoryDetail`은 `CompanyHistoryDetailUnavailableError` throw. blockers.md. 그룹 C 종료(#15) 시 일괄 요청 |
+| 상세 조회 | `getCompanyHistoryDetail`(신규) | `GET History/Stec/W/GetHistoryDetail?caseSeq=` **(2026-09-09 신설)** | ✅ 연동 완료(**2026-09-09 회신 반영**). 응답 = 경찰용 `GetHistoryDetail` + `groupName`·`parentGroupName`(매퍼 `detailRowToSecurityCase` 공유). 상태 안 가림(진행중도 200, 화면은 종결·취소만 도달). 스코프: 운영/시스템=전국, 본부관리자=본인 배정 건(범위 밖 → 404, StecM3 실측). `CompanyHistoryDetailUnavailableError`·"준비 중" placeholder 제거, `HistoryDetailPage`(company) 실제 상세 렌더. 브라우저 검증(StecM1 `/admin/history/46`). issues #14 종료. 응답 샘플 `History-Stec-GetHistoryDetail.md` |
 
 #### 대시보드 (`/admin/dashboard`, 아직 미구현·Phase 4)
 
@@ -368,18 +372,18 @@
 진행중 상세는 배정 이후 데이터가 실존해야 의미 있어서, 1~4번 섹션이 전부 끝난 뒤가
 자연스럽다.
 
-#### 이력 조회 (`/history`, `/history/:id`) — #15 **부분완료(△)**, 2026-09-08
+#### 이력 조회 (`/history`, `/history/:id`) — #15 ✅ **실 API 전환 완료(2026-09-09 회신 반영)**, △ = 종결 데이터 대기
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listSecurityCaseHistory` | `GET History/Police/W/GetHistoryList` (+ 진행중은 `GET Deploy/Police/W/GetDeployList`) | **미전환 — mock 유지.** `GetHistoryList`는 `groupSeq`가 경찰서(leaf)일 때만 데이터(부모 노드 → 0건, 캐스케이드 없음) + 종결·취소만(진행중 토글 없음). 진행중은 `GetDeployList?groupSeq=<leaf>`로 본청/지역청 토큰도 200이나 역시 leaf 단위. 관할 전체 = `Login/W/GetGroupTree`(3역할 공통 200, 서브트리)에서 leaf 뽑아 팬아웃해야 하나 임시방편이라 미채택. 백엔드 요청 → `requests/2026-09-08-이력-C.md`(issues #15) |
-| 상세 조회 | `getSecurityCaseHistoryDetail` | `GET History/Police/W/GetHistoryDetail?caseSeq=` | **미전환 — mock 유지.** EP 자체는 본청/지역청 토큰에 200(스코프 미검, 타 관할 차단 없음). 목록이 mock인 동안 넘길 실 `caseSeq`가 없어 함께 보류. 응답에 `guardWorkLoc`/`guardHomeLoc` 포함(#14 exclusions와 배치 — issues #14·#15 논의 항목) |
+| 목록 조회 | `listSecurityCaseHistory` (실 API) | `GET History/Police/W/GetHistoryList` (groupSeq 없이) | ✅ 스웨거 개정으로 `groupSeq` 없이 부르면 서버 역할 캐스케이드 — 본청=전국, 지역청=관할 이하, **전 구간**(접수·진행중·종결·취소). `GetDeployList` 팬아웃 불필요. 행 `deploySeq`·`status`(int), 접수행 `caseSeq: null`. `SecurityCase.id` = 종결·취소면 `caseSeq`, 그 외면 `deploySeq`. 응답 샘플 `History-Police-GetHistoryList.md` "회신 반영" |
+| 상세 조회 (종결·취소) | `getSecurityCaseHistoryDetail` → `getPoliceStationHistoryDetail` 통합 | `GET History/Police/W/GetHistoryDetail?caseSeq=` | ✅ 3역할 공통 함수. 본청/지역청 관할 건 200. ⚠️ 스웨거는 "종결·취소만"인데 진행중도 200(화면 미도달 → 제외). 타 관할 차단은 CARRYOVER C절 |
 
-#### 진행중 건 상세 (`/security-cases/:id`, 조회 전용) — #15, mock 유지
+#### 진행중·접수 건 상세 (`/security-cases/:id`, 조회 전용) — #15 ✅ 라우팅 연결됨
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail?deployReqSeq=` | EP는 본청/지역청 토큰에 **200**(2026-09-08 실측, deployReqSeq 90) — `SecurityCaseDetailPage`의 `isReadOnlyViewer`가 이미 액션 버튼을 숨김. 목록(이력 화면)이 실 API로 전환되면 진행중 행 id(deploySeq)로 이 EP 호출 → 코드 변경 최소. 목록 전환 전까지 mock |
+| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail?deployReqSeq=` | ✅ 이력 목록 행(진행중·접수)의 `id`=`deploySeq` → `historyTarget()`이 `/security-cases/:id`로 라우팅 → 경호상세 조회전용. `isReadOnlyViewer`가 액션 숨김. 브라우저 검증(SPoliceM1 → `/security-cases/90`, deployReqSeq 90 경호중). ⚠️ 근무일정 패널은 `GetDeployGuardSchedule` 미연결 상태 — 별도 후속(CARRYOVER D절) |
 
 #### 대시보드 (`/dashboard`, 아직 미구현·Phase 4)
 

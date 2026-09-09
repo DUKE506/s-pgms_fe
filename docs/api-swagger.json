@@ -697,7 +697,7 @@
       "post": {
         "tags": ["PoliceDeploy"],
         "summary": "최종 종결",
-        "description": "피전이 경호 전 과정을 닫는다 (END-006). 화면에서 확인 팝업·재확인을 거친 뒤 부른다. 상태만 바뀌는 것이 아니라 개인정보 파기가 함께 일어난다 (BR-020) - 배치요구서, 문서 3종(경호계획서·개인정보동의서·파기확인서), 담당 경찰관·수사관 정보, 게스트 조회권한이 지워진다. 문서는 DB 행뿐 아니라 디스크의 실물 파일까지 지운다 (END-007). 게스트는 계정을 지우지 않고 이 경호건 조회권한만 뺀다 - 다른 경호건을 보고 있을 수 있어서다 (END-009). 지우기 전에 최종 근무시간을 집계해 TOTAL_GUARD_WORK_MINUTES 에 남긴다 (WORK-006) - 휴무를 뺀 실제 근무에 근무 밖 사전미팅 시간을 더한 값이다. 근무·조·사전미팅·배치장소는 남는다. 대상자 실명은 마스킹된 값이라 그대로 둔다. 경호완료 상태에서만 종결할 수 있고 그 외에는 409 다. 피전은 자기 경찰서 건만 종결할 수 있다. endReason 은 종결 코드이며 필수다 - 경호건의 END_REASON 에 그대로 남는다. 서버는 값을 검증하지 않고 화면이 보낸 코드를 저장한다(범죄유형 코드와 같은 방식). 경호취소 사유(CANCEL_REASON)와는 다른 칸이다. 되돌릴 수 없는 작업이다.",
+        "description": "피전이 경호 전 과정을 닫는다 (END-006). 화면에서 확인 팝업·재확인을 거친 뒤 부른다. 상태만 바뀌는 것이 아니라 개인정보 파기가 함께 일어난다 (BR-020) - 배치요구서, 문서 3종(경호계획서·개인정보동의서·파기확인서), 담당 경찰관·수사관 정보, 게스트 조회권한이 지워진다. 문서는 DB 행뿐 아니라 디스크의 실물 파일까지 지운다 (END-007). 게스트는 계정을 지우지 않고 이 경호건 조회권한만 뺀다 - 다른 경호건을 보고 있을 수 있어서다 (END-009). 지우기 전에 최종 근무시간을 집계해 TOTAL_GUARD_WORK_MINUTES 에 남긴다 (WORK-006) - 휴무를 뺀 실제 근무에 근무 밖 사전미팅 시간을 더한 값이다. 근무·조·사전미팅은 남고, 경호건의 직장·주거지·기타 위치 2개는 NULL 로 비운다. 대상자 실명은 마스킹된 값이라 그대로 둔다. 경호완료 상태에서만 종결할 수 있고 그 외에는 409 다. 피전은 자기 경찰서 건만 종결할 수 있다. endReason 은 종결 코드이며 필수다 - 경호건의 END_REASON 에 그대로 남는다. 서버는 값을 검증하지 않고 화면이 보낸 코드를 저장한다(범죄유형 코드와 같은 방식). 경호취소 사유(CANCEL_REASON)와는 다른 칸이다. 되돌릴 수 없는 작업이다.",
         "requestBody": {
           "content": {
             "application/json-patch+json": {
@@ -733,7 +733,7 @@
       "get": {
         "tags": ["PoliceHistory"],
         "summary": "경호관리 리스트 이력 =============== [확인 완료]",
-        "description": "끝난 경호건만 나온다 (HIST-001) - 종결·경호취소. remark 는 상태에 따라 갈린다 - 종결이면 종결 코드(END_REASON), 경호취소면 취소 사유(CANCEL_REASON)다. searchKey 는 관리번호(접수번호+경호코드)와 경호취소 사유를 함께 훑는다 - 둘 중 하나만 맞아도 나온다. 종결은 코드라 부분일치 검색에 넣지 않는다 - endReason 으로 정확히 일치하는 코드만 거른다. endReason 을 보내면 경호취소 건은 자연히 빠진다(그 칸이 비어 있다).",
+        "description": "**보이는 상태 범위가 권한마다 다르다 (HIST-001).** 본청·지방청은 전 구간이 나온다 - 접수 단계의 배치요구서까지 함께 올라와 관할 전체 흐름을 한 화면에서 훑는다. 피전·게스트는 끝난 건만 나온다 - 종결·경호취소. 피전은 진행 중인 건을 배치관리 목록(GetDeployList)에서 다루기 때문이다. **조회 범위는 소속 노드 이하 전체다 (HIST-003 / GRP-005)** - 본청은 전국, 지방청은 관할 지방청·경찰서, 피전은 자기 경찰서다. groupSeq 는 그중 한 경찰서만 골라 보는 필터일 뿐 범위를 넓히지 못한다 - 안 보내면 소속 이하 전체가 나오고, 권한 밖 경찰서를 보내면 빈 목록이다. 게스트는 조직이 아니라 조회권이 부여된 건 단위라 groupSeq 를 쳐다보지 않는다. 행마다 status(경호 상태값)와 statusName 이 함께 나간다 - 0:배정 1:경호중 2:경호완료 3:종결 4:경호취소. **접수 행은 status 가 null 이다** - 배치요구서의 DEPLOY_STATUS 와 코드 공간이 달라 0 을 채우면 '배정'과 구분되지 않는다. statusName 이 '접수'이거나 caseSeq 가 없으면 접수다. 그래서 status 필터를 걸면 접수 행은 자연히 빠진다. **접수 행은 caseSeq 가 없고 deploySeq 만 있다** - 이력 상세(GetHistoryDetail)는 caseSeq 로 열고, 접수 행은 배치요구서 상세(Deploy/Police/W/GetDeployDetail)를 deploySeq 로 연다. 반대로 종결·경호취소 건은 배치요구서가 지워져(END-007) deploySeq 가 null 이다. startDt·endDt 는 경호건이면 경호기간, 접수 행이면 배치요구서의 배치기간이다 - 기간 필터도 같은 기준이다. remark 는 상태에 따라 갈린다 - 종결이면 종결 코드(END_REASON), 경호취소면 취소 사유(CANCEL_REASON)다. 접수·진행 중인 건은 둘 다 없어 null 이다. searchKey 는 관리번호와 경호취소 사유를 함께 훑는다 - 둘 중 하나만 맞아도 나온다. 종결은 코드라 부분일치 검색에 넣지 않는다 - endReason 으로 정확히 일치하는 코드만 거른다. endReason 을 보내면 경호취소·접수·진행 중 건은 자연히 빠진다(그 칸이 비어 있다). 정렬은 접수 행이 맨 위고 그 아래가 경호건 최신순이다.",
         "parameters": [
           {
             "name": "pageNumber",
@@ -811,7 +811,7 @@
       "get": {
         "tags": ["PoliceHistory"],
         "summary": "경호관리 이력 상세",
-        "description": "끝난 경호건의 기본정보와 경호원별 투입 실적을 함께 준다 (HIST-002) - 종결·경호취소",
+        "description": "경호건의 기본정보와 경호원별 투입 실적을 함께 준다 (HIST-002). **상태를 가리지 않는다 - 진행 중인 건(배정·경호중·경호완료)도 열린다.** 목록(GetHistoryList)은 끝난 건만 담지만 상세는 그렇지 않다 - 경호건 PK 만 있으면 어디서든 여는 자리라, 상태로 막으면 진행 중인 건 링크가 404 로 죽는다. 끝난 건만 보여줄지는 화면이 statusName 으로 정한다. 에스텍 상세도 같은 기준이다. 범위는 배치요구서 상세와 같다 - 본청·지방청·피전은 소속 노드 이하 경찰서, 게스트는 조회권이 부여된 건. 범위 밖이면 없는 건과 똑같이 404 다. 진행 중인 건은 아직 끝나지 않아 비어 있는 칸이 있다 - totalGuardWorkMinutes(종결에서 계산)·endDt·remark 가 그렇고 guards 는 지금까지 편성된 만큼만 집계된다. 종결된 건은 반대로 배치요구서가 지워져(END-007) 담당 수사관·피전이 비어 있다.",
         "parameters": [
           {
             "name": "caseSeq",
@@ -1872,11 +1872,47 @@
         }
       }
     },
+    "/api/v1/GuardCase/Stec/W/CancelGuardCase": {
+      "post": {
+        "tags": ["StecGuardCase"],
+        "summary": "취소 (접수취소 / 경호취소)",
+        "description": "경찰용(Deploy/Police/W/CancelGuardCase)과 같은 동작을 에스텍이 한다. 화면에서는 취소 버튼 하나고, 서버가 배정 여부를 보고 갈라 처리한다. 키가 caseSeq 가 아니라 deployReqSeq 인 이유는 접수 단계에 경호건이 없기 때문이다 - 배치요청 목록과 경호관리 리스트가 모두 deploySeq 를 내려주므로 그것만 보내면 된다. ① 아직 배정 전이면 접수취소다 (REQ-008) - 경호코드가 나간 적이 없어 배치요구서 행을 통째로 지운다. 적을 자리가 없으므로 reason 을 받지 않는다. ② 배정된 뒤면 경호취소다 (WORK-011) - 경호코드는 유지하고 상태를 경호취소로 남기며, reason 이 경호건의 CANCEL_REASON 에 남는다(이때만 필수). 근무·근무조·사전미팅은 그대로 두고 편성 기록을 보존한다 - 취소된 건을 집계에서 빼는 것은 조회하는 쪽이 STATUS 로 거른다. 배치요구서·첨부파일·게스트 조회권은 한 트랜잭션에서 정리된다. 경찰용과 갈리는 지점은 둘이다 - ㉠ 취소 가능한 상태가 배정·경호중·경호완료다(경찰은 배정뿐). 종결·경호취소면 409 다. 허용 범위는 서비스의 cancellableStatuses 한 줄로 조정한다. 경호중·경호완료 건을 취소하면 쌓인 근무는 남지만 정산(TOTAL_GUARD_WORK_MINUTES)은 집계되지 않는다 - 정산이 필요한 건은 조기종료(END-002) 후 종결로 가야 한다. ㉡ 소속 판정이 담당 본부 기준이다. 본부관리자는 자기한테 배정된 경호건만 취소할 수 있고 아니면 403 이다. 접수 단계 건은 담당 본부가 정해지기 전이라 본부관리자에게 403 이며, 시스템·운영관리자만 접수취소를 할 수 있다.",
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StecPgmsWebService_Comm_Dto_v1_GuardCase_Request_Stec_StecCancelCaseDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StecPgmsWebService_Comm_Dto_v1_GuardCase_Request_Stec_StecCancelCaseDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StecPgmsWebService_Comm_Dto_v1_GuardCase_Request_Stec_StecCancelCaseDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StecPgmsWebService_Comm_Dto_v1_GuardCase_Request_Stec_StecCancelCaseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/History/Stec/W/GetHistoryList": {
       "get": {
         "tags": ["StecHistory"],
         "summary": "경호관리 리스트 이력 =============== [확인 완료]",
-        "description": "끝난 경호건만 나온다 (HIST-001) - 종결·경호취소. 진행 중인 건(배정·경호중·경호완료)은 GetGuardCaseList 가 맡아 두 목록이 상태로 정확히 갈린다. 시스템·운영관리자는 전체, 본부관리자는 자기한테 배정된 건만 본다 (HIST-003). remark 는 상태에 따라 갈린다 - 종결이면 종결 코드(END_REASON), 경호취소면 취소 사유(CANCEL_REASON)다. searchKey 는 관리번호(접수번호+경호코드)와 경호취소 사유를 함께 훑는다 - 둘 중 하나만 맞아도 나온다. 종결은 코드라 부분일치 검색에 넣지 않는다 - endReason 으로 정확히 일치하는 코드만 거른다. endReason 을 보내면 경호취소 건은 자연히 빠진다(그 칸이 비어 있다).",
+        "description": "끝난 경호건만 나온다 (HIST-001) - 종결·경호취소. 진행 중인 건(배정·경호중·경호완료)은 GetGuardCaseList 가 맡아 두 목록이 상태로 정확히 갈린다. 시스템·운영관리자는 전체, 본부관리자는 자기한테 배정된 건만 본다 (HIST-003). 행마다 status(3:종결 / 4:경호취소)와 statusName 이 함께 나간다 - status 필터도 같은 코드를 받는다. 경찰용(History/Police/W/GetHistoryList)과 달리 접수 건은 오지 않는다 - 접수는 배치요청 목록(GuardCase/Stec/W/GetDeployRequestList)이 맡고, 진행 중인 건은 경호관리 목록(GetGuardCaseList)이 맡는다. remark 는 상태에 따라 갈린다 - 종결이면 종결 코드(END_REASON), 경호취소면 취소 사유(CANCEL_REASON)다. searchKey 는 관리번호(접수번호+경호코드)와 경호취소 사유를 함께 훑는다 - 둘 중 하나만 맞아도 나온다. 종결은 코드라 부분일치 검색에 넣지 않는다 - endReason 으로 정확히 일치하는 코드만 거른다. endReason 을 보내면 경호취소 건은 자연히 빠진다(그 칸이 비어 있다).",
         "parameters": [
           {
             "name": "pageNumber",
@@ -1950,6 +1986,28 @@
         }
       }
     },
+    "/api/v1/History/Stec/W/GetHistoryDetail": {
+      "get": {
+        "tags": ["StecHistory"],
+        "summary": "경호관리 이력 상세",
+        "description": "경호건의 기본정보와 경호원별 투입 실적을 함께 준다 (HIST-002). **상태를 가리지 않는다 - 진행 중인 건(배정·경호중·경호완료)도 열린다.** 목록(GetHistoryList)은 끝난 건만 담지만 상세는 그렇지 않다 - 경호건 PK 만 있으면 어디서든 여는 자리라, 상태로 막으면 진행 중인 건 링크가 404 로 죽는다. 끝난 건만 보여줄지는 화면이 statusName 으로 정한다. 경찰용(History/Police/W/GetHistoryDetail)은 여전히 종결·경호취소만 열린다 - 경찰은 진행 중인 건을 배치관리 상세(GetDeployDetail)로 보기 때문이다. 시스템·운영관리자는 전체, 본부관리자는 자기한테 배정된 건만 열린다 (HIST-003) - 범위 밖이면 없는 건과 똑같이 404 다. 경찰용과 같은 칸을 쓰되 경찰서·지방청 이름이 더 붙는다. 진행 중인 건은 아직 끝나지 않아 비어 있는 칸이 있다 - totalGuardWorkMinutes(종결에서 계산)·endDt·remark 가 그렇고 guards 는 지금까지 편성된 만큼만 집계된다. 종결된 건은 반대로 배치요구서가 지워져(END-007) 담당 수사관·피전이 비어 있다. 경호취소 건은 totalGuardWorkMinutes 가 비어 있는데 guards 에는 값이 있다 - 앞의 것은 종결에서만 계산하는 정산값이고 guards 는 편성해 뒀던 기록이라 출처가 다르다.",
+        "parameters": [
+          {
+            "name": "caseSeq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "tags": ["StecPgmsWebService"],
@@ -2000,7 +2058,7 @@
       "get": {
         "tags": ["StecUser"],
         "summary": "에스텍 계정 목록 =============== [확인완료]",
-        "description": "시스템·운영·본부관리자 계정을 권한순으로 내려준다. 에스텍은 소속 그룹이 없어 평면 목록이다. 중지된 계정도 포함된다 - 재활성화하려면 목록에 보여야 한다.",
+        "description": "시스템·운영·본부관리자 계정을 권한순으로 내려준다. 에스텍은 소속 그룹이 없어 평면 목록이다. 중지된 계정도 포함된다 - 재활성화하려면 목록에 보여야 한다. 본부관리자도 조회할 수 있다 - 담당부서 필터를 채우려면 목록이 필요해서다. 다만 내려가는 내용은 세 권한이 모두 같다(범위를 좁히지 않는다) - 계정 등록(AddStecUser)은 여전히 시스템·운영관리자만 한다.",
         "responses": {
           "200": {
             "description": "OK"
@@ -2659,6 +2717,22 @@
               "type": "integer",
               "format": "int32"
             },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "StecPgmsWebService_Comm_Dto_v1_GuardCase_Request_Stec_StecCancelCaseDto": {
+        "required": ["deployReqSeq"],
+        "type": "object",
+        "properties": {
+          "deployReqSeq": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reason": {
+            "maxLength": 500,
+            "type": "string",
             "nullable": true
           }
         },
