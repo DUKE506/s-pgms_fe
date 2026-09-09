@@ -66,6 +66,8 @@ HTTP 200
 - **배치장소 4필드는 저장돼 있으면 채워져 온다** — 별도 쓰기 테스트(deploySeq 87)에서
   `AddDeployRequest`로 `guardHomeLoc` 등 4필드를 보내면 이 응답에 그대로 반영됨을 확인.
   71/82가 null인 건 그 건들이 4필드 이전 방식(단일 `deploymentPlace`)으로 생성됐기 때문.
-- `crimeType`이 레거시 데이터에선 영문(`"stalking"`)으로 옴(71) — 우리 폼이 쓰는 한글
-  라벨과 안 맞아 사건유형이 미선택으로 표시된다. 폼으로 생성한 건은 한글이라 정상(82).
-  레거시 건 재저장 시 사건유형 다시 선택 필요(경미, exclusions).
+- `crimeType` — 레거시 건은 영문(`"stalking"`, 71), 폼 생성 건은 한글(82)이 섞여 있었다.
+  **2026-09-09 프론트가 enum으로 통일** — 이 매퍼는 `crimeCodeToCaseType`(코드·레거시 한글
+  모두 라벨로)을 쓰므로 레거시 영문 건도 수정 화면에서 정상 선택 상태로 뜬다. 저장은
+  공유 `toDeployRequestDto`가 `caseTypeToCrimeCode`로 enum 전송. 브라우저 검증: 사건유형
+  협박으로 변경 → 재진입 협박 유지 → 스토킹 원복(deploySeq 90). (findings "crimeType enum 전환")

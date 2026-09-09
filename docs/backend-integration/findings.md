@@ -979,12 +979,19 @@ GetDeployDetail*`(배치요구서 기간 보유)을 부르면 **403**(2026-09-04
   `DispatchRequestViewDialog`도 동일).
 - **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 해소 불필요(설계상 확정).
 
-#### `crimeType`을 라벨 문자열 그대로 전송
-- **왜 제외했는지**: DB `DEPLOY_REQUEST.CRIME_TYPE` 코멘트는 "범죄유형 코드"지만 대응하는
-  코드표(`BASIC_CODE`)가 없음. 폼은 사건유형 라벨('스토킹' 등)을 그대로 씀.
-- **사용자가 잃는 것**: 없음 — 화면4 연동 검증에서 `GetDeployDetail`의 `crimeType`이
-  `"스토킹"` 문자열로 그대로 돌아오는 것 확인(round-trip 정상).
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 해소 불필요(문자열 저장 확인됨).
+#### ~~`crimeType`을 라벨 문자열 그대로 전송~~ → 해소(2026-09-09, enum 전환)
+- **경위**: DB `DEPLOY_REQUEST.CRIME_TYPE`은 "범죄유형 코드" 컬럼이고 스웨거(대시보드
+  `crimeType` 파라미터)에 enum이 `stalking/domestic/dating/threat/etc/none`으로 명시됨.
+  등록 시 체크버튼(한글 라벨)과 enum을 매칭하므로 조회도 enum으로 통일.
+- **처리**: `shared/lib/crimeType.ts` 신규 — `caseTypeToCrimeCode`(쓰기) /
+  `crimeCodeToCaseType`(읽기, enum·레거시 한글 둘 다 수용). 쓰기 `toDeployRequestDto`
+  (Add/UpdateDeployRequest 공유) 1곳, 읽기 매퍼 3곳(`GetDeployDetail`·
+  `GetDeployDetailUpdate`·`GetGuardCaseDetail`) 전환.
+- **백엔드 요청 전달**: 위 4개 GET 응답 `crimeType`을 enum으로 반환 + Add/Update는
+  enum 수신 그대로 저장 + 레거시 행(한글·영문 혼재) 정규화 방침 회신 (사용자 전달 완료).
+  회신 오면 읽기 헬퍼의 레거시 한글 폴백 제거 여부 판단.
+- **검증**: 브라우저(`SPoliceM5`) 배치요구서 수정에서 사건유형 협박으로 변경 → 재진입
+  협박 유지 → 스토킹 원복. 경찰/본사 경호상세 사건유형 정상 렌더.
 
 ---
 
@@ -1105,14 +1112,15 @@ GetDeployDetail*`(배치요구서 기간 보유)을 부르면 **403**(2026-09-04
   "경호관리"로 축소. 폼 내용·저장엔 영향 없음.
 - **연동 커밋 / 해소 예정**: (화면5 iteration 커밋) / 응답에 `mgmtNo` 추가 시.
 
-#### 레거시 건의 `crimeType`이 영문값이라 사건유형 미선택으로 뜸
-- **왜 제외하는지**: 폼이 쓰는 사건유형은 한글 라벨('스토킹' 등)인데, 백엔드에 직접
-  들어간 오래된 테스트 건(예: deployReqSeq 71)은 `crimeType: "stalking"` 영문값이라
-  폼 Select와 매칭이 안 된다. 우리 폼으로 생성/수정한 건은 한글이라 정상.
-- **사용자가 잃는 것**: 그런 레거시 건을 수정 화면에서 열면 사건유형이 미선택 상태 —
-  저장하려면 다시 골라야 한다(필수 항목).
-- **연동 커밋 / 해소 예정**: (화면5 iteration 커밋) / 백엔드 사건유형 코드표(`BASIC_CODE`)가
-  생기고 프론트가 코드↔라벨 매핑을 붙이면. 그전까지는 신규 건엔 영향 없어 경미.
+#### ~~레거시 건의 `crimeType`이 영문값이라 사건유형 미선택으로 뜸~~ → 해소(2026-09-09)
+- **경위**: 폼이 쓰는 사건유형은 한글 라벨('스토킹' 등)인데, 백엔드에 직접 들어간 오래된
+  테스트 건(예: deployReqSeq 71)은 `crimeType: "stalking"` 영문값이라 폼 Select와 매칭이
+  안 됐다.
+- **처리**: 프론트가 이제 사건유형을 enum 코드로 통일(위 "crimeType enum 전환" 항목).
+  읽기 헬퍼 `crimeCodeToCaseType`이 영문 enum·레거시 한글 둘 다 라벨로 변환하므로 레거시
+  영문 건도 수정 화면에서 정상 선택 상태로 뜬다.
+- **잔여**: 백엔드가 레거시 행을 정규화하고 읽기 응답을 enum으로 통일하면 헬퍼의 한글
+  폴백 제거 가능(회신 대기).
 
 ---
 
@@ -1321,11 +1329,10 @@ GetDeployDetail*`(배치요구서 기간 보유)을 부르면 **403**(2026-09-04
 - **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 본사용 배치요구서 원본 조회 API 신설 시
   (issues #7).
 
-#### `crimeType` 레거시 영문값
-- **왜 제외했는지**: 화면4에서 이미 기록 — 옛 데이터(caseSeq 29 등)는 `crimeType`이
-  `"stalking"` 같은 영문. 신규 접수분은 `"스토킹"` 정상.
-- **사용자가 잃는 것**: 옛 건의 사건유형이 영문 그대로 표시.
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 백엔드 데이터 정규화 시.
+#### ~~`crimeType` 레거시 영문값~~ → 해소(2026-09-09, enum 전환)
+- **경위**: 옛 데이터(caseSeq 29 등)는 `crimeType`이 `"stalking"` 같은 영문.
+- **처리**: `GetGuardCaseDetail` 매퍼도 `crimeCodeToCaseType`으로 전환 — 영문 enum·레거시
+  한글 모두 라벨로 변환. 위 "crimeType enum 전환" 항목과 동일 건.
 
 ### (없는 API) 본사 경호계획 등록 폼 — 프리필/등록 전용 조회 API 부재
 

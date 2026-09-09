@@ -92,6 +92,8 @@ HTTP 200
 - `summary1~5` = 5개 조치 섹션(안전조치/긴급응급조치/잠정조치/긴급임시조치/임시조치)에
   1:1 대응하는 것으로 보임. 단 프론트는 섹션당 **다중선택 배열 + {시작일,종료일} 기간**,
   백엔드는 **단일 문자열 + 단일 문자열** → 매핑 손실 있음(issues 참고).
-- `crimeType`이 caseSeq 29에선 레거시 영문값("stalking") — 화면4에서 이미 exclusions 기록.
+- `crimeType`이 caseSeq 29에선 레거시 영문값("stalking"). **2026-09-09 이 매퍼도
+  `crimeCodeToCaseType`으로 전환** — 영문 enum·레거시 한글 모두 라벨로 변환(exclusion 해소,
+  findings "crimeType enum 전환").
 - `destoryDocDownloadYn` = 파기확인서 다운로드 여부(오타 필드명 그대로). 종결 가능 판정용.
 ```

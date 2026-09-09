@@ -32,9 +32,9 @@
 |---|---|---|---|---|---|---|
 | 1 | 전제 | 공통 | 로그인 | 완료 | `008383a` | 경찰/본사 실제로는 같은 엔드포인트 — 유일하게 역할보다 먼저 |
 | 2 | A | [경찰서] 피전 | 경찰서 경호목록 | 완료 | `2679751` | 스코프는 서버가 403으로 강제(analysis.md 4-6 해소). 3번 직후 재검증 완료(새 접수 반영·mgmtNo 조합형태 확인). **7번 배정 직후 부분 재검증(2026-09-03)**: 배정 건이 `statusName:"배정"`(프론트 라벨과 일치)·`mgmtNo:"…동래경찰서 ST0002"`(경호코드 조합)로 반환됨 확인. 경호중/경호완료/종결/취소는 **9번 이후 재검증** |
-| 3 | A | [경찰서] 피전 | 접수/배치요구서 작성 | 완료 | `5074920` (+배치장소 4필드 보정: 이번 커밋) | `POST AddDeployRequest`. 폼: 요구자 3필드 분리 + 생년월일 입력(+ `DateField` yearGrid). **2026-09-03**: 배치장소를 백엔드 수정에 맞춰 `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드 전송(공유 `toDeployRequestDto`, D-2 제거, issues #5 해결 — 쓰기 테스트 deploySeq 87 왕복) |
+| 3 | A | [경찰서] 피전 | 접수/배치요구서 작성 | 완료 | `5074920` (+배치장소 4필드 보정) (+사건유형 enum: 이번 커밋) | `POST AddDeployRequest`. 폼: 요구자 3필드 분리 + 생년월일 입력(+ `DateField` yearGrid). **2026-09-03**: 배치장소를 백엔드 수정에 맞춰 `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` 4필드 전송(공유 `toDeployRequestDto`, D-2 제거, issues #5 해결 — 쓰기 테스트 deploySeq 87 왕복). **2026-09-09**: 사건유형을 enum 코드로 전송(`caseTypeToCrimeCode`, 공유 `toDeployRequestDto` — Add·Update 공통, findings "crimeType 라벨 전송" 해소) |
 | 4 | A | [경찰서] 피전 | 경호 상세 | 부분완료(△) | `19786c4` (+B-1 반영 커밋) | 접수 상태 실측 검증(2026-09-03). **2026-09-07 B-1 반영**: 백엔드가 `GetDeployDetail` shape 변경(`startDt`/`endDt` → `startDate`/`endDate`+`startTime`/`endTime`, `summary1~5`, `guardUserList`) → 배정+경호계획 등록 건의 조치 5개·배치시간·배치장소가 통합 카드에 채워짐(issues #13 해소, 브라우저 검증 deployReqSeq 81). 배정 이후 취소/연장/단축/종결 액션은 여전히 미검증 → 9번 이후 재검증. **완료 표시 보류** |
-| 5 | A | [경찰서] 피전 | 배치요구서 수정 | 완료 | (이번 커밋) | 블로커 해소 — 백엔드가 `GET GetDeployDetailUpdate` 응답 구현(배치요구서 원본 필드 전부 반환, issues #7 해결). prefill = `getDeployRequestForEdit`(`getSecurityCase`에서 분리, 쿼리키 분리) / 저장 = `PUT UpdateDeployRequest`(공유 `toDeployRequestDto`). 읽기/쓰기 필드명 비대칭 매핑. **저장 후 재진입 stale 캐시 버그 수정**(`removeQueries` — 아래 로그). 브라우저 SPA 플로우 검증. `mgmtNo` 없어 breadcrumb 축소·레거시 crimeType 영문 → exclusions. **피전 경호관리 섹션 종료** |
+| 5 | A | [경찰서] 피전 | 배치요구서 수정 | 완료 | (이번 커밋) | 블로커 해소 — 백엔드가 `GET GetDeployDetailUpdate` 응답 구현(배치요구서 원본 필드 전부 반환, issues #7 해결). prefill = `getDeployRequestForEdit`(`getSecurityCase`에서 분리, 쿼리키 분리) / 저장 = `PUT UpdateDeployRequest`(공유 `toDeployRequestDto`). 읽기/쓰기 필드명 비대칭 매핑. **저장 후 재진입 stale 캐시 버그 수정**(`removeQueries` — 아래 로그). 브라우저 SPA 플로우 검증. `mgmtNo` 없어 breadcrumb 축소. **피전 경호관리 섹션 종료**. **2026-09-09**: 사건유형 읽기/쓰기 enum 전환(`GetDeployDetailUpdate` 매퍼 + 공유 `toDeployRequestDto`) — 레거시 영문 crimeType exclusion 해소, prefill·저장 왕복 브라우저 검증(deploySeq 90) |
 | 6 | B | [본사] 운영/시스템관리자 | 근무자 목록/등록 | 완료 | `b5f5738` | `GetGuardList`/`AddGuardInfo`/`PatchGuardInfo`/`DeleteGuardInfo` 4종 실측(생성→수정→삭제 원상복구). 수정/삭제 mock에 없던 기능 → 행별 `⋮` 메뉴 UI 신규. 부서 열 제거(GetGuardList 응답에 `DEPT_NM` 누락 — DB엔 있음, issues #8 신규, 섹션 #12에서 일괄 요청). 조인용 `listCaseJoinWorkers` 분리(#9·#13 회귀 차단) |
 | 7 | B | [본사] 운영/시스템관리자 | 배치요청 목록(+본부 배정) | 완료 | (이번 커밋) | `GetDeployRequestList`/`GetStecUserList`(담당자 필터)/`AddGuardCase` 3종. deploySeq 81 실배정 → **GuardCase 최초 생성 검증**(caseSeq 46, `ST0002`). 담당자 목록 본부(#1)·배정건수 필드 없어 표시 축소. "취소" API 없어 메뉴 비활성화(**issues #9 신규**). 조인용 `listCaseAssignees` 분리(#8 회귀 차단). **함께 수정**: `client.ts` refresh single-flight(동시 401 → 1회용 RefreshToken 회전 → 강제 로그아웃되던 문제) |
 | 8 | B | [본사] 운영/시스템관리자 | 경호목록 | 완료 | `59bcd5b` | `GetGuardCaseList` 실 API 전환. 응답 이중 래핑 `{meta,data:[...]}`, `pageSize` 상한 100 → `meta.totalPages`까지 클라이언트 순회. `caseSeq`→id, `mgmtNo` 완성형 `splitMgmtNo`, `statusName` 라벨 그대로, `userName`→`assigneeName`(담당자 id 없음 — managers 조인 제거). 7번 배정 건(caseSeq 46~48) 렌더 확인. **실백엔드 계정으로 이 화면 진입 시 나던 RefreshToken 폭풍 해소**(mock 호출 0). 회귀 차단: `listManagerAssignedCases`(#11)·`listMockSecurityCases`(연장/단축=#10) 분리, 죽은 `listCaseAssignees` + `handlers/managers.ts` 제거. 지역청·담당자 소속 본부 열 축소(exclusions) |
@@ -52,6 +52,35 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-09: **사건유형(`crimeType`) enum 전환** — 새 화면 아님, 백엔드 요청 동반 수정.
+  배치요구서 등록 시 사건유형이 한글 라벨('스토킹')로 전송되던 것을, `DEPLOY_REQUEST.CRIME_TYPE`
+  (범죄유형 코드 컬럼) + 스웨거 대시보드 파라미터에 명시된 enum(`stalking/domestic/dating/
+  threat/etc/none`)으로 통일. 등록 체크버튼↔enum을 매칭하므로 조회도 enum으로.
+  - **변환 헬퍼 신규** `src/shared/lib/crimeType.ts` — `caseTypeToCrimeCode`(쓰기, 라벨→코드) /
+    `crimeCodeToCaseType`(읽기, 코드·레거시 한글·null 모두 라벨로). `subject.ts`의 성별
+    변환과 같은 패턴. 단위 테스트 `crimeType.test.ts` 14건.
+  - **쓰기 전환**: `police/api/securityCases.ts` 공유 `toDeployRequestDto`(Add·Update
+    공통) 1곳 — `crimeType: caseTypeToCrimeCode(input.caseType)`. 폼(`SecurityCaseForm`)·
+    `CaseType` 유니온·화면 렌더는 무변경(변환은 API 경계에서만).
+  - **읽기 전환 3곳**: `police/api/securityCaseDetail.ts`(`GetDeployDetail`·
+    `GetDeployDetailUpdate` 매퍼), `company/api/securityCaseDetail.ts`(`GetGuardCaseDetail`
+    매퍼) — `(d.crimeType as CaseType) || '사건미접수'` → `crimeCodeToCaseType(d.crimeType)`.
+    본사용 `GuardCase/Stec/W/GetDeployDetail`은 원래 crimeType을 안 읽음(주석만 보강).
+  - **테스트 더블**: `mocks/handlers/deploy.ts`(Add 파싱 + `GetDeployDetail`/
+    `GetDeployDetailUpdate` 응답 3곳), `guardCaseDetail.ts`(`GetGuardCaseDetail` 응답)를
+    enum shape로. `.mock` 스프레드 경로라 기존 테스트 어서션은 영향 없음.
+  - 검증: `npm run test` 136/136(신규 14) · lint(기존 warning 2) · build 통과. 실백엔드
+    `run-s-pgms`: (`SPoliceM5`) 배치요구서 수정에서 사건유형 협박으로 변경 →
+    `UpdateDeployRequest` → 재진입 시 협박 유지 → **스토킹으로 원복 완료**(deploySeq 90).
+    경찰 경호상세·수정 prefill·본사 경호상세 사건유형 정상 렌더, 콘솔 에러 0. 스크린샷
+    `crime-02`~`crime-08`.
+  - **관찰(블로커 아님)**: 저장 직후 경찰 경호상세(`GetDeployDetail`)는 이전 캐시로 옛
+    값을 잠깐 보여줌(수정 prefill `GetDeployDetailUpdate`는 최신) — React Query 무효화
+    범위 문제(화면5 `removeQueries` 패턴과 같은 성격), 새로고침 시 정상. 이번 변경과 무관.
+  - **이월**: 백엔드 회신(4개 GET 응답 enum 반환 + Add/Update enum 저장 + 레거시 행
+    정규화) 오면 → 읽기 응답이 실제 enum인지 재검증, 레거시 한글 폴백 제거 여부 판단.
+  - **다음**: 커밋 후 — 회신 대기 3건(B-2·C·D)은 여전히 대기. 재검증 대기(CARRYOVER B절) 유지.
 
 - 2026-09-08: 17번([경찰서] 게스트 · 경호목록 + 상세 조회전용) — **완료**. 그룹 D
   마지막 = 섹션 경계. **코드 변경 없음(테스트 1건 + 문서만)** — 게스트는 피전 경호목록/

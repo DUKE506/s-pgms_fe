@@ -152,9 +152,13 @@ HTTP 404
   로는 보냈지만 `GetDeployDetail`은 안 돌려줌. 현재 경찰 상세(`BaseInfoReadCard`)는
   둘 다 표시하지 않으므로 이번 화면엔 영향 없음. 배치요구서 수정(#5)에서 필요 →
   그때 `UpdateDeployRequest`/재조회 스펙으로 확인.
-- **`crimeType`이 한글 문자열**("스토킹") — 화면 `CaseType` 유니온과 동일 표기.
-  단 `GetDeployList`는 `crimeType`을 안 주므로(목록 매핑은 `'사건미접수'` 고정)
-  상세에서만 실제 사건유형을 얻는다.
+- **`crimeType`** — 이 실측 시점엔 한글 문자열("스토킹")이 돌아왔으나, 실제 컬럼은
+  코드값(`DEPLOY_REQUEST.CRIME_TYPE` "범죄유형 코드")이고 레거시 건은 영문(`"stalking"`)이
+  섞여 있었다. **2026-09-09부터 프론트는 사건유형을 enum(`stalking`/`domestic`/`dating`/
+  `threat`/`etc`/`none`)으로 쓰고, 읽기는 `crimeCodeToCaseType`(코드·레거시 한글 모두
+  수용)으로 변환**한다(`shared/lib/crimeType.ts`, findings "crimeType enum 전환"). 백엔드가
+  이 응답을 enum으로 통일하는지는 회신 후 재검증(CARRYOVER A절). 단 `GetDeployList`는
+  `crimeType`을 안 주므로(목록 매핑은 `'사건미접수'` 고정) 상세에서만 사건유형을 얻는다.
 - **`investigator`/`responsibleOfficer`가 `"이름 / 계급 / 연락처"` 결합 문자열.**
   화면은 `policeContact.investigator`/`.victimOfficer`에 그대로 넣어 표시(파싱 불필요).
 - **`policeStation`/`jurisdiction` 없음** — 목록과 동일하게 `GetMyProfile.groupName`으로

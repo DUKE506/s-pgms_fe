@@ -148,13 +148,13 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 접수 등록 | `createSecurityCase` | `POST Deploy/Police/W/AddDeployRequest` | ✅ 연동 완료(2026-09-02, **배치장소 4필드 보정 2026-09-03**). 성공 응답 `{message,data:true,code}` — 생성 id 안 돌려줌. 폼 변경: 요구자 3필드 분리, 생년월일 입력. 배치장소는 백엔드 수정으로 `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` **4필드 전송**(공유 `toDeployRequestDto`, D-2 제거, issues #5 해결 — 쓰기 테스트 deploySeq 87로 왕복 확인). 응답 샘플: `Deploy-Police-AddDeployRequest.md` |
+| 접수 등록 | `createSecurityCase` | `POST Deploy/Police/W/AddDeployRequest` | ✅ 연동 완료(2026-09-02, **배치장소 4필드 보정 2026-09-03**, **사건유형 enum 2026-09-09**). 성공 응답 `{message,data:true,code}` — 생성 id 안 돌려줌. 폼 변경: 요구자 3필드 분리, 생년월일 입력. 배치장소는 `guardHomeLoc`/`guardWorkLoc`/`guardEtcLoc1`/`guardEtcLoc2` **4필드 전송**(공유 `toDeployRequestDto`, issues #5 해결). 사건유형은 `caseTypeToCrimeCode`로 enum(`stalking` 등) 전송(`shared/lib/crimeType.ts`, findings "crimeType 라벨 전송" 해소). 응답 샘플: `Deploy-Police-AddDeployRequest.md` |
 
 #### 경호 상세 (`/security-cases/:id`)
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail` (배정 이후는 `GetGuardCaseDetail` 분기 예정) | △ 연동(2026-09-03), **접수 상태만 실측**. 접수단계 응답: `startDt`/`endDt` null(기간은 `periodFrom`/`periodTo`). 배치장소 4필드는 저장돼 있어도 **이 응답은 항상 null**(`GetDeployDetailUpdate`만 실제 값 반환 — 화면4 배치장소 표시는 빈 값, exclusions). 성별·생년월일·직업·사건개요·참고사항 없음(상세 화면은 원래 미표시). 배정 이후 `GetGuardCaseDetail` 분기·`caseSeq` 확보는 그룹 B(#9). 응답 샘플: `Deploy-Police-GetDeployDetail.md` |
+| 조회 | `getSecurityCase` | `GET Deploy/Police/W/GetDeployDetail` (배정 이후는 `GetGuardCaseDetail` 분기 예정) | △ 연동(2026-09-03), **접수 상태만 실측**. 접수단계 응답: `startDt`/`endDt` null(기간은 `periodFrom`/`periodTo`). 배치장소 4필드는 저장돼 있어도 **이 응답은 항상 null**(`GetDeployDetailUpdate`만 실제 값 반환 — 화면4 배치장소 표시는 빈 값, exclusions). 성별·생년월일·직업·사건개요·참고사항 없음. `crimeType`은 `crimeCodeToCaseType`으로 변환(2026-09-09 enum 전환). 배정 이후 `GetGuardCaseDetail` 분기·`caseSeq` 확보는 그룹 B(#9). 응답 샘플: `Deploy-Police-GetDeployDetail.md` |
 | 접수취소 | `cancelPendingCase` | `POST CancelGuardCase` | ✅ 연동+검증 완료(2026-09-03). 성공 `{data:true}` + 하드 삭제, 실패 시 400 `{data:false}`. 응답 샘플: `Deploy-Police-CancelGuardCase.md` |
 | 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
 | 연장/단축 요청 | `requestPeriodChange` | `PATCH ExtendDeployPeriod` / `ShortenDeployPeriod` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
@@ -169,8 +169,8 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회(prefill) | `getDeployRequestForEdit`(신규, `getSecurityCase`에서 분리) | `GET Deploy/Police/W/GetDeployDetailUpdate?deployReqSeq=` | ✅ issues #7 해결. 상세(화면4, `GetDeployDetail`)와 소스가 달라 쿼리키도 분리(`['deploy-request-edit', id]`). 읽기 필드명이 쓰기 DTO와 다름(`suspectBirth`↔`suspectBirthDate`, `etcLoc1/2`↔`guardEtcLoc1/2`, `deployStatus`) — 프론트 매핑. `mgmtNo` 없어 breadcrumb 축소(exclusions). 응답 샘플: `Deploy-Police-GetDeployDetailUpdate.md` |
-| 수정 저장 | `updateSecurityCase` | `PUT Deploy/Police/W/UpdateDeployRequest` | ✅ `UpdateDeployRequestDto` = `AddDeployRequestDto` + `deployReqSeq`(공유 `toDeployRequestDto`). 성공 `{data:true}`. 브라우저 왕복 검증(prefill·저장·배치장소 4필드, 사건유형 한글화). 배정 후 배치기간은 서버 무시/경호중+ 409/소속 밖 403(스웨거) — 배치기간 UI 비활성화 처리됨. 응답 샘플: `Deploy-Police-UpdateDeployRequest.md` |
+| 조회(prefill) | `getDeployRequestForEdit`(신규, `getSecurityCase`에서 분리) | `GET Deploy/Police/W/GetDeployDetailUpdate?deployReqSeq=` | ✅ issues #7 해결. 상세(화면4, `GetDeployDetail`)와 소스가 달라 쿼리키도 분리(`['deploy-request-edit', id]`). 읽기 필드명이 쓰기 DTO와 다름(`suspectBirth`↔`suspectBirthDate`, `etcLoc1/2`↔`guardEtcLoc1/2`, `deployStatus`) — 프론트 매핑. `crimeType`은 `crimeCodeToCaseType`으로 변환(2026-09-09, 레거시 영문 건도 정상 선택). `mgmtNo` 없어 breadcrumb 축소(exclusions). 응답 샘플: `Deploy-Police-GetDeployDetailUpdate.md` |
+| 수정 저장 | `updateSecurityCase` | `PUT Deploy/Police/W/UpdateDeployRequest` | ✅ `UpdateDeployRequestDto` = `AddDeployRequestDto` + `deployReqSeq`(공유 `toDeployRequestDto`). 성공 `{data:true}`. 브라우저 왕복 검증(prefill·저장·배치장소 4필드). **2026-09-09**: 사건유형 enum 전환 — 저장은 `caseTypeToCrimeCode`, prefill은 `crimeCodeToCaseType`(레거시 영문·한글 모두 라벨로). 협박↔스토킹 왕복 검증(deploySeq 90). 배정 후 배치기간은 서버 무시/경호중+ 409/소속 밖 403 — 배치기간 UI 비활성화. 응답 샘플: `Deploy-Police-UpdateDeployRequest.md` |
 
 #### 게스트 계정 관리 (`/guests`)
 
@@ -283,7 +283,7 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 조회(경호계획/헤더) | `getSecurityCase` | `GET GuardCase/Stec/W/GetGuardCaseDetail?caseSeq=` | ✅ 연동. 경호계획 등록 판정 = `startDate != null`. 배치요구서 원본 필드(요구자·사건개요·등록일·성별/생년월일/직업) 없음(issues #7·#12, exclusions). `crimeType` 레거시 영문값 잔존 |
+| 조회(경호계획/헤더) | `getSecurityCase` | `GET GuardCase/Stec/W/GetGuardCaseDetail?caseSeq=` | ✅ 연동. 경호계획 등록 판정 = `startDate != null`. 배치요구서 원본 필드(요구자·사건개요·등록일·성별/생년월일/직업) 없음(issues #7·#12, exclusions). `crimeType`은 `crimeCodeToCaseType`으로 변환(2026-09-09, 레거시 영문값 해소) |
 | 조회(경호원 배정) | `getCaseGuards`(신규, `workers.ts`) | `GET GuardCase/Stec/W/GetCaseGuardList?caseSeq=` | ✅ 연동. `{guardSeq,name,sabun,deptName,isAssigned,phone}` — 경호건 스코프라 부서도 옴(issues #8 무관). `listCaseJoinWorkers`(mock)는 이력 상세 #13용으로만 잔존 |
 | 조회(스케줄) | `getSecurityCase` | `GET GuardCase/Stec/W/GetCaseSchedule?caseSeq=` | ✅ 연동. `data[]={groupName(일자),groups[]{groupSeq,order,guards[]}}` → `WorkSchedule.days[].groups[].assignments[]`. **그룹 메모 응답에 없음**(issues #12, exclusions) |
 | 조회(사전미팅) | `getSecurityCase` | `GET GuardCase/Stec/W/GetCaseMeeting?caseSeq=` | ⚠️ 현재 모든 케이스 `data:null` — 응답 스키마 미실측. 저장 연동은 **후속** |

@@ -120,7 +120,8 @@ Authorization: Bearer {StecM1 accessToken}
 - **필드명 비대칭** (읽기 vs 쓰기 `UpdateDeployRequestDto`): `suspectBirth`↔`suspectBirthDate`,
   `etcLoc1`/`etcLoc2`↔`guardEtcLoc1`/`guardEtcLoc2`. `guardWorkLoc`/`guardHomeLoc`는 동일.
 - **`mgmtNo` 없음** — 헤더/breadcrumb는 목록에서 받은 값 사용.
-- 레거시 `crimeType` 영문값("stalking", deployReqSeq 70·71 등 옛 데이터). 신규 접수분은
-  한글("스토킹").
+- 레거시 `crimeType` 영문값("stalking", deployReqSeq 70·71 등 옛 데이터), 신규 접수분은
+  한글("스토킹")이 섞임. **이 응답의 `crimeType`은 프론트가 안 읽는다** — 사건유형은
+  `GetGuardCaseDetail` 매퍼(`toHeader`)가 `crimeCodeToCaseType`으로 채운다(2026-09-09).
 - deployReqSeq 81의 `suspectUserName`이 "홍○○"인 것은 마스킹이 아니라 그 레코드에
   원래 그렇게 입력된 테스트 데이터(86은 "이동희" 실명 그대로 반환).

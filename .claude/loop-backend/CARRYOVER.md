@@ -14,6 +14,7 @@ B-2·C·D 통합 전달본: `requests/2026-09-08-미회신-B2-C-D.xlsx`(시트 3
 | `requests/2026-09-08-본사-경호관리-B2.md` | 섹션 B-2 (#10~#12) | #12 완료 표시·문서 갱신, findings #1·#2, 경호목록 지역청 필터 프론트 연동 |
 | `requests/2026-09-08-이력-C.md` | 섹션 C (#13~#15) | #14 본사 이력 상세 EP, #15 캐스케이드/진행중 목록 EP, 이력 상세 스코프·배치장소 논의 |
 | `requests/2026-09-08-게스트-D.md` | 섹션 D (#16~#17) | `useYn` 중지 계정 결정, `GetDeployDetail` 게스트 스코프 서버 보장 확인 |
+| 사건유형 `crimeType` enum (2026-09-09 전달) | `GetDeployDetail`·`GetDeployDetailUpdate`·`GetGuardCaseDetail`·`GuardCase/Stec/W/GetDeployDetail` | 4개 GET 응답을 enum으로 반환하는지 재검증, Add/Update enum 저장 확인, 레거시 행(한글·영문 혼재) 정규화 여부 → `crimeCodeToCaseType`의 레거시 한글 폴백 제거 판단 |
 
 ## B. 데이터·상태 대기 재검증
 

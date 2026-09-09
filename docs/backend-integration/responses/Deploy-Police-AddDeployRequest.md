@@ -19,7 +19,7 @@
   "suspectBirthDate": "1992-01-01",
   "suspectJob": "회사원",
   "suspectAddress": "부산 동래구 온천천로 123",
-  "crimeType": "스토킹",
+  "crimeType": "stalking",
   "caseSummary": "…",
   "deploymentPeriodFrom": "2026-09-12",
   "deploymentPeriodTo": "2026-09-22",
@@ -93,6 +93,11 @@ HTTP 400 (ASP.NET `[ApiController]` 자동 모델 검증 — envelope가 아니�
 - **선택(nullable) 필드**: `suspectGender`(int, 기본 0)·`caseSummary`·`caseMemo`·
   `crimeType`·`investigator`·`responsibleOfficer`. `caseMemo`는 빈 문자열 `""`로 보내도
   200.
+- **`crimeType`은 2026-09-09부터 enum 코드로 전송** — `stalking`/`domestic`/`dating`/
+  `threat`/`etc`/`none`(스웨거 대시보드 파라미터 기준). 초기 실측 땐 한글 라벨("스토킹")로
+  보냈고 그대로 저장됐으나, `DEPLOY_REQUEST.CRIME_TYPE`이 코드 컬럼이라 통일.
+  `shared/lib/crimeType.ts`의 `caseTypeToCrimeCode`가 공유 `toDeployRequestDto`에서 변환
+  (Add·Update 공통). 백엔드 회신 후 응답 enum 반환·레거시 정규화 재검증(CARRYOVER A절).
 - **`groupSeq`**는 모델 검증 필수 목록엔 없지만(int 기본 0), 우리 앱은 로그인 시
   `GetMyProfile`로 받은 값을 세션에서 꺼내 항상 넣는다(GetDeployList와 동일). 권한 밖
   `groupSeq`는 GetDeployList처럼 서버가 막을 것으로 추정(미검증 — 화면3에선 본인
