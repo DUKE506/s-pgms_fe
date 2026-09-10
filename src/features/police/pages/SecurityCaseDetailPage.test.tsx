@@ -132,6 +132,8 @@ describe('PoliceSecurityCaseDetailPage', () => {
 
     await waitFor(() => expect(record.status).toBe('종결'))
     expect(record.closureReason).toBe('경호기간 만료')
+    // 종결하면 상세에 머무르지 않고 경호목록으로 이동한다.
+    expect(await screen.findByText('경호목록 도착')).toBeInTheDocument()
   })
 
   it('종결 사유를 선택하지 않으면 종결이 진행되지 않는다', async () => {

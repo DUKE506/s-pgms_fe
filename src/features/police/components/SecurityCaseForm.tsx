@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import DateField from '@/shared/components/DateField'
+import DetailHeader from '@/shared/components/DetailHeader'
 import { calcAge } from '@/shared/lib/subject'
 import { cn } from '@/lib/utils'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
@@ -146,6 +147,8 @@ export interface SecurityCaseFormProps {
   // 경호 상세의 연장/단축 요청으로만 가능(2026-08-25 결정).
   disablePeriod?: boolean
   breadcrumb: string
+  // 뒤로가기 버튼이 히스토리 없이(주소창 직접 진입) 이동할 상위 경로.
+  backTo: string
   title: string
   description: string
   submitLabel: string
@@ -159,6 +162,7 @@ function SecurityCaseForm({
   initialForm,
   disablePeriod = false,
   breadcrumb,
+  backTo,
   title,
   description,
   submitLabel,
@@ -209,7 +213,7 @@ function SecurityCaseForm({
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-5 p-4 pb-24 sm:p-8 sm:pb-24 xl:pb-8">
       <div>
-        <p className="text-xs text-muted-foreground">{breadcrumb}</p>
+        <DetailHeader breadcrumb={breadcrumb} fallbackTo={backTo} />
         <h1 className="mt-1 text-xl font-bold text-foreground">{title}</h1>
         <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       </div>

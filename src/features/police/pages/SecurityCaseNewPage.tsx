@@ -45,6 +45,7 @@ function SecurityCaseNewPage() {
     <SecurityCaseForm
       initialForm={INITIAL_FORM_STATE}
       breadcrumb="경호목록 / 신규 접수"
+      backTo="/security-cases"
       title="신규 접수 · 배치요구서 작성"
       description="배치요구서를 작성합니다. 모든 항목 입력 후 등록해주세요."
       submitLabel="등록"

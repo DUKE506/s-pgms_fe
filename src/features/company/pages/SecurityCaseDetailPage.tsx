@@ -4,6 +4,7 @@ import { FileText, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
+import DetailHeader from '@/shared/components/DetailHeader'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCase } from '../api/securityCaseDetail'
 import { getCaseGuards } from '../api/workers'
@@ -75,10 +76,14 @@ function SecurityCaseDetailPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <p className="text-xs text-muted-foreground">
-        경호관리 / {managementNumber}
-        {editingBaseInfo && ' / 기본정보 등록'}
-      </p>
+      <DetailHeader
+        breadcrumb={
+          '경호관리' +
+          (managementNumber ? ` / ${managementNumber}` : '') +
+          (editingBaseInfo ? ' / 기본정보 등록' : '')
+        }
+        fallbackTo="/admin/security-cases"
+      />
 
       {/* BaseInfoForm(폼)은 목업상 760px로 좁게 디자인돼 있어 자체적으로
           mx-auto max-w-3xl을 갖고 있음 — 여기선 폭을 제한하지 않아야

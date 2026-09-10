@@ -1,7 +1,7 @@
-import { useNavigate, useParams } from 'react-router'
-import { ArrowLeft } from 'lucide-react'
+import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import StatusBadge from '@/shared/components/StatusBadge'
+import DetailHeader from '@/shared/components/DetailHeader'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getCompanyHistoryDetail } from '../api/history'
 
@@ -32,7 +32,6 @@ function Field({ label, value }: { label: string; value: string }) {
 // 정보 우측. 근무자별 투입실적은 응답 guards[]에 이름이 인라인이라 별도 조회 없음.
 // 사건유형·배치장소는 이 응답에 없어 미표시(exclusions).
 function HistoryDetailPage() {
-  const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const caseQuery = useQuery({
     queryKey: ['company-history-detail', id],
@@ -40,21 +39,12 @@ function HistoryDetailPage() {
     enabled: Boolean(id),
   })
 
-  const backButton = (
-    <button
-      type="button"
-      onClick={() => navigate('/admin/history')}
-      className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-    >
-      <ArrowLeft className="size-4" />
-      이력 조회
-    </button>
-  )
+  const header = <DetailHeader breadcrumb="이력 조회" fallbackTo="/admin/history" />
 
   if (caseQuery.isLoading) {
     return (
       <main className="flex flex-col gap-5 p-4 sm:p-8">
-        {backButton}
+        {header}
         <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
       </main>
     )
@@ -63,7 +53,7 @@ function HistoryDetailPage() {
   if (caseQuery.isError || !caseQuery.data) {
     return (
       <main className="flex flex-col gap-5 p-4 sm:p-8">
-        {backButton}
+        {header}
         <p className="py-8 text-center text-sm text-destructive">이력을 불러오지 못했습니다</p>
       </main>
     )
@@ -82,11 +72,10 @@ function HistoryDetailPage() {
 
   return (
     <main className="flex flex-col gap-5 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      {backButton}
-
-      <p className="text-xs text-muted-foreground">
-        {[c.jurisdiction, c.policeStation].filter(Boolean).join(' / ')} / 이력 조회
-      </p>
+      <DetailHeader
+        breadcrumb={managementNumber ? `이력 조회 / ${managementNumber}` : '이력 조회'}
+        fallbackTo="/admin/history"
+      />
 
       <div className="flex flex-wrap items-center gap-3.5">
         <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>

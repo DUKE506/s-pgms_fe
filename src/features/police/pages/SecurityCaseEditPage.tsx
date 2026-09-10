@@ -63,7 +63,7 @@ function SecurityCaseEditPage() {
   const securityCase = caseQuery.data
   // GetDeployDetailUpdate 응답엔 mgmtNo가 없어 receiptNumber가 빈 값일 수 있다.
   const managementNumber = formatManagementNumber(securityCase.receiptNumber, securityCase.securityCode)
-  const breadcrumb = managementNumber ? `경호관리 / ${managementNumber}` : '경호관리'
+  const breadcrumb = managementNumber ? `경호목록 / ${managementNumber}` : '경호목록'
   // 접수/배정까지는 배치기간 포함 전체 수정, 경호중 이후는 배치기간만 잠근다
   // (2026-08-25 결정 — 기간 변경은 경호 상세의 연장/단축 요청 몫).
   const disablePeriod = securityCase.status !== '접수' && securityCase.status !== '배정'
@@ -114,6 +114,7 @@ function SecurityCaseEditPage() {
       initialForm={toFormState(securityCase)}
       disablePeriod={disablePeriod}
       breadcrumb={breadcrumb}
+      backTo={`/security-cases/${securityCase.id}`}
       title="배치요구서 수정"
       description="배치요구서 내용을 수정합니다."
       submitLabel="저장"

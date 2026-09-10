@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -33,6 +34,7 @@ function CloseCaseDialog({ securityCase, open, onOpenChange }: CloseCaseDialogPr
   const [detail, setDetail] = useState('')
   const [showError, setShowError] = useState(false)
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const showToast = useToastStore((state) => state.show)
 
   const mutation = useMutation({
@@ -41,6 +43,9 @@ function CloseCaseDialog({ securityCase, open, onOpenChange }: CloseCaseDialogPr
       queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
       showToast('종결 처리되었습니다', 'success')
       onOpenChange(false)
+      // 종결하면 이 건은 경호목록에서 빠지고 이력으로 넘어간다 — 상세에 머무르지 않고
+      // 경호목록으로 돌려보낸다.
+      navigate('/security-cases')
     },
     onError: () => showToast('종결 처리에 실패했습니다', 'error'),
   })

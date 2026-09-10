@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
+import DetailHeader from '@/shared/components/DetailHeader'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { useAuthStore } from '../../auth/store/authStore'
 import { getDeployGuardSchedule, getSecurityCase } from '../api/securityCaseDetail'
@@ -159,7 +160,10 @@ function SecurityCaseDetailPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <p className="text-xs text-muted-foreground">{securityCase.policeStation}</p>
+      <DetailHeader
+        breadcrumb={managementNumber ? `경호목록 / ${managementNumber}` : '경호목록'}
+        fallbackTo="/security-cases"
+      />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3.5">

@@ -1,6 +1,7 @@
 import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import StatusBadge from '@/shared/components/StatusBadge'
+import DetailHeader from '@/shared/components/DetailHeader'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getPoliceStationHistoryDetail } from '../api/history'
 import type { MeasurePeriod } from '../types/securityCase'
@@ -78,7 +79,10 @@ function HistoryDetailPage() {
 
   return (
     <main className="flex flex-col gap-5 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <p className="text-xs text-muted-foreground">{c.policeStation} / 이력 조회</p>
+      <DetailHeader
+        breadcrumb={managementNumber ? `이력 조회 / ${managementNumber}` : '이력 조회'}
+        fallbackTo="/history"
+      />
 
       <div className="flex flex-wrap items-center gap-3.5">
         <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
