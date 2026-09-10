@@ -53,6 +53,40 @@
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
 
+- 2026-09-10: **수정사항 7건 처리** (사용자 재검증 중 나온 UI/연동 이슈 모음, 커밋 4개).
+  loop-backend iteration 아님 — 화면 단위 버그픽스 패스.
+  - **① 본사 경호목록 "본부" 열 제거**(`409ad4a`) — 본사 계정은 `USER_INFO` group 컬럼
+    미사용(findings #1). 데스크톱 테이블 헤더·셀.
+  - **② 근무조 특이사항 연결**(`409ad4a`) — `GetCaseSchedule` 응답이 `groups[].memo`를
+    주기 시작(findings #12 memo 파트 🟢). `toWorkSchedule`이 `note: ''`로 하드코딩하던 것을
+    `note: g.memo ?? ''`로. `PatchScheduleGroup.memo`→`GetCaseSchedule.memo` 왕복 프로브 +
+    브라우저(StecM1 `/admin/security-cases/53`) 확인. 테스트용 memo 원복.
+  - **③ 단축 요청 다이얼로그 "(현재)" 라벨 제거**(`409ad4a`) — 마지막 배치일자 버튼의
+    "(현재)"가 오늘로 오인 소지.
+  - **④ 연장/단축 신청 대기 건이 피전 경호목록에서 사라짐**(`3e33042`) — `GetDeployList`
+    `statusName`이 신청 걸린 경호중 건을 "연장"/"단축"으로 준다 → `VISIBLE_STATUSES` 필터에
+    걸려 행이 빠짐. `shared/lib/deployStatus.ts::resolveDeployStatus`로 "연장"/"단축"→경호중
+    정규화, 피전 목록/상세/수정 매퍼 3곳 적용. 상세는 `requestedEndDate` 있으면
+    `pendingPeriodRequest`도 조립. 테스트 더블도 pending 시 "연장"/"단축" 반환. 테스트 1건
+    추가(139→140). 브라우저: 단축 걸린 ST0015(deploySeq 96)가 경호중으로 표시됨.
+    **findings #19 신규(🔴)**: `GetDeployList`·`GetDeployDetail`에 숫자 `status`(0~4,
+    `GetHistoryList`엔 이미 있음) 추가 요청 — **사용자가 백엔드에 요청함, 회신 대기**.
+  - **⑤ 종결 후 페이지 전환**(`4e892e2`) — 피전 종결 완료 시 `CloseCaseDialog`가 상세에
+    머무르던 것 → `navigate('/security-cases')`(종결 건은 목록에서 빠짐). 종결 테스트에
+    "경호목록 도착" 어서션 추가.
+  - **⑥ breadcrumb 통일**(`4e892e2`) — 피전 배치요구서 수정 화면 "경호관리 / …" →
+    "경호목록 / …"(피전 메뉴/신규화면과 일치). 본사 경호상세 관리번호 없을 때 "경호관리 / "
+    꼬리 가드. 이력상세 "{소속} / 이력 조회" → "이력 조회 / {관리번호}"(메뉴/항목 순서 통일).
+  - **⑦ 공용 상세 헤더 뒤로가기 버튼**(`4e892e2`·`26487ff`) — `shared/components/DetailHeader`
+    신설: 왼쪽 화살표 버튼(`navigate(-1)`, 히스토리 없으면 `fallbackTo`) + 경로 텍스트(클릭
+    이동 없음). 경호상세·이력상세(피전/본사)·배치요구서 접수/수정 화면 5곳 적용. 아이콘
+    ArrowLeft·`p-2`·`rounded-lg`·hover 배경(`26487ff`, 사용자 디자인 요청).
+  - 검증: `npm run test` 140/140 · lint(기존 warning 2) · build · `tsc -b` 통과. 브라우저
+    `run-s-pgms` 각 화면 확인, 콘솔 에러 0.
+  - **미해결**: ④ 숫자 `status` 백엔드 회신 대기(findings #19). **추가 작업 기록**: 경찰서
+    경호목록에서 배정 직후 건(배치기간 null)의 경호기간이 `1970.01.01`로 표시됨 —
+    `formatDate` 빈 값 가드 없음(본사 목록엔 있음). CARRYOVER D절.
+
 - 2026-09-10: **문서함 다운로드 연결 — 경호계획서·개인정보동의서** (#4·#9 걸침). 재검증 중
   발견한 프론트 갭 수정(백엔드 요청 아님). 유형 = 연동(계획서·프로브 축약).
   - **배경**: 파기확인서만 전용 API(`GetDestroyDocDownload` — 수령 기록이 종결 선결조건).
