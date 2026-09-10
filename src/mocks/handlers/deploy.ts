@@ -369,18 +369,15 @@ export const deployTestHandlers = [
     ),
   ),
 
-  // 종결 — POST Deploy/Police/W/CloseGuardCase {caseSeq, endReason}.
-  // caseSeq는 경호코드 숫자부(GetDeployList 더블의 caseSeq 규칙과 동일) — 프론트가
-  // resolveCaseSeq로 deployReqSeq→caseSeq 변환해서 보낸다. 프론트가 "사유 - 상세"로
-  // 합쳐 보내므로 더블에서 되돌려 나눈다(실제 API는 endReason 단일 자유텍스트).
+  // 종결 — POST Deploy/Police/W/CloseGuardCase {deploySeq, endReason}.
+  // deploySeq는 배치요구서 PK(프론트가 라우트 id로 그대로 보냄, 파기확인서 다운로드와 같은 키).
+  // 프론트가 "사유 - 상세"로 합쳐 보내므로 더블에서 되돌려 나눈다(실제 API는 endReason 단일 자유텍스트).
   http.post('/api/v1/Deploy/Police/W/CloseGuardCase', async ({ request }) => {
     if (!stationFromBearer(request)) {
       return HttpResponse.json({ message: '인증이 필요합니다.', data: null, code: 401 }, { status: 401 })
     }
-    const { caseSeq, endReason } = (await request.json()) as { caseSeq: unknown; endReason: string }
-    const record = securityCases.find(
-      (c) => c.securityCode && Number(c.securityCode.replace(/\D/g, '')) === Number(caseSeq),
-    )
+    const { deploySeq, endReason } = (await request.json()) as { deploySeq: unknown; endReason: string }
+    const record = findBySeq(deploySeq)
     if (!record) {
       return HttpResponse.json(
         { message: '존재하지 않는 경호건입니다.', data: null, code: 404 },

@@ -195,15 +195,15 @@ export function toSeq(id: string): number | string {
   return /^\d+$/.test(id) ? Number(id) : id
 }
 
-// 파기확인서 다운로드 — GET Deploy/Police/W/GetDestroyDocDownload?caseSeq=.
-// ⚠️ 파라미터가 caseSeq다(deployReqSeq 아님) — CloseGuardCase와 동일하게 GetDeployDetail이
-// caseSeq를 안 줘서 resolveCaseSeq로 변환한다. 이 다운로드를 받아야 서버의
-// DESTROY_DOC_DOWNLOAD_YN이 켜지고 그게 종결(CloseGuardCase)의 선결조건이다 — 안 받고
-// 종결하면 409. Authorization 헤더가 필요해 <a href> 대신 blob으로 받아 저장 트리거한다.
+// 파기확인서 다운로드 — GET Deploy/Police/W/GetDestroyDocDownload?deploySeq=.
+// 파라미터는 배치요구서 PK(deploySeq = 화면이 라우트 id로 이미 갖고 있는 값, 종결과 같은 키).
+// 이 다운로드를 받아야 서버의 DESTROY_DOC_DOWNLOAD_YN이 켜지고 그게 종결(CloseGuardCase)의
+// 선결조건이다 — 안 받고 종결하면 409. Authorization 헤더가 필요해 <a href> 대신 blob으로
+// 받아 저장 트리거한다.
 export async function downloadDestructionCert(id: number | string): Promise<void> {
-  const caseSeq = await resolveCaseSeq(String(id))
+  const deploySeq = Number(String(id).replace(/\D/g, ''))
   const res = await apiFetch(
-    `/v1/Deploy/Police/W/GetDestroyDocDownload?caseSeq=${caseSeq}`,
+    `/v1/Deploy/Police/W/GetDestroyDocDownload?deploySeq=${deploySeq}`,
   )
   if (!res.ok) {
     throw new Error('파기확인서를 불러오지 못했습니다')
@@ -211,7 +211,7 @@ export async function downloadDestructionCert(id: number | string): Promise<void
   const blob = await res.blob()
   const disposition = res.headers.get('content-disposition') ?? ''
   const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)
-  const fileName = match ? decodeURIComponent(match[1]) : `파기확인서_${caseSeq}.pdf`
+  const fileName = match ? decodeURIComponent(match[1]) : `파기확인서_${deploySeq}.pdf`
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -438,31 +438,9 @@ export async function requestPeriodChange(
   }
 }
 
-// ⚠️ 임시 우회: CloseGuardCaseDto는 caseSeq(경호건 시퀀스)를 요구하는데 GetDeployDetail
-// 응답엔 caseSeq가 없다(deployReqSeq만). 경호목록(GetDeployList)은 행에 {deploySeq, caseSeq}를
-// 둘 다 주므로 거기서 deployReqSeq → caseSeq를 매핑한다. 백엔드가 GetDeployDetail 응답에
-// caseSeq를 추가하면 이 조회는 제거한다(findings — GetDeployDetail.caseSeq 요청).
-async function resolveCaseSeq(deployReqSeq: string): Promise<number> {
-  const groupSeq = useAuthStore.getState().user?.groupSeq
-  const query = groupSeq != null ? `?groupSeq=${groupSeq}` : ''
-  const res = await apiFetch(`/v1/Deploy/Police/W/GetDeployList${query}`)
-  if (!res.ok) {
-    throw new Error('경호건 정보를 확인하지 못했습니다')
-  }
-  const rows = await unwrapEnvelope<{ deploySeq: number; caseSeq: number | null }[]>(res)
-  // 실백엔드 id는 String(deploySeq)지만 테스트 더블 id는 문자열('case-seed-8')이라
-  // 숫자부만 비교한다(mock GetDeployList의 deploySeq 규칙과 동일).
-  const key = Number(String(deployReqSeq).replace(/\D/g, ''))
-  const row = rows.find((r) => r.deploySeq === key)
-  if (!row || row.caseSeq == null) {
-    throw new Error('경호건 시퀀스를 찾지 못했습니다')
-  }
-  return row.caseSeq
-}
-
-// 종결: POST Deploy/Police/W/CloseGuardCase { caseSeq, endReason }. 종결사유가 자유텍스트
-// 단일 필드라 프론트의 ClosureReason(+상세)를 한 문자열로 합쳐 보낸다. id는 라우트
-// 파라미터(=deployReqSeq)라 실제 caseSeq로 변환해서 보낸다(위 resolveCaseSeq).
+// 종결: POST Deploy/Police/W/CloseGuardCase { deploySeq, endReason }. 키는 배치요구서
+// PK(deploySeq = 화면이 라우트 id로 이미 갖고 있는 값). 종결사유가 자유텍스트 단일
+// 필드라 프론트의 ClosureReason(+상세)를 한 문자열로 합쳐 보낸다.
 export async function closeCase(
   id: string,
   closureReason: ClosureReason,
@@ -472,11 +450,11 @@ export async function closeCase(
     closureReason === '기타' && closureReasonDetail?.trim()
       ? `${closureReason} - ${closureReasonDetail.trim()}`
       : closureReason
-  const caseSeq = await resolveCaseSeq(id)
+  const deploySeq = Number(String(id).replace(/\D/g, ''))
   const res = await apiFetch('/v1/Deploy/Police/W/CloseGuardCase', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ caseSeq, endReason }),
+    body: JSON.stringify({ deploySeq, endReason }),
   })
   if (!res.ok) {
     throw new Error('종결 처리에 실패했습니다')
