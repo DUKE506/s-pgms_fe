@@ -1,4 +1,4 @@
-import { ChevronLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router'
 
 interface DetailHeaderProps {
@@ -20,14 +20,14 @@ function DetailHeader({ breadcrumb, fallbackTo }: DetailHeaderProps) {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={goBack}
         aria-label="뒤로 가기"
-        className="-ml-1 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="-ml-2 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
-        <ChevronLeft className="size-4" />
+        <ArrowLeft className="size-4" />
       </button>
       <p className="text-xs text-muted-foreground">{breadcrumb}</p>
     </div>
