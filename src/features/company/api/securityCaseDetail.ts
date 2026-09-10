@@ -273,10 +273,17 @@ function toWorkSchedule(
 function toAttachments(doc: CaseDocData): CaseAttachments {
   return {
     securityPlanFileName: doc.caseInfoDto?.fileName ?? null,
+    // 경호계획서·동의서는 filePath를 /files/<path>로 받는다(전용 API 없음).
+    securityPlanFilePath: doc.caseInfoDto?.filePath ?? null,
     workerConsentFileNames: Object.fromEntries(
       doc.guardAgreementDtos
         .filter((x) => x.fileName)
         .map((x) => [String(x.guardSeq), x.fileName as string]),
+    ),
+    workerConsentFilePaths: Object.fromEntries(
+      doc.guardAgreementDtos
+        .filter((x) => x.filePath)
+        .map((x) => [String(x.guardSeq), x.filePath as string]),
     ),
     destructionCertFileName: doc.guardDeployDocDto?.fileName ?? null,
   }

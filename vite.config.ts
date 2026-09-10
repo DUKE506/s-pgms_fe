@@ -37,6 +37,13 @@ export default defineConfig(({ mode }) => {
               target: env.API_PROXY_TARGET,
               changeOrigin: true,
             },
+            // 경호계획서·개인정보동의서는 전용 다운로드 API가 없고 저장 경로가 곧
+            // 다운로드 URL이다(스웨거 GetDestroyDocDownload 설명). 백엔드가 정적 파일을
+            // /files/<경로>로 서빙하므로 이 경로도 함께 프록시한다.
+            '/files': {
+              target: env.API_PROXY_TARGET,
+              changeOrigin: true,
+            },
           }
         : undefined,
     },

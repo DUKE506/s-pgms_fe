@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { FileText } from 'lucide-react'
 import { downloadDestructionCert } from '../api/securityCaseDetail'
+import { downloadFileByPath } from '../../../shared/lib/download'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { SecurityCase } from '../types/securityCase'
 
@@ -12,8 +13,7 @@ interface DocRowProps {
   pending?: boolean
 }
 
-// 실제 파일 저장 없이 파일명만 보관하는 mock 특성상(2026-08-22 결정) 다운로드는
-// 눌러도 받을 파일이 없어 비활성 라벨로만 표시한다.
+// action이 있으면 다운로드 버튼, 없으면(pending) "대기중" 라벨.
 function DocRow({ title, subtitle, action, pending }: DocRowProps) {
   return (
     <div
@@ -54,7 +54,17 @@ function DocumentsCard({ securityCase, readOnly }: DocumentsCardProps) {
   const showToast = useToastStore((state) => state.show)
   const isPending = securityCase.status === '접수'
   const securityPlanFileName = securityCase.attachments?.securityPlanFileName
+  const securityPlanFilePath = securityCase.attachments?.securityPlanFilePath
   const destructionCertFileName = securityCase.attachments?.destructionCertFileName
+
+  async function handleDownloadSecurityPlan() {
+    if (!securityPlanFilePath) return
+    try {
+      await downloadFileByPath(securityPlanFilePath, securityPlanFileName)
+    } catch {
+      showToast('경호계획서를 불러오지 못했습니다', 'error')
+    }
+  }
 
   async function handleDownloadDestructionCert() {
     try {
@@ -83,7 +93,15 @@ function DocumentsCard({ securityCase, readOnly }: DocumentsCardProps) {
 
         {!isPending &&
           (securityPlanFileName ? (
-            <DocRow title={securityPlanFileName} subtitle="본사 업로드" action={{ label: '다운로드', onClick: () => {} }} />
+            <DocRow
+              title={securityPlanFileName}
+              subtitle="본사 업로드"
+              action={
+                securityPlanFilePath
+                  ? { label: '다운로드', onClick: handleDownloadSecurityPlan }
+                  : undefined
+              }
+            />
           ) : (
             <DocRow title="경호계획서" subtitle="본사 업로드 예정" pending />
           ))}

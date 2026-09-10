@@ -25,18 +25,42 @@ import type { Worker } from '../../company/api/workers'
 // 조립해 통합 기본정보 카드(CaseBaseInfoCard)의 조치·배치시간을 채운다(issues #13 해소).
 // 배정 이후 상태(경호취소/연장·단축/종결)는 matrix 9번 이후 재검증.
 
-// 문서함 항목(파기확인서·경호계획서). 파기확인서는 drtFileName/drtFileExt로 오고
-// (2026-09-09 실측), 경호계획서(docGuardDetail)는 실측 데이터가 없어 필드명 미확정.
+// 문서함 항목. 파기확인서(docDestructionDetail)는 drtFileName/drtFileExt로 오고,
+// 경호계획서(docGuardDetail)는 {docSeq,docType,docPath,fileName,fileExt}로 온다
+// (2026-09-10 실측 — deployReqSeq 93). 경호계획서·동의서는 전용 API 없이 docPath를
+// /files/<path>로 받는다(파기확인서만 GetDestroyDocDownload를 거침).
 interface DeployDocDetail {
   drtFileName?: string | null
   drtFileExt?: string | null
   docFileName?: string | null
   fileName?: string | null
+  docPath?: string | null
+  filePath?: string | null
 }
 
 function docFileNameOf(detail: DeployDocDetail | null | undefined): string | null {
   if (!detail) return null
   return detail.drtFileName ?? detail.docFileName ?? detail.fileName ?? null
+}
+
+// 경호계획서·동의서 저장 경로(다운로드용). 필드명이 응답마다 갈려 둘 다 본다.
+function docPathOf(detail: DeployDocDetail | null | undefined): string | null {
+  if (!detail) return null
+  return detail.docPath ?? detail.filePath ?? null
+}
+
+// docAgreeDetail(근무자별 동의서 배열) → { [guardSeq]: 값 } 맵. 파일명/경로 둘 다
+// 이 함수로 뽑는다(pick = docFileNameOf | docPathOf).
+function consentMap(
+  list: ({ guardSeq?: number } & DeployDocDetail)[] | undefined,
+  pick: (d: DeployDocDetail) => string | null,
+): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const item of list ?? []) {
+    const value = pick(item)
+    if (item.guardSeq != null && value) out[String(item.guardSeq)] = value
+  }
+  return out
 }
 
 // GetDeployDetail 응답 data 형태.
@@ -88,7 +112,10 @@ interface DeployDetailData {
   // 동의서 배열(findings #6 요청 3, 후속).
   docGuardDetail?: DeployDocDetail | null
   docDestructionDetail?: DeployDocDetail | null
-  docAgreeDetail?: unknown[]
+  // 근무자별 개인정보동의서. 실측 데이터가 아직 없어(항상 []) shape 미확정 — 본사
+  // guardAgreementDtos({guardSeq,fileName,filePath})를 미러링해 방어적으로 읽는다
+  // (CARRYOVER: 데이터 생기면 재검증).
+  docAgreeDetail?: ({ guardSeq?: number } & DeployDocDetail)[]
   downloadYn?: boolean
 
   // 테스트 더블(mocks/handlers/deploy.ts)만 채우는 필드 — 실제 응답엔 없다.
@@ -181,7 +208,9 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
     // 종결할 수 있다.
     attachments: {
       securityPlanFileName: docFileNameOf(d.docGuardDetail),
-      workerConsentFileNames: {},
+      securityPlanFilePath: docPathOf(d.docGuardDetail),
+      workerConsentFileNames: consentMap(d.docAgreeDetail, docFileNameOf),
+      workerConsentFilePaths: consentMap(d.docAgreeDetail, docPathOf),
       destructionCertFileName: docFileNameOf(d.docDestructionDetail),
     },
     destructionCertDownloaded: d.downloadYn ?? false,

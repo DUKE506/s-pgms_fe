@@ -1,17 +1,31 @@
 import { FileText } from 'lucide-react'
 import type { Worker } from '../../company/api/workers'
 import type { SecurityCase } from '../types/securityCase'
+import { downloadFileByPath } from '../../../shared/lib/download'
+import { useToastStore } from '../../../shared/hooks/useToastStore'
 
 interface ConsentDocsCardProps {
   securityCase: SecurityCase
   workers: Worker[]
 }
 
-// 목업(s5)의 보안서약 및 개인정보동의서 카드 — 등록된 근무자별 서약서 업로드
-// 상태만 읽기전용으로 보여준다. 실제 파일이 없어 다운로드는 비활성 라벨.
+// 목업(s5)의 보안서약 및 개인정보동의서 카드 — 등록된 근무자별 서약서 상태를 보여주고
+// 업로드 완료된 건은 다운로드한다(경호계획서와 같은 /files/<path> 방식).
+// 피전은 baseInfo.defaultWorkers가 비어(근무자 마스터 접근 불가, findings #6) 현재는
+// 렌더되지 않는다 — 근무자 명단이 채워지면 동작(동의서 응답 shape는 데이터 생기면 재검증).
 function ConsentDocsCard({ securityCase, workers }: ConsentDocsCardProps) {
+  const showToast = useToastStore((state) => state.show)
   const roster = securityCase.baseInfo?.defaultWorkers ?? []
   if (roster.length === 0) return null
+
+  async function handleDownload(path: string | undefined, fileName: string) {
+    if (!path) return
+    try {
+      await downloadFileByPath(path, fileName)
+    } catch {
+      showToast('동의서를 불러오지 못했습니다', 'error')
+    }
+  }
 
   return (
     <div className="rounded-xl border border-border bg-card p-5.5">
@@ -24,6 +38,7 @@ function ConsentDocsCard({ securityCase, workers }: ConsentDocsCardProps) {
           const worker = workers.find((x) => x.id === w.workerId)
           const name = worker?.name ?? w.workerId
           const fileName = securityCase.attachments?.workerConsentFileNames[w.workerId]
+          const filePath = securityCase.attachments?.workerConsentFilePaths?.[w.workerId]
 
           if (!fileName) {
             return (
@@ -52,7 +67,12 @@ function ConsentDocsCard({ securityCase, workers }: ConsentDocsCardProps) {
                   <div className="text-[11px] text-muted-foreground">{fileName} · 업로드 완료</div>
                 </div>
               </div>
-              <button type="button" onClick={() => {}} className="text-xs font-semibold text-green-700">
+              <button
+                type="button"
+                onClick={() => handleDownload(filePath, fileName)}
+                disabled={!filePath}
+                className="text-xs font-semibold text-green-700 disabled:opacity-50"
+              >
                 다운로드
               </button>
             </div>

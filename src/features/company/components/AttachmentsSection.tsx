@@ -8,6 +8,7 @@ import {
   uploadWorkerConsentDoc,
 } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
+import { downloadFileByPath } from '../../../shared/lib/download'
 import DispatchRequestViewDialog from './DispatchRequestViewDialog'
 import type { Worker } from '../api/workers'
 import type { SecurityCase } from '../../police/types/securityCase'
@@ -117,6 +118,19 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
     showToast(error instanceof Error ? error.message : '업로드에 실패했습니다', 'error')
   }
 
+  // 경호계획서·동의서는 filePath를 /files/<path>로 직접 받는다(전용 API 없음).
+  async function downloadByPath(
+    path: string | null | undefined,
+    fileName: string | null | undefined,
+  ) {
+    if (!path) return
+    try {
+      await downloadFileByPath(path, fileName)
+    } catch {
+      showToast('파일을 불러오지 못했습니다', 'error')
+    }
+  }
+
   const securityPlanMutation = useMutation({
     mutationFn: (file: File) => uploadSecurityPlanDoc(securityCase.id, file),
     onSuccess: () => {
@@ -161,6 +175,15 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
           title="경호계획서 파일을 업로드하세요"
           fileName={securityCase.attachments?.securityPlanFileName}
           onSelect={(file) => securityPlanMutation.mutate(file)}
+          onDownload={
+            securityCase.attachments?.securityPlanFilePath
+              ? () =>
+                  downloadByPath(
+                    securityCase.attachments?.securityPlanFilePath,
+                    securityCase.attachments?.securityPlanFileName,
+                  )
+              : undefined
+          }
         />
       </div>
 
@@ -177,6 +200,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
           {roster.map((w) => {
             const worker = workers.find((x) => x.id === w.workerId)
             const fileName = securityCase.attachments?.workerConsentFileNames[w.workerId]
+            const filePath = securityCase.attachments?.workerConsentFilePaths?.[w.workerId]
             return (
               <UploadedFileRow
                 key={w.workerId}
@@ -184,6 +208,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
                 fileName={fileName}
                 subtitle={worker?.name}
                 onSelect={(file) => consentMutation.mutate({ workerId: w.workerId, file })}
+                onDownload={filePath ? () => downloadByPath(filePath, fileName) : undefined}
               />
             )
           })}

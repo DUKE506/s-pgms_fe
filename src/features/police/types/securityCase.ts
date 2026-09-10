@@ -118,11 +118,17 @@ export interface WorkSchedule {
   days: ScheduleDay[]
 }
 
-// 파일 업로드는 브라우저 파일선택까지만 동작 — 실제 저장 없이 파일명만 보관
-// (2026-08-22 결정, 백엔드 미확정이라 서버 업로드는 범위 밖)
+// 본사가 업로드한 문서함 파일들. 실 API에선 GetDeployDetail(피전)·GetCaseDoc(본사)이
+// 파일명과 저장 경로를 함께 준다. *FilePath는 경호계획서·동의서 다운로드용
+// (/files/<path>) — 파기확인서는 전용 API라 경로가 없다(destructionCertDownloaded 참고).
 export interface CaseAttachments {
   securityPlanFileName: string | null
+  // 경호계획서 저장 경로(docGuardDetail.docPath / caseInfoDto.filePath). 파일명은 있는데
+  // 경로가 없으면(구 데이터 등) 다운로드 버튼을 숨긴다.
+  securityPlanFilePath?: string | null
   workerConsentFileNames: Record<string, string>
+  // 근무자(guardSeq)별 동의서 저장 경로. 키는 workerConsentFileNames와 동일.
+  workerConsentFilePaths?: Record<string, string>
   destructionCertFileName: string | null
 }
 
