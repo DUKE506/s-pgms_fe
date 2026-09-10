@@ -170,7 +170,6 @@ function SecurityCaseListPage() {
                   <TableHead>관리번호</TableHead>
                   <TableHead>경찰서</TableHead>
                   <TableHead>담당자</TableHead>
-                  <TableHead>본부</TableHead>
                   <TableHead>상태</TableHead>
                   <TableHead>경호시작</TableHead>
                   <TableHead>경호종료</TableHead>
@@ -187,8 +186,6 @@ function SecurityCaseListPage() {
                     <TableCell>{formatManagementNumber(c.receiptNumber, c.securityCode)}</TableCell>
                     <TableCell>{c.policeStation}</TableCell>
                     <TableCell>{c.assigneeName ?? '-'}</TableCell>
-                    {/* 담당자 소속 본부 — GetGuardCaseList에 없음(issues #1) */}
-                    <TableCell>-</TableCell>
                     <TableCell>
                       <StatusBadge status={c.status} />
                     </TableCell>

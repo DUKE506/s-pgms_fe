@@ -124,7 +124,14 @@ interface CaseScheduleGuard {
 
 interface CaseScheduleDayData {
   groupName: string // 일자 "YYYY-MM-DD"
-  groups: { groupSeq: number; order: number; guards: CaseScheduleGuard[] }[]
+  groups: {
+    groupSeq: number
+    order: number
+    // 근무조 특이사항(PatchScheduleGroup.memo로 저장). 2026-09-10 실측 — GetCaseSchedule
+    // 응답 그룹 항목에 포함되기 시작(findings #12 memo 갭 해소). 미입력이면 null.
+    memo?: string | null
+    guards: CaseScheduleGuard[]
+  }[]
 }
 
 // GetCaseDoc 실측(2026-09-04 — GuardCase-Stec-CaseMeeting.md/CaseDoc):
@@ -256,9 +263,9 @@ function toWorkSchedule(
         .sort((a, b) => a.order - b.order)
         .map((g) => ({
           id: String(g.groupSeq),
-          // GetCaseSchedule 응답에 그룹 메모가 없다(쓰기 DTO엔 memo 있음) —
-          // 저장은 되나 재조회 시 표시 불가(exclusions, issues #12).
-          note: '',
+          // 근무조 특이사항 — PatchScheduleGroup.memo로 저장하고 GetCaseSchedule
+          // 응답에서 되읽는다(2026-09-10 백엔드 반영, findings #12).
+          note: g.memo ?? '',
           assignments: g.guards.map((gd) => ({
             workerId: String(gd.guardSeq),
             startTime: hhmm(gd.workStartDt),

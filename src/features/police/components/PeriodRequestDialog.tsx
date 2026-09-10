@@ -158,7 +158,6 @@ function PeriodRequestDialog({ securityCase, open, onOpenChange }: PeriodRequest
                     )}
                   >
                     {formatShort(d)}
-                    {d === securityCase.endDate && '(현재)'}
                   </button>
                 ))}
               </div>

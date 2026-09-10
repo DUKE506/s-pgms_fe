@@ -72,8 +72,8 @@ describe('SecurityCaseListPage', () => {
 
     await screen.findAllByText(`26-02-서초경찰서 · ${record.securityCode}`)
     const row = withinTable().getByText(`26-02-서초경찰서 · ${record.securityCode}`).closest('tr')!
-    // GetGuardCaseList는 담당자 이름(userName)만 준다 — id 조인이 없어 소속 본부 열은
-    // 채울 수 없다("-", issues #1).
+    // GetGuardCaseList는 담당자 이름(userName)만 준다. 소속 본부 열은 본사 계정에
+    // group 개념이 없어(findings #1) 2026-09-10 제거됨.
     expect(within(row).getByText('김민수')).toBeInTheDocument()
     expect(within(row).getByText('배정')).toBeInTheDocument()
   })
