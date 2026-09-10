@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
@@ -23,6 +24,7 @@ import EditWorkerDialog from '../components/EditWorkerDialog'
 import DeleteWorkerDialog from '../components/DeleteWorkerDialog'
 
 function WorkerListPage() {
+  const navigate = useNavigate()
   const workersQuery = useQuery({ queryKey: ['workers'], queryFn: listWorkers })
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -83,17 +85,23 @@ function WorkerListPage() {
                 <TableRow>
                   <TableHead>이름</TableHead>
                   <TableHead>사번</TableHead>
+                  <TableHead>부서</TableHead>
                   <TableHead>연락처</TableHead>
                   <TableHead className="w-12" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((w) => (
-                  <TableRow key={w.id}>
+                  <TableRow
+                    key={w.id}
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/admin/workers/${w.id}`)}
+                  >
                     <TableCell>{w.name}</TableCell>
                     <TableCell>{w.employeeId}</TableCell>
+                    <TableCell>{w.department || '-'}</TableCell>
                     <TableCell>{w.phone || '-'}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <WorkerRowMenu
                         onEdit={() => setEditTarget(w)}
                         onDelete={() => setDeleteTarget(w)}
@@ -109,11 +117,17 @@ function WorkerListPage() {
             {filtered.map((w) => (
               <div
                 key={w.id}
-                className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/admin/workers/${w.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') navigate(`/admin/workers/${w.id}`)
+                }}
+                className="flex cursor-pointer flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-foreground">{w.name}</span>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <span className="text-xs text-muted-foreground">{w.employeeId}</span>
                     <WorkerRowMenu
                       onEdit={() => setEditTarget(w)}
@@ -121,7 +135,9 @@ function WorkerListPage() {
                     />
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground">{w.phone || '-'}</div>
+                <div className="text-xs text-muted-foreground">
+                  {[w.department, w.phone].filter(Boolean).join(' · ') || '-'}
+                </div>
               </div>
             ))}
           </div>

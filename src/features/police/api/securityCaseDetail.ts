@@ -331,6 +331,7 @@ export async function getDeployGuardSchedule(
               name: g.name,
               employeeId: '',
               phone: g.phone ?? '',
+              department: g.deptName ?? '',
             })
           }
           return { workerId, startTime, endTime, isOff: !g.isWork }

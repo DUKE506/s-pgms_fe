@@ -14,8 +14,7 @@ interface EditWorkerDialogProps {
 
 // 근무자 정보수정 — PATCH Guard/Stec/W/PatchGuardInfo.
 // 사번(sabun)은 스키마에 없어 수정 불가 → 읽기 전용으로 노출.
-// 부서(deptName)는 GetGuardList가 돌려주지 않아(issues.md #8) 현재 값을 채울 수
-// 없다 → 비워두고, 입력했을 때만 전송한다(빈 값이면 서버 기존 값 유지).
+// 부서는 GetGuardList가 `deptNm`으로 돌려줘(2026-09-10, findings #8 해소) 현재 값을 prefill한다.
 function EditWorkerForm({
   target,
   onOpenChange,
@@ -28,7 +27,7 @@ function EditWorkerForm({
 
   const [name, setName] = useState(target.name)
   const [phone, setPhone] = useState(target.phone)
-  const [department, setDepartment] = useState('')
+  const [department, setDepartment] = useState(target.department)
 
   const mutation = useMutation({
     mutationFn: () =>

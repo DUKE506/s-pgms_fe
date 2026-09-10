@@ -401,7 +401,14 @@ breadcrumb만 영향, 경미) / 읽기·쓰기 필드명 비대칭(`suspectBirth
 
 ---
 
-## 8. 🟡 근무자(경호원) — `deptName`이 쓰기 전용, 조회로 다시 못 읽음
+## 8. 🟢 근무자(경호원) — `deptName`이 쓰기 전용, 조회로 다시 못 읽음 → **해결(2026-09-10)**
+
+**해결(2026-09-10)**: `GET GetGuardList` 응답 항목에 부서가 **`deptNm`**으로 실려 오기
+시작(실측 — guardSeq 13·14). 프론트: `Worker` 타입에 `department` 추가, `listWorkers`
+매퍼가 `row.deptNm`을 매핑, `GetCaseGuardList` 매퍼도 `deptName`(이쪽은 필드명이 다름)을
+매핑. 근무자 목록에 "부서" 열/모바일 행 복원, 근무자 상세 기본정보에 "부서" 행,
+`EditWorkerDialog`가 현재 부서를 prefill. **필드명 주의**: `GetGuardList`는 `deptNm`,
+`GetCaseGuardList`는 `deptName`, 쓰기 DTO는 `deptName`.
 
 **발견 경위**: 화면6([본사] 운영/시스템관리자 · 근무자 목록/등록) 연동(2026-09-03),
 `Guard/Stec/W/*` 4종 실측 중.

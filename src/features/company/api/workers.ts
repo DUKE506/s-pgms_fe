@@ -4,15 +4,15 @@ import { unwrapEnvelope } from '@/shared/api/envelope'
 // 근무자(경호원) 마스터 — 본사 운영/시스템관리자용 CRUD.
 // 실측: docs/backend-integration/responses/Guard-Stec-GuardInfo.md
 //
-// ⚠️ deptName 비대칭(issues.md #8): AddGuardInfo/PatchGuardInfo는 deptName을
-// 받지만 GetGuardList 응답엔 deptName이 없고 근무자 상세조회 API도 없다.
-// → 저장은 하되 목록에서 부서를 표시할 수 없어 부서 열을 뺐다
-// (docs/backend-integration/findings.md). 등록/수정 폼의 부서 입력은 유지.
+// 부서: GetGuardList 응답이 `deptNm`으로 부서를 준다(2026-09-10 실측 — 이전엔
+// 누락돼 findings #8이었으나 해소). GetCaseGuardList는 `deptName`으로 준다(엔드포인트별
+// 필드명 다름). 등록/수정 DTO는 `deptName`.
 export interface Worker {
   id: string
   name: string
   employeeId: string
   phone: string
+  department: string
 }
 
 // 등록: 부서(deptName)는 서버 필수라 폼에서 계속 입력받는다.
@@ -37,6 +37,7 @@ interface GuardListRow {
   sabun: string
   name: string
   phone: string | null
+  deptNm: string | null
 }
 
 export async function listWorkers(): Promise<Worker[]> {
@@ -50,6 +51,7 @@ export async function listWorkers(): Promise<Worker[]> {
     name: row.name,
     employeeId: row.sabun,
     phone: row.phone ?? '',
+    department: row.deptNm ?? '',
   }))
 }
 
@@ -122,9 +124,8 @@ interface CaseGuardRow {
   phone: string | null
 }
 
-// 화면9(경호 상세)의 경호원 배정 드롭다운·근무자 이름 조인용. 경호건 스코프라
-// GetGuardList(본사 전체 마스터, issues #8)와 달리 부서(deptName)도 온다 —
-// 다만 이 화면은 부서를 표시하지 않아 Worker 타입엔 담지 않는다.
+// 화면9(경호 상세)의 경호원 배정 드롭다운·근무자 이름 조인용. 경호건 스코프.
+// 부서는 이 응답에선 `deptName`으로 온다(GetGuardList의 `deptNm`과 필드명 다름).
 export async function getCaseGuards(id: string): Promise<Worker[]> {
   const res = await apiFetch(
     `/v1/GuardCase/Stec/W/GetCaseGuardList?caseSeq=${encodeURIComponent(id)}`,
@@ -138,5 +139,32 @@ export async function getCaseGuards(id: string): Promise<Worker[]> {
     name: row.name,
     employeeId: row.sabun,
     phone: row.phone ?? '',
+    department: row.deptName ?? '',
   }))
+}
+
+// 근무자 상세 화면의 "근무 이력" — 근무자 한 명의 근무 일정을 일자별로 준다.
+// 하루당 한 항목: { guardSeq, name, dates:"YYYY-MM-DD", schdules:[{startDt,endDt,isWork}] }.
+// ⚠️ 필드명 schdules(오타)는 실제 응답 그대로. 응답에 경호건·부서 정보는 없다.
+//
+// TODO(데이터 연동): GET /api/v1/Guard/Stec/W/GetGuardSchedule?guardSeq=&fromDate=&toDate=
+// 로 교체(2026-09-10 프로브 확인). 지금은 목업 UI용 mock 경로(/api/workers/:id/schedule).
+export interface WorkerScheduleShift {
+  startDt: string
+  endDt: string
+  isWork: boolean
+}
+export interface WorkerScheduleDay {
+  guardSeq: number
+  name: string
+  dates: string
+  schdules: WorkerScheduleShift[]
+}
+
+export async function getWorkerSchedule(id: string): Promise<WorkerScheduleDay[]> {
+  const res = await apiFetch(`/workers/${encodeURIComponent(id)}/schedule`)
+  if (!res.ok) {
+    throw new Error('근무 이력을 불러오지 못했습니다')
+  }
+  return res.json() as Promise<WorkerScheduleDay[]>
 }

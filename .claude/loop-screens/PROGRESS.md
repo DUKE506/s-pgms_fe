@@ -63,6 +63,12 @@ Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
 **발견된 후속 항목(백로그)**:
 - [본사] 경호 상세 화면에서 담당자(본부관리자) 변경 기능 — roadmap.md Phase 3.6 후속 항목 참고, 미구현
 
+## Phase 3.7 — 근무자 상세 (신규, 목업 미설계)
+
+| # | 항목 | 상태 | 커밋 | 비고 |
+|---|---|---|---|---|
+| 1 | [본사] 근무자 상세 (근무 이력) | 승인대기(1차) | — | **목업에 없는 신규 화면.** 백엔드가 `GET Guard/Stec/W/GetGuardSchedule?guardSeq=&fromDate=&toDate=`(근무자 한 명의 일자별 근무 일정)를 추가해와서, 붙일 화면을 만든 것. `/admin/workers/:id` 라우트 신설, 근무자 목록 행 클릭 → 진입. 상단 요약 타일 3개(근무일/총시간/휴무) + 월별 그룹 리스트(일자 행: 흰 배경+radius+왼쪽 컬러바, 시각, 일자별 시간합, 월 헤더에 월 합). 뒤로가기는 공용 `DetailHeader` 재사용. **데이터는 아직 mock** — `/api/workers/:id/schedule` 더블이 실 응답 shape(`{guardSeq,name,dates,schdules:[{startDt,endDt,isWork}]}`, `schdules` 오타 포함)를 흉내냄. 실 API 연결·디자인 추가 수정은 후속(2026-09-10, 운영부서 점검용 급조). CARRYOVER-backend D절 |
+
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)

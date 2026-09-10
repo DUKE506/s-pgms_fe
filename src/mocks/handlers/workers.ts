@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { companyAccounts } from '../data/accounts'
 import { allPoliceLoginAccounts } from '../data/guests'
 import { workers } from '../data/workers'
+import { guardSchedules } from '../data/workerSchedules'
 
 // 근무자 마스터 CRUD(본사 admin)는 실제 백엔드(Guard/Stec/W/*)로 연동 완료 —
 // 그 검증은 테스트 전용 더블(mocks/handlers/guard.ts)에서 한다. 여기 남은 GET
@@ -30,5 +31,16 @@ export const workerHandlers = [
       return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
     }
     return HttpResponse.json(workers)
+  }),
+
+  // 근무자 상세 화면의 "근무 이력" — 실제 백엔드 GET Guard/Stec/W/GetGuardSchedule
+  // 응답 shape({ guardSeq, name, dates, schdules:[{startDt,endDt,isWork}] }[])를 흉내낸다.
+  // 데이터 연동은 추후 — 지금은 목업 UI용 mock이라, 목업 검증(run-s-pgms)이 실백엔드
+  // JWT로 근무자 목록을 받아오는 것과 맞물려 토큰 존재 여부만 확인한다.
+  http.get('/api/workers/:id/schedule', ({ request, params }) => {
+    if (!request.headers.get('Authorization')) {
+      return HttpResponse.json({ message: '인증이 필요합니다' }, { status: 401 })
+    }
+    return HttpResponse.json(guardSchedules[String(params.id)] ?? [])
   }),
 ]

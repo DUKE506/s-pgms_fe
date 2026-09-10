@@ -57,12 +57,13 @@ export const guardTestHandlers = [
   http.get('/api/v1/Guard/Stec/W/GetGuardList', ({ request }) => {
     const denied = requireStec(request)
     if (denied) return denied
-    // 실제 응답에는 deptName이 없다 — 더블도 응답에서 뺀다.
+    // 실제 응답이 deptNm으로 부서를 준다(2026-09-10, findings #8 해소).
     const data = guards.map((g) => ({
       guardSeq: g.guardSeq,
       sabun: g.sabun,
       name: g.name,
       phone: g.phone,
+      deptNm: g.deptName,
     }))
     return HttpResponse.json({ message: 'ok', data, code: 200 })
   }),
