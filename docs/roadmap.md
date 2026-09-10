@@ -340,9 +340,10 @@ API를 먼저 연결한다 — 정확한 순서는 `.claude/loop-backend/PROGRES
    Stec/W/CancelGuardCase {deployReqSeq, reason?}` 신설. 접수취소/경호취소를 서버가 배정
    여부로 분기. `cancelPendingRequest`(#7)·`cancelAssignedCase`(#9) 배선, 버튼 활성. 실왕복
    미검(되돌릴 수 없음).
-9b. [신규] `Deploy/Police/W/GetDeployDetail` 응답에 `caseSeq` 없음(2026-09-09) —
-   `CloseGuardCase`·`GetDestroyDocDownload`가 `caseSeq`를 요구해 `GetDeployList` 재조회
-   우회(`resolveCaseSeq`). 응답에 `caseSeq` 추가 요청.
+9b. ~~[신규] `Deploy/Police/W/GetDeployDetail` 응답에 `caseSeq` 없음(2026-09-09)~~ →
+   **해결(2026-09-10)**: 백엔드가 `CloseGuardCase`·`GetDestroyDocDownload` 두 EP를
+   `caseSeq`→`deploySeq`(배치요구서 PK = 라우트 id) 키로 수정 → `resolveCaseSeq` 재조회
+   우회 제거, 두 함수 `deploySeq` 직접 전송. 파기확인서 다운로드→종결 실왕복 확인(findings #16 🟢).
 10~13. issues.md 참고(#10·#13은 해결, #11·#12는 B-2 요청서로 전달).
 14. [본사] 이력 조회 상세 API 없음(2026-09-08) → **해결(2026-09-09)** —
     `GET History/Stec/W/GetHistoryDetail?caseSeq=` 신설, 상세 실 API 연동 완료.

@@ -158,7 +158,7 @@
 | 접수취소 | `cancelPendingCase` | `POST CancelGuardCase` | ✅ 연동+검증 완료(2026-09-03). 성공 `{data:true}` + 하드 삭제, 실패 시 400 `{data:false}`. 응답 샘플: `Deploy-Police-CancelGuardCase.md` |
 | 경호취소 | `cancelAssignedCase` | `POST CancelGuardCase` | △ 코드만 교체, **실왕복 미검**(되돌릴 수 없음). 피전 경호취소는 `Deploy/Police/W/CancelGuardCase {deployReqSeq, reason}` |
 | 연장/단축 요청 | `requestPeriodChange` | `PATCH ExtendDeployPeriod` / `ShortenDeployPeriod` | △ 코드만 교체, **미검증** — 배정 이후 상태 필요, 그룹 B(#9 본사 경호 상세) 이후 재검증 |
-| 종결 | `closeCase` | `POST Deploy/Police/W/CloseGuardCase {caseSeq, endReason}` | ✅ **연동·검증 완료(2026-09-09, 사용자 실제 종결)**. DTO가 `caseSeq`(int)를 요구하는데 `GetDeployDetail`엔 없음 → `resolveCaseSeq`(GetDeployList 재조회로 deploySeq→caseSeq 매핑, findings #16). 선결조건: 파기확인서 다운로드로 `DESTROY_DOC_DOWNLOAD_YN` 켜야 함(안 받고 종결 → 409) → `canClose`에 `destructionCertDownloaded` 포함. 종결 시 배치요구서·문서·배치장소가 서버에서 파기됨(END-007) |
+| 종결 | `closeCase` | `POST Deploy/Police/W/CloseGuardCase {deploySeq, endReason}` | ✅ **연동·검증 완료(2026-09-09 최초 종결 / 2026-09-10 키 변경 재확인)**. **2026-09-10**: DTO 키 `caseSeq`→`deploySeq`(배치요구서 PK = 라우트 id) → `resolveCaseSeq` 우회 제거, `{deploySeq,endReason}` 직접 전송(findings #16 🟢). 선결조건: 파기확인서 다운로드로 `DESTROY_DOC_DOWNLOAD_YN` 켜야 함(안 받고 종결 → 409) → `canClose`에 `destructionCertDownloaded` 포함. 종결 시 배치요구서·문서·배치장소가 서버에서 파기됨(END-007) |
 | 근무 스케줄 / 근무자 표시 | `getDeployGuardSchedule`(신규, `securityCaseDetail.ts`) | `GET Deploy/Police/W/GetDeployGuardSchedule?deployReqSeq=` | ✅ 연동 완료(**2026-09-09**, findings #6 근무일정 파트). 평면 배열 `[{ dates, guardSchedule:[{guardSeq,name,phone,deptName,isWork}] }]` — 근무자 이름·연락처 인라인(피전은 근무자 마스터 접근 불가). 근무 시각은 응답에 없어 `baseInfo.workHours` 공통 적용. `SecurityCaseDetailPage`의 `workers: never[] = []` 제거 → `useQuery`로 병합, `enabled = status !== '접수'`. 브라우저 검증(SPoliceM5·SPoliceM1 `/security-cases/90`). 응답 샘플 `Deploy-Police-GetDeployGuardSchedule.md`. 근무자별 동의서 조회(요청 3)는 여전히 전용 GET 미확인 |
 
 #### 배치요구서 수정 (`/security-cases/:id/edit`) — ✅ 연동 완료(2026-09-03)
@@ -302,7 +302,7 @@
 | 경호계획서 업로드 | `uploadSecurityPlanDoc` | `PUT PatchGuardPlanDoc` | ✅ 연동·브라우저 검증. `multipart`(`caseSeq`+`file`). `GetCaseDoc.caseInfoDto`에 반영. 파일 시그니처 검사(비허용 시 400 "File signature is not allowed") |
 | 개인정보동의서 업로드 | `uploadWorkerConsentDoc` | `PUT PatchConsentDoc` | ✅ 연동·curl+오프라인 검증. `multipart`(`caseSeq`+`guardSeq`+`file`). `GetCaseDoc.guardAgreementDtos[]` — 경호풀 근무자별 1행, 해당 `guardSeq` 행에 파일 채워짐 |
 | 파기확인서 업로드 | `uploadDestructionCertDoc` | `PUT PatchDestroyDoc` | ✅ 연동·브라우저 검증. `multipart`(`caseSeq`+`file`). **경호중·경호완료 상태에서만**(그 외 409) → UI에서 상태 가드. `GetCaseDoc.guardDeployDocDto`(filePath 없음) |
-| 파기확인서 다운로드 | `downloadDestructionCert` | `GET GetDestroyDocDownload?caseSeq=` | ✅ 연동·브라우저 검증. 바이너리 + `Content-Disposition`. Authorization 필요 → blob 받아 저장 트리거. 파일 없으면 404 |
+| 파기확인서 다운로드 | `downloadDestructionCert` | `GET GetDestroyDocDownload?deploySeq=` | ✅ 연동·브라우저 검증. **2026-09-10**: 쿼리 파라미터 `caseSeq`→`deploySeq` → `resolveCaseSeq` 우회 제거(findings #16). 바이너리 + `Content-Disposition`. Authorization 필요 → blob 받아 저장 트리거. 파일 없으면 404 |
 
 이 화면(및 #12) 완료 후 **4번([경찰서] 경호 상세)의 배정 이후 상태(연장/단축요청,
 경호취소, 종결)를 재검증**한다 — caseSeq 46에 경호계획+스케줄 데이터가 생겼다.

@@ -1,20 +1,23 @@
 # Deploy/Police/W/GetDestroyDocDownload — 파기확인서 다운로드
 
-- 테스트 날짜: 2026-09-09
-- 데이터: 동래경찰서 caseSeq 51 / deployReqSeq 90
-- 엔드포인트: `GET /api/v1/Deploy/Police/W/GetDestroyDocDownload?caseSeq=`
+- 테스트 날짜: 2026-09-09 · **2026-09-10 (파라미터 변경 회신반영)**
+- 데이터: 동래경찰서 — 2026-09-09 caseSeq 51 / deployReqSeq 90
+- 엔드포인트: `GET /api/v1/Deploy/Police/W/GetDestroyDocDownload?deploySeq=`
 
-## 파라미터
+## 파라미터 — 2026-09-10 개정
 
 ```
-caseSeq: integer (int32)   ← deployReqSeq 아님
+deploySeq: integer (int32)   ← 배치요구서 PK (구 caseSeq 자리)
 ```
 
-- `GetDeployDetail`에 `caseSeq`가 없어 `resolveCaseSeq`(GetDeployList 재조회)로 변환 —
-  `CloseGuardCase`와 같은 우회(findings #16).
+- **파라미터가 `caseSeq` → `deploySeq` 로 바뀌었다.** 스웨거 설명: *"경찰 화면은 경호건
+  PK 를 들고 있지 않아 배치요구서 PK(deploySeq)로 받는다 — 종결(CloseGuardCase)과 같은
+  키다."* → 프론트는 라우트 id(= `deployReqSeq`)를 그대로 `deploySeq`로 보낸다.
+  `resolveCaseSeq` 우회 제거(findings #16 🟢).
 - 응답: 파기확인서 파일 바이너리 + `Content-Disposition`. Authorization 헤더 필요 →
   `<a href>`로 못 받고 blob으로 받아 클라이언트에서 저장 트리거.
 - 파기확인서가 없거나 디스크 파일이 없으면 404.
+- 본청·지방청·게스트는 상세는 봐도 문서에는 접근 불가. 타 경찰서 → 403.
 
 ## 중요 — 다운로드 = 최종 종결 선결조건
 
@@ -26,9 +29,16 @@ caseSeq: integer (int32)   ← deployReqSeq 아님
 - `SecurityCaseDetailPage`의 `canClose` = `경호완료 && 파기확인서 존재 && destructionCertDownloaded`
 - `DocumentsCard`가 다운로드 성공 후 `['security-case', id]` 쿼리 무효화 → 종결 버튼 즉시 활성
 
-## 실측 (브라우저)
+## 프로브 (2026-09-10, `local/_probe-4.sh`)
 
-`/security-cases/90`(SPoliceM5, 경호완료):
-- 진입 시 `downloadYn: false` → 종결 버튼 비활성
-- "다운로드" 클릭 → 콘솔 에러 0 (`?caseSeq=51`로 200), 쿼리 재조회 → `downloadYn: true` →
-  종결 버튼 활성
+| 요청 | 결과 |
+|---|---|
+| M5, `?deploySeq=92` (파기확인서 없는 배정→경호중 건) | 404 — 파라미터명은 정상 인식, cert 없어 404 |
+| M3(부산청), `?deploySeq=90` (동래 건) | **403** — 스코프 정상 |
+
+## 실측 (사용자 실왕복)
+
+- **2026-09-09**: `/security-cases/90`(SPoliceM5, 경호완료) — 진입 시 `downloadYn: false` →
+  종결 비활성. "다운로드" 클릭 → 콘솔 에러 0, 쿼리 재조회 → `downloadYn: true` → 종결 활성.
+- **2026-09-10**: 파라미터 변경 후 `?deploySeq=` 로 다운로드 → 종결까지 사용자가 실백엔드에서
+  실제 확인.

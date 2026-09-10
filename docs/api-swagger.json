@@ -675,10 +675,10 @@
       "get": {
         "tags": ["PoliceDeploy"],
         "summary": "파기확인서 다운로드",
-        "description": "에스텍이 올린 파기확인서를 담당 피전이 받는다 (END-005 / BR-024). 경호계획서·동의서는 PATH 가 곧 다운로드 URL 이라 이 API 가 필요 없고, 파기확인서만 여기를 거친다. 받아가면 DESTROY_DOC_DOWNLOAD_YN 이 켜지고, 이것이 최종 종결(CloseGuardCase)의 선행조건이다 (END-006) - 먼저 받지 않고 종결하면 409 다. 피전은 소속 경찰서 건만 받을 수 있고, 본청·지방청·게스트는 상세는 봐도 문서에는 접근할 수 없다. 파기확인서가 없거나 디스크에서 파일을 못 찾으면 404 다.",
+        "description": "에스텍이 올린 파기확인서를 담당 피전이 받는다 (END-005 / BR-024). 경호계획서·동의서는 PATH 가 곧 다운로드 URL 이라 이 API 가 필요 없고, 파기확인서만 여기를 거친다. 경찰 화면은 경호건 PK 를 들고 있지 않아 배치요구서 PK(deploySeq)로 받는다 - 종결(CloseGuardCase)과 같은 키다. 받아가면 DESTROY_DOC_DOWNLOAD_YN 이 켜지고, 이것이 최종 종결(CloseGuardCase)의 선행조건이다 (END-006) - 먼저 받지 않고 종결하면 409 다. 피전은 소속 경찰서 건만 받을 수 있고, 본청·지방청·게스트는 상세는 봐도 문서에는 접근할 수 없다. 파기확인서가 없거나 디스크에서 파일을 못 찾으면 404 다.",
         "parameters": [
           {
-            "name": "caseSeq",
+            "name": "deploySeq",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -953,6 +953,44 @@
       "get": {
         "tags": ["StecGuard"],
         "summary": "경호원 목록 조회 =============== [확인 완료]",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/Guard/Stec/W/GetGuardSchedule": {
+      "get": {
+        "tags": ["StecGuard"],
+        "summary": "경호원 스케줄 조회",
+        "description": "경호원 한 명의 근무 일정을 기간으로 준다. 경호건이 아니라 사람 기준이라 여러 경호건에 걸쳐 있어도 한 날짜로 모인다 - 다른 건에 넣기 전에 그날 이미 뛰는지 보는 용도다. fromDate·toDate 는 양끝을 포함하는 날짜다(yyyy-MM-dd) - toDate 당일 근무도 들어간다. 한쪽만 보내면 반대편은 열어두고(fromDate 만 보내면 그날 이후 전부), 둘 다 안 보내면 그 경호원의 근무 전체다. fromDate 가 toDate 보다 늦으면 400 이다. 날짜는 조가 들고 있는 근무일이다 - 자정을 넘기는 야간근무는 endDt 만 다음 날로 넘어가고 일정은 시작한 날에 붙는다. 휴무도 함께 나가고 isWork 로 구분한다 - 그날 쉬는 것도 일정이다. 경호취소된 건의 근무는 빠진다. 없는 경호원이거나 근무가 없으면 빈 배열이다.",
+        "parameters": [
+          {
+            "name": "guardSeq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -2209,10 +2247,12 @@
         "additionalProperties": false
       },
       "StecPgmsWebService_Comm_Dto_v1_Deploy_Request_Police_CloseGuardCaseDto": {
-        "required": ["caseSeq", "endReason"],
+        "required": ["endReason"],
         "type": "object",
         "properties": {
-          "caseSeq": {
+          "deploySeq": {
+            "maximum": 2147483647,
+            "minimum": 1,
             "type": "integer",
             "format": "int32"
           },

@@ -12,7 +12,7 @@ B-2·C·D 통합 전달본: `requests/2026-09-08-미회신-B2-C-D.xlsx`(시트 3
 | 요청서 | 대상 | 회신 시 반영할 것 |
 |---|---|---|
 | `requests/2026-09-08-본사-경호관리-B2.md` | 섹션 B-2 (#10~#12) | **부분 반영 완료(2026-09-09)**: `GuardCase/Stec/W/CancelGuardCase` 배선(#7·#9), `GetStecUserList` 본부관리자 200 → 안내 제거(#11), **"본부" 열 제거**(findings #1 본부 파트 🟢). 나머지(`userSeq` 조인·`isRepresentative`·`GetCaseSchedule.memo`·사전미팅 근무자별·`GetGuardList.deptName`·연장/단축 거부 EP)는 **운영팀 문의 대기** — 미회신 |
-| `GetDeployDetail`에 `caseSeq` 추가 요청 (2026-09-09 발견) | `Deploy/Police/W/GetDeployDetail` | `CloseGuardCase`·`GetDestroyDocDownload` 둘 다 `caseSeq`(int)를 키로 받는데 상세 응답엔 `deployReqSeq`만 있음 → 지금은 `GetDeployList` 재조회로 `deploySeq→caseSeq` 매핑(`resolveCaseSeq`) 우회 중. 응답에 `caseSeq` 추가되면 `resolveCaseSeq` 제거. 겸사겸사 `docGuardDetail`(경호계획서) 필드명도 실측 데이터 생기면 확정 |
+| ~~`GetDeployDetail`에 `caseSeq` 추가 요청~~ + `docGuardDetail` 필드명 | `Deploy/Police/W/GetDeployDetail` | **✅ caseSeq 파트 해결(2026-09-10)** — 백엔드가 `CloseGuardCase`·`GetDestroyDocDownload` 두 EP를 `deploySeq` 키로 바꿔 `resolveCaseSeq` 우회 제거(findings #16 🟢). **잔존**: `docGuardDetail`(경호계획서) 파일명 필드는 실측 데이터가 없어 미확정 — 폴백 3개(`drtFileName`/`docFileName`/`fileName`). 본사 경호계획서 업로드 건으로 재확인 |
 | ~~`requests/2026-09-08-이력-C.md`~~ | 섹션 C (#13~#15) | **✅ 회신 반영 완료(2026-09-09)** — `History/Stec/W/GetHistoryDetail` 신설(#13), `GetHistoryList` 역할 캐스케이드(#15). 상세 스코프 차단 적용·종결 시 배치장소 NULL 확정. 남은 것: 종결 건 데이터 대기(B절) + URL 직접 접근 스코프 일괄 테스트(아래 C절) |
 | `requests/2026-09-08-게스트-D.md` | 섹션 D (#16~#17) | `useYn` = **종결**(백엔드 소프트삭제 전용, 경찰서 삭제 대비 — 프론트 무관, `useYn=false` 숨김 유지). `GetDeployDetail` 게스트 스코프 서버 보장 확인 → 아래 C절로 이관 |
 | 사건유형 `crimeType` enum (2026-09-09 전달) | `GetDeployDetail`·`GetDeployDetailUpdate`·`GetGuardCaseDetail`·`GuardCase/Stec/W/GetDeployDetail` | 4개 GET 응답을 enum으로 반환하는지 재검증, Add/Update enum 저장 확인, 레거시 행(한글·영문 혼재) 정규화 여부 → `crimeCodeToCaseType`의 레거시 한글 폴백 제거 판단 |
@@ -54,5 +54,5 @@ id만 링크되어 실사용 문제는 없고, 직접 URL 입력 방어선만 �
 | 경찰 경호상세(#4) 근무일정 재연결 | `getDeployGuardSchedule` 신설 → `SecurityCaseDetailPage` `WorkerAssignmentPanel` 재연결. 브라우저 검증(SPoliceM5·SPoliceM1 `/security-cases/90`). findings #6 근무일정 파트 종료 | ✅ **완료(2026-09-09)** — 커밋은 이 iteration |
 | B-2 부분 반영 | `GuardCase/Stec/W/CancelGuardCase` 배선(#7·#9) + `GetStecUserList` 본부관리자 허용(#11) + "본부" 열 제거(#1). | ✅ **완료(2026-09-09)** |
 | 피전 종결 워크플로우 실연동 | 문서함 `docDestructionDetail`→`attachments` 매핑, 파기확인서 다운로드 `?caseSeq=`, 종결 `CloseGuardCase` caseSeq 우회(`resolveCaseSeq`), `downloadYn`→종결 선결조건 게이트 | ✅ **완료(2026-09-09)** — 사용자 실제 종결 성공 |
-| `GetDeployDetail.caseSeq` 백엔드 추가되면 | `resolveCaseSeq`(GetDeployList 재조회 우회) 제거하고 상세 응답의 caseSeq 직접 사용 | A절 회신 대기 |
+| ~~`GetDeployDetail.caseSeq` 백엔드 추가되면~~ | `resolveCaseSeq`(GetDeployList 재조회 우회) 제거 | ✅ **완료(2026-09-10)** — 두 EP가 `deploySeq` 키로 바뀌어 `resolveCaseSeq` 제거, 파기확인서 다운로드·종결 실왕복 확인 |
 | 근무자별 동의서(findings #6 요청 3) | `ConsentDocsCard`용 근무자별 보안서약·개인정보동의서 조회 전용 GET 없음. `baseInfo.defaultWorkers` 빈 배열이라 현재 표시 영향 없음 — EP/데이터 생기면 | 대기 |

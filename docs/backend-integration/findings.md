@@ -793,7 +793,26 @@ CCTV / 잠정조치 1호" 렌더 확인. 응답 샘플: `Deploy-Police-GetDeploy
 
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
 
-## 16. 🟡 `Deploy/Police/W/GetDeployDetail` 응답에 `caseSeq`가 없음
+## 16. 🟢 `Deploy/Police/W/GetDeployDetail` 응답에 `caseSeq`가 없음 → **해결(2026-09-10, 두 EP 키를 `deploySeq`로 통일)**
+
+**해결(2026-09-10)**: 백엔드가 "GetDeployDetail에 caseSeq 추가" 대신 **`CloseGuardCase`·
+`GetDestroyDocDownload` 두 EP가 `caseSeq` 대신 `deploySeq`(배치요구서 PK = 프론트가 라우트
+id로 이미 갖고 있는 값)를 받도록** 수정. 스웨거 개정: `CloseGuardCaseDto.caseSeq` →
+`deploySeq`(required 배열엔 `endReason`만 남았으나 서버는 `deploySeq`도 실제 필수 검증 —
+누락 시 `{ "deploySeq": ["배치요구서를 선택해주세요."] }`), `GetDestroyDocDownload` 쿼리
+파라미터 `caseSeq` → `deploySeq`.
+- **연동**: `police/api/securityCaseDetail.ts`의 `resolveCaseSeq`(GetDeployList 재조회 우회)
+  **함수 통째 제거**. `closeCase`는 `{ deploySeq: <id 숫자부>, endReason }`, `downloadDestructionCert`는
+  `?deploySeq=<id 숫자부>` 직접 전송. 테스트 더블 `mocks/handlers/deploy.ts`의 `CloseGuardCase`
+  핸들러도 `deploySeq`(`findBySeq`)로.
+- **프로브(2026-09-10, `local/_probe-4.sh` — 상태 안 바꿈)**: `{deploySeq:92}`(배정→경호중
+  실재 건) → 409 "경호완료 후에 종결"(무변경) / `{caseSeq:92}` 구 키 → 400 검증오류
+  `deploySeq` 필수 / 타 경찰서 M3 → 403. 성공 왕복(다운로드→종결)은 사용자가 실백엔드에서
+  실제 확인(2026-09-10).
+- **잔존(별건)**: `docGuardDetail`(경호계획서) 파일명 필드는 실측 데이터가 없어 미확정 —
+  CARRYOVER A절에 별도로 남김. 이번 건과 무관.
+
+---
 
 **발견 경위**: 사용자가 종결 건을 만드는 중(2026-09-09). 경호완료 상태 건이 처음 생겨서
 피전 경호상세의 배정 이후 액션(파기확인서 다운로드·종결)을 실측할 수 있게 됐는데 둘 다
