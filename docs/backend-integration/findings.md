@@ -849,8 +849,44 @@ id로 이미 갖고 있는 값)를 받도록** 수정. 스웨거 개정: `CloseG
 다운로드(`Deploy/Police/W/GetDestroyDocDownload?caseSeq=`)도 배선(이전엔 no-op).
 - **미확정**: `docGuardDetail`(경호계획서)은 실측 데이터가 null이라 필드명 확정 못 함 —
   폴백 3개(`drtFileName`/`docFileName`/`fileName`). 본사 경호계획서 업로드 건으로 재확인.
+  → **해결(2026-09-10, #18)**: 본사가 실제로 업로드 → `docGuardDetail =
+  {docSeq, docType:0, docPath, fileName, fileExt}`. 파일명은 `fileName`(기존 폴백에 포함,
+  표시 정상), 다운로드 경로는 `docPath`.
+
+## 18. 🟢 경호계획서·개인정보동의서 다운로드가 프론트에 연결 안 돼 있음 → **해결(2026-09-10, `/files/{path}`)**
+
+**발견 경위**: CARRYOVER 재검증 중 사용자가 "본사에서 경호계획서 업로드는 되는데 피전에서
+다운로드가 안 된다"고 지적(2026-09-10).
+
+**현재 상태 / 원인**: 경호계획서·동의서는 **전용 다운로드 API가 없다**(스웨거
+`GetDestroyDocDownload` 설명: *"경호계획서·동의서는 PATH가 곧 다운로드 URL이라 이 API가
+필요 없고, 파기확인서만 여기를 거친다"*). 백엔드가 정적 파일을 `{API}/files/{경로}`로 서빙
+(2026-09-10 실측 — `application/pdf`, **인증 불필요**, `Content-Disposition` 없음). 그런데
+프론트는:
+- 피전 `DocumentsCard`의 경호계획서 "다운로드" 버튼 `onClick: () => {}` (빈 함수)
+- 피전 `ConsentDocsCard`의 동의서 다운로드도 `onClick: () => {}`
+- **본사** `AttachmentsSection`의 경호계획서·동의서 행엔 다운로드 버튼 자체가 없음(올리기만 됨)
+- `docPath`/`filePath`를 `SecurityCase.attachments`에 매핑조차 안 함
+
+**응답 필드 (2026-09-10 실측)**:
+- 피전 `GetDeployDetail.docGuardDetail = {docSeq, docType:0, docPath:"guardcase/53/202609/….pdf", fileName, fileExt}` / `docAgreeDetail: []`(동의서, 실데이터 없어 shape 미확정)
+- 본사 `GetCaseDoc.caseInfoDto = {docSeq, filePath:"guardcase/53/…", fileName, fileExt}` / `guardAgreementDtos[].filePath`(동의서, 전부 null)
+- 다운로드 URL: `{API}/files/{docPath}` — 200, `application/pdf`. 없는 경로 404.
+
+**해결**: `shared/lib/download.ts::downloadFileByPath(docPath, fileName?)` 신설(`/files/{path}`
+blob 받아 `a.download` 저장 — 파기확인서 다운로드와 같은 패턴). `vite.config.ts` dev 프록시에
+`/files` 추가. `CaseAttachments`에 `securityPlanFilePath`/`workerConsentFilePaths` 추가,
+피전·본사 매퍼가 `docPath`/`filePath`를 채움. 피전 `DocumentsCard`·`ConsentDocsCard`,
+본사 `AttachmentsSection` 다운로드 배선. 브라우저 검증(SPoliceM5 `/security-cases/93` —
+`/files/…` 200·콘솔 에러 0 / StecM1 `/admin/security-cases/53` — 다운로드 버튼 표시).
+
+**잔존**: 동의서(`docAgreeDetail`)는 실서버에 업로드 파일이 없어(항상 `[]`) 응답 shape
+미확정 — 본사 `guardAgreementDtos` 미러링으로 방어적 매핑, 데이터 생기면 재검증(CARRYOVER).
+피전 `ConsentDocsCard`는 `baseInfo.defaultWorkers`가 비어(findings #6) 아직 렌더 안 됨.
 
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
+
+
 
 
 ---
