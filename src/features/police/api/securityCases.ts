@@ -4,12 +4,9 @@ import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderLabelToCode } from '@/shared/lib/subject'
 import { caseTypeToCrimeCode } from '@/shared/lib/crimeType'
+import { resolveDeployStatus } from '@/shared/lib/deployStatus'
 import { toSeq } from './securityCaseDetail'
-import type {
-  SecurityCase,
-  SecurityCaseCreateInput,
-  SecurityCaseStatus,
-} from '../types/securityCase'
+import type { SecurityCase, SecurityCaseCreateInput } from '../types/securityCase'
 
 // SecurityCaseCreateInput(폼 구조) → Add/UpdateDeployRequestDto 공통 필드.
 // 신규접수(AddDeployRequest)와 배치요구서 수정(UpdateDeployRequest)이 대칭 DTO라
@@ -80,13 +77,20 @@ interface DeployListRow {
 // 화면은 별도 API(GetDeployDetail 등, 후속 iteration)로 각자 채운다.
 function toSecurityCase(row: DeployListRow): SecurityCase {
   const { receiptNumber, securityCode } = splitMgmtNo(row.mgmtNo)
+  // 연장/단축 신청 대기 건은 statusName이 "연장"/"단축"으로 온다 — 경호중으로 정규화하지
+  // 않으면 VISIBLE_STATUSES 필터에 걸려 목록에서 사라진다(findings #19).
+  const { status, pendingRequestType } = resolveDeployStatus(row.statusName)
   return {
     id: String(row.deploySeq),
     receiptNumber,
     securityCode,
     policeStation: '',
     jurisdiction: '',
-    status: row.statusName as SecurityCaseStatus,
+    status,
+    // 목록 응답엔 요청 종료일/요청일이 없어 타입만 표시용으로 담는다(상세는 GetDeployDetail).
+    ...(pendingRequestType
+      ? { pendingPeriodRequest: { type: pendingRequestType, requestedEndDate: '', requestedAt: '' } }
+      : {}),
     caseType: '사건미접수',
     subject: {
       nameInitial: row.suspectUserName,

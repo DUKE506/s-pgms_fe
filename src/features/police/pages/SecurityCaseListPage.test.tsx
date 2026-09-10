@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import SecurityCaseListPage from './SecurityCaseListPage'
 import { policeAccounts } from '../../../mocks/data/accounts'
+import { securityCases, requestPeriodChange } from '../../../mocks/data/securityCases'
 import { useAuthStore } from '../../auth/store/authStore'
 
 function renderPage() {
@@ -85,5 +86,21 @@ describe('PoliceSecurityCaseListPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '신규 접수' }))
 
     expect(await screen.findByText('신규 접수 도착')).toBeInTheDocument()
+  })
+
+  it('연장/단축 신청 대기 중인 경호중 건도 목록에서 사라지지 않는다', async () => {
+    loginAsStation()
+    // 경호중 건에 단축 신청 → 실백엔드는 GetDeployList.statusName을 "단축"으로 준다
+    // (findings #19). 경호중으로 정규화하지 않으면 VISIBLE_STATUSES 필터에 걸려 사라진다.
+    const record = securityCases.find((c) => c.id === 'case-seed-7')!
+    requestPeriodChange(record.id, '단축', record.endDate)
+    try {
+      renderPage()
+      await screen.findAllByText('26-03-강남경찰서 · ST102')
+      const row = withinTable().getByText('26-03-강남경찰서 · ST102').closest('tr')!
+      expect(within(row).getByText('경호중')).toBeInTheDocument()
+    } finally {
+      record.pendingPeriodRequest = undefined
+    }
   })
 })

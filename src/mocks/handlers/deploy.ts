@@ -92,7 +92,8 @@ function toDeployDetail(c: SecurityCase) {
   return {
     deployReqSeq: deploySeqOf(c),
     mgmtNo: mgmtNo(c.receiptNumber, c.securityCode),
-    statusName: c.status,
+    // 연장/단축 신청 대기면 실백엔드는 statusName을 "연장"/"단축"으로 준다(findings #19).
+    statusName: c.pendingPeriodRequest ? c.pendingPeriodRequest.type : c.status,
     suspectUserName: c.subject.nameInitial,
     // 근무일자·근무시간은 경호계획 등록 후에만(2026-09-07 백엔드가 startDt/endDt →
     // startDate/endDate/startTime/endTime로 변경, 본사 GetGuardCaseDetail과 동일 구조).
@@ -187,7 +188,9 @@ export const deployTestHandlers = [
         caseSeq: c.securityCode ? Number(c.securityCode.replace(/\D/g, '')) || null : null,
         mgmtNo: mgmtNo(c.receiptNumber, c.securityCode),
         suspectUserName: c.subject.nameInitial,
-        statusName: c.status,
+        // 실백엔드는 연장/단축 신청이 걸린 경호중 건의 statusName을 "연장"/"단축"으로 준다
+        // (findings #19) — 더블도 그대로 흉내낸다.
+        statusName: c.pendingPeriodRequest ? c.pendingPeriodRequest.type : c.status,
         startDt: c.startDate,
         endDt: c.endDate,
         extendCount: 0,

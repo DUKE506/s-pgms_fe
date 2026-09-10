@@ -884,6 +884,34 @@ blob 받아 `a.download` 저장 — 파기확인서 다운로드와 같은 패�
 미확정 — 본사 `guardAgreementDtos` 미러링으로 방어적 매핑, 데이터 생기면 재검증(CARRYOVER).
 피전 `ConsentDocsCard`는 `baseInfo.defaultWorkers`가 비어(findings #6) 아직 렌더 안 됨.
 
+## 19. 🔴 `GetDeployList`·`GetDeployDetail` 응답에 숫자 `status`(경호상태 코드)가 없음 — `statusName`이 신청 대기와 뒤섞임
+
+**발견 경위**: 사용자 재검증(2026-09-10) — 피전이 경호중 건에서 연장/단축을 신청하면
+경호목록에서 그 건이 사라진다.
+
+**현재 상태**: `GET Deploy/Police/W/GetDeployList` 행은 `statusName`(표시용 한글 문자열)만
+준다. 연장/단축 신청이 걸린 경호중 건은 `statusName`이 **"경호중"이 아니라 "연장"/"단축"**으로
+온다(실측). 프론트 `SecurityCaseListPage`가 `VISIBLE_STATUSES = ['접수','배정','경호중','경호완료']`
+로 거르므로 그 건이 목록에서 통째로 빠진다. `GetDeployDetail`의 `statusName`,
+`GetDeployDetailUpdate`의 `deployStatus`도 같은 문제(스웨거 GetDeployDetailUpdate 설명:
+"연장·단축 신청이 올라와 있으면 그쪽을 우선한다").
+
+**대비**: `GET History/*/W/GetHistoryList`는 **이미** 숫자 `status`(0:배정 1:경호중 2:경호완료
+3:종결 4:경호취소)와 `statusName`을 함께 준다(스웨거 명시). 배치관리 계열만 문자열 하나뿐.
+
+**요청**: `GetDeployList`·`GetDeployDetail`(가능하면 `GetDeployDetailUpdate`도) 응답에
+`GetHistoryList`와 동일한 숫자 `status` 필드 추가. 연장/단축 신청 여부는 별도 플래그
+(예: `pendingPeriodType`)나 기존 `requestedEndDate`(GetDeployDetail엔 이미 있음)로.
+
+**임시 처리(2026-09-10)**: `shared/lib/deployStatus.ts::resolveDeployStatus(statusName)` —
+"연장"/"단축"을 `경호중` + `pendingRequestType`으로 정규화. 피전 목록/상세/수정 매퍼 3곳에
+적용해 목록에서 안 사라지게 함. 상세는 `requestedEndDate`가 있으면 `pendingPeriodRequest`도
+조립("연장 요청 중 · 승인 대기" 배너·재요청 차단). 숫자 `status` 오면 그걸 소스로 전환.
+
+**영향받는 화면/코드**: `features/police/api/securityCases.ts`(`toSecurityCase`),
+`features/police/api/securityCaseDetail.ts`(`toSecurityCase`·`toSecurityCaseFromEdit`),
+`features/police/pages/SecurityCaseListPage.tsx`, `shared/lib/deployStatus.ts`.
+
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
 
 

@@ -5,12 +5,12 @@ import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderCodeToLabel } from '@/shared/lib/subject'
 import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
 import { hhmm, parseMeasureItems, parseMeasurePeriod } from '@/shared/lib/caseMeasures'
+import { resolveDeployStatus } from '@/shared/lib/deployStatus'
 import type {
   CaseBaseInfo,
   ClosureReason,
   ScheduleDay,
   SecurityCase,
-  SecurityCaseStatus,
   WorkSchedule,
 } from '../types/securityCase'
 import type { Worker } from '../../company/api/workers'
@@ -158,6 +158,8 @@ function toBaseInfo(d: DeployDetailData): CaseBaseInfo {
 function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
   const split = splitMgmtNo(d.mgmtNo)
   const groupName = useAuthStore.getState().user?.groupName ?? ''
+  // 연장/단축 신청 대기 건은 statusName이 "연장"/"단축" — 경호중으로 정규화(findings #19).
+  const { status, pendingRequestType } = resolveDeployStatus(d.statusName)
 
   return {
     id,
@@ -166,7 +168,18 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
     // 목록 연동과 동일하게, 응답에 소속 정보가 없으면 세션 groupName으로 대체.
     policeStation: groupName,
     jurisdiction: '',
-    status: d.statusName as SecurityCaseStatus,
+    status,
+    // 연장/단축 신청 대기면 상세 배너("연장 요청 중 · 승인 대기")·재요청 차단에 쓴다.
+    // requestedAt은 GetDeployDetail이 주지 않아 빈 값(요청일 표시는 본사 승인 화면 소관).
+    ...(pendingRequestType && d.requestedEndDate
+      ? {
+          pendingPeriodRequest: {
+            type: pendingRequestType,
+            requestedEndDate: d.requestedEndDate,
+            requestedAt: '',
+          },
+        }
+      : {}),
     caseType: crimeCodeToCaseType(d.crimeType),
     subject: {
       nameInitial: d.suspectUserName ?? '',
@@ -373,7 +386,8 @@ function toSecurityCaseFromEdit(id: string, d: DeployDetailUpdateData): Security
     receiptNumber: '',
     policeStation: useAuthStore.getState().user?.groupName ?? '',
     jurisdiction: '',
-    status: d.deployStatus as SecurityCaseStatus,
+    // deployStatus도 연장·단축 신청이 걸리면 "연장"/"단축"으로 온다(스웨거 GetDeployDetailUpdate).
+    status: resolveDeployStatus(d.deployStatus).status,
     caseType: crimeCodeToCaseType(d.crimeType),
     subject: {
       nameInitial: d.suspectUserName ?? '',
