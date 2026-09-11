@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { RouteObject } from 'react-router'
-import PoliceLoginPage from '../features/auth/pages/PoliceLoginPage'
-import CompanyLoginPage from '../features/auth/pages/CompanyLoginPage'
+import { Navigate } from 'react-router'
+import LoginPage from '../features/auth/pages/LoginPage'
 import PoliceAppShell from '../features/police/layout/PoliceAppShell'
 import CompanyAppShell from '../features/company/layout/CompanyAppShell'
 import type { Role } from '../features/auth/store/authStore'
@@ -58,7 +58,10 @@ function companyScreen(allow: Role[], label: string, screenIds: string[]): React
 }
 
 export const routes: RouteObject[] = [
-  { path: '/', element: <PoliceLoginPage /> },
+  // 경찰/본사 로그인 화면 통합(2026-09-11 사용자 결정) — 로그인 자체는 실백엔드가
+  // 이미 하나로 취급하고 있어(roadmap Phase 5 백로그 참고) 화면을 나눌 이유가 없었음.
+  // 역할별 이동은 LoginPage 내부에서 getDefaultRouteForRole로 그대로 처리.
+  { path: '/', element: <LoginPage /> },
   { path: '/dashboard', element: policeScreen(POLICE_DASHBOARD, '현황', ['1', '2']) },
   {
     path: '/history',
@@ -131,7 +134,9 @@ export const routes: RouteObject[] = [
     ),
   },
 
-  { path: '/admin', element: <CompanyLoginPage /> },
+  // 예전 본사 로그인 경로 — 통합 전 북마크/공유 링크가 404 대신 로그인으로 자연스럽게
+  // 이어지도록 리다이렉트만 남겨둠.
+  { path: '/admin', element: <Navigate to="/" replace /> },
   { path: '/admin/dashboard', element: companyScreen(COMPANY_ALL, '본사 전체 대시보드', ['6']) },
   {
     path: '/admin/requests',

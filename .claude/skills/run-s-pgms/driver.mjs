@@ -143,27 +143,29 @@ const COMMANDS = {
     catch { console.log('TIMEOUT:', sel) }
   },
 
-  // 앱 전용 헬퍼: 경찰 모드 계정(경찰서/본청/지역청/게스트)으로 로그인.
-  // fixture 계정은 src/mocks/data/accounts.ts에 있음.
+  // 로그인 화면 통합(2026-09-11)으로 경찰/본사 로그인이 같은 화면(/)·같은 폼이 됨 —
+  // login-police/login-company 둘 다 동일하게 동작하는 별칭으로 남겨둠(계정 종류만
+  // 다름, fixture 계정은 src/mocks/data/accounts.ts에 있음).
   async 'login-police'(args) {
     if (!page) return console.log('ERROR: launch first')
     const [id, password] = args.split(' ')
     await page.goto(BASE + '/')
-    await page.waitForSelector('h1:has-text("경찰 로그인")')
-    await page.fill('#police-id', id)
-    await page.fill('#police-password', password)
+    await page.waitForSelector('h1:has-text("로그인")')
+    await page.fill('#login-id', id)
+    await page.fill('#login-password', password)
     await page.click('button:has-text("로그인")')
     console.log('submitted police login for', id)
   },
 
-  // 앱 전용 헬퍼: 본사 모드 계정(시스템관리자/운영관리자/본부관리자)으로 로그인.
+  // 본사 모드 계정(시스템관리자/운영관리자/본부관리자)으로 로그인 — login-police와
+  // 동일한 화면·동일한 셀렉터, 계정만 다르다.
   async 'login-company'(args) {
     if (!page) return console.log('ERROR: launch first')
     const [id, password] = args.split(' ')
-    await page.goto(BASE + '/admin')
-    await page.waitForSelector('h1:has-text("본사 로그인")')
-    await page.fill('#company-id', id)
-    await page.fill('#company-password', password)
+    await page.goto(BASE + '/')
+    await page.waitForSelector('h1:has-text("로그인")')
+    await page.fill('#login-id', id)
+    await page.fill('#login-password', password)
     await page.click('button:has-text("로그인")')
     console.log('submitted company login for', id)
   },

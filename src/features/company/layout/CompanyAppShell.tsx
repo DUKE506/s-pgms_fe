@@ -27,7 +27,8 @@ function CompanyAppShell({ children }: CompanyAppShellProps) {
   async function handleLogout() {
     await logout()
     useAuthStore.getState().logout()
-    navigate('/admin')
+    // 로그인 화면 통합(2026-09-11)으로 본사도 단일 로그인 경로(/)로 이동.
+    navigate('/')
   }
 
   return (

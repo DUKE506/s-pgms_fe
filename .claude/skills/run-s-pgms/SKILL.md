@@ -46,8 +46,8 @@ EOF
 | `launch` | 필요하면 서버부터 띄운 뒤, headless Chromium 실행 |
 | `viewport <width> <height>` | 브라우저 뷰포트 크기 변경 (반응형/모바일 확인용, 예: `viewport 390 844`) |
 | `nav <path>` | `http://localhost:<port><path>`로 이동 |
-| `login-police <id> <password>` | `/`로 이동, 경찰 로그인 폼 채우고 제출 |
-| `login-company <id> <password>` | `/admin`으로 이동, 본사 로그인 폼 채우고 제출 |
+| `login-police <id> <password>` | `/`(로그인 화면)로 이동, 폼 채우고 제출 |
+| `login-company <id> <password>` | `login-police`와 동일(로그인 화면 통합, 2026-09-11) — 계정만 다름 |
 | `fill <selector> <text...>` | input 채우기 |
 | `upload <input셀렉터> <파일경로>` | `<input type=file>`에 파일 주입 (숨겨진 input도 셀렉터로 직접 지정) |
 | `click <selector>` | CSS 셀렉터로 클릭 |
@@ -94,14 +94,14 @@ npm run test   # vitest run — MSW 기반 unit/integration 테스트
 - **`killPort`는 Windows 전용이다.** `driver.mjs`의 포트 kill 로직은
   `netstat`/`taskkill`을 쓴다 (이 프로젝트의 개발 환경이 Windows). Linux/macOS
   에서 돌린다면 `lsof -ti:$PORT | xargs kill`로 바꿔야 한다.
-- **로그인 화면 2개는 디자인 목업이 없다.** `docs/PGMS_UI_mock.dc.html`은
-  화면 1–12(로그인 이후)만 다루고, 로그인 화면은 기능 위주로 만들어졌다 —
-  비주얼 스펙과 비교하지 말고 `src/features/auth/pages/*LoginPage.tsx` 자체를
-  기준으로 볼 것.
+- **로그인 화면은 경찰/본사 공용 1개이고 디자인 목업이 없다.** (2026-09-11
+  통합 — 이전엔 화면 2개였음) `docs/PGMS_UI_mock.dc.html`은 화면 1–12(로그인
+  이후)만 다루고, 로그인 화면은 기능 위주로 만들어졌다 — 비주얼 스펙과
+  비교하지 말고 `src/features/auth/pages/LoginPage.tsx` 자체를 기준으로 볼 것.
 - **로그인 성공 후 이동 경로는 role마다 다르다.** `getDefaultRouteForRole()`
   (`src/features/auth/lib/defaultRoute.ts`)이 유일한 매핑 소스: 본청/지역청
   → `/dashboard`, 경찰서/게스트 → `/security-cases`, 본사 3개 role →
-  `/admin/dashboard`. `login-police`로 어떤 계정을 쓰느냐에 따라 `wait`으로
+  `/admin/dashboard`. 어떤 계정을 쓰느냐에 따라 `wait`으로
   기다려야 할 화면 라벨이 달라진다.
 
 ## 트러블슈팅

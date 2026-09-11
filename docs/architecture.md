@@ -7,7 +7,10 @@
 - 방식: 자체 ID/PW 로그인 + JWT(accessToken, refreshToken)
 - 저장 위치: 둘 다 localStorage (추후 백엔드와 협의되면 refreshToken을 HttpOnly 쿠키로 전환 검토)
 - 토큰 갱신: accessToken 만료 시 refreshToken으로 재발급 요청 → 헤더 갱신 → 원 요청 재시도 (인터셉터 패턴)
-- 로그인 화면: 경찰(`/`)과 본사(`/admin`)로 완전히 분리
+- 로그인 화면: 경찰/본사 공용 단일 화면(`/`). 원래 경찰(`/`)·본사(`/admin`)로 분리돼
+  있었으나, 실백엔드가 애초에 로그인을 하나로 취급한다는 게 확인돼(`Login` 응답의
+  `code`가 `100+codeSeq`라 역할까지 이미 구분 가능) 통합(2026-09-11, `LoginPage.tsx`).
+  로그인 성공 후 이동은 여전히 `getDefaultRouteForRole(role)`이 담당
 - 로그인 후 기본 경로: 각 진입점 하위의 `/dashboard`, `/history` 등 구체 경로로 이동 (루트 경로 자체엔 컨텐츠 없음)
 - 권한 모델: role은 한글 문자열로 관리(본청/지역청/경찰서/게스트/시스템관리자/운영관리자/본부관리자). 게스트는 경찰서가 발급하는 별도 role로, 할당된 경호건만 조회 가능한 축소 권한. 화면/버튼 단위 접근 제어는 역할별로 화면을 분리하지 않고 공용 컴포넌트 + `usePermission()` 훅으로 조건부 처리
 - 미인증 접근: 로그인 화면으로 리다이렉트
@@ -25,7 +28,7 @@
 
 - 라이브러리: `react-router` (v7)
 - 모바일: 별도 라우트로 분리하지 않고 단일 라우트 + 반응형 레이아웃으로 처리 (PWA 적용 여부와 무관한 결정)
-- 라우트 가드: `<ProtectedRoute allow={[...]}>` 래퍼 컴포넌트로 구현 (loader 방식 아님, `src/app/ProtectedRoute.tsx`). Zustand 스토어를 렌더링 시점에 동기적으로 읽어 판단하므로 별도 비동기 처리 없이 렌더 전에 차단 가능. 미인증이면 현재 경로가 `/admin`으로 시작하는지로 진영을 판별해 해당 로그인으로 리다이렉트, 권한 없는 role이면 토스트 알림 후 `getDefaultRouteForRole()`로 리다이렉트
+- 라우트 가드: `<ProtectedRoute allow={[...]}>` 래퍼 컴포넌트로 구현 (loader 방식 아님, `src/app/ProtectedRoute.tsx`). Zustand 스토어를 렌더링 시점에 동기적으로 읽어 판단하므로 별도 비동기 처리 없이 렌더 전에 차단 가능. 미인증이면 경로 무관 항상 `/`(로그인 화면 통합, 2026-09-11)로 리다이렉트, 권한 없는 role이면 토스트 알림 후 `getDefaultRouteForRole()`로 리다이렉트
 - URL 세그먼트는 영어(kebab-case), 화면에 보이는 라벨은 한글 유지. 경호건은 `security-case`로 표기
 - 모달로 처리하는 화면(담당자 배정, 게스트 발급, 근무자 등록)은 별도 라우트를 주지 않고 목록 페이지 내 UI 상태로 처리
 - 아직 실제 화면이 없는 라우트는 `ScreenPlaceholder`(`src/shared/components/ScreenPlaceholder.tsx`, 라벨 + 목업 anchor id 표시)로 채워져 있으며 roadmap Phase 1-4에서 화면이 만들어질 때마다 하나씩 교체됨
@@ -36,7 +39,7 @@
 
 | 경로                     | 화면                            | 비고                                    |
 | ------------------------ | ------------------------------- | ---------------------------------------- |
-| `/`                      | 로그인                          | 비인증 시                                |
+| `/`                      | 로그인 (경찰/본사 공용)         | 비인증 시                                |
 | `/dashboard`             | 1, 2 (현황 대시보드)            | role별 scope만 다름, 같은 라우트 공유. 본청/지역청/경찰서 (게스트 제외) |
 | `/history`               | 1h, 2h, 8 (이력 조회 목록)      | 본청/지역청/경찰서 공통, role별 scope만 다름 |
 | `/history/:id`           | 1h/2h/8h (이력 상세)            | 본청/지역청/경찰서 공통                  |
@@ -49,8 +52,7 @@
 
 | 경로                            | 화면                        | 비고                              |
 | ------------------------------- | --------------------------- | ---------------------------------- |
-| `/admin`                        | 로그인                      | 비인증 시                          |
-| `/admin/dashboard`              | 6 (전체 대시보드)           |                                     |
+| `/admin/dashboard`              | 6 (전체 대시보드)           | 로그인은 `/`(경찰과 공용) — `/admin` 자체엔 라우트 없음 |
 | `/admin/requests`               | 6b (배치요청 목록)          | 담당자 배정(6c)은 목록 내 모달     |
 | `/admin/security-cases`         | 6d (경호목록)               |                                     |
 | `/admin/security-cases/:id`     | 7 (배정 경호건 상세)        |                                     |
@@ -100,8 +102,8 @@
 - shadcn 컴포넌트: `Button`, `Card`, `Table`, `Dialog`, `Input`, `Label`, `Select` (`src/components/ui/`, 필요할 때마다 `npx shadcn add <component>`로 추가). `Button`의 `outline` variant는 기본값(`bg-background`)이 페이지 배경과 같은 색이라 `bg-card`(흰색)로 수정해둠 — shadcn CLI로 다른 컴포넌트를 다시 추가하면서 `button.tsx`가 덮어써지면 이 수정도 같이 사라지니 재적용 필요. `Table`의 `TableHeader`도 같은 이유로 헤더 배경(`bg-slate-50`, 목업 실측 `#f8fafc`)을 추가해둠
 - `StatusBadge`(`src/shared/components/StatusBadge.tsx`): 경호건 상태 6개 → `--color-status-*` 토큰 매핑
 - `Sidebar`(`src/shared/components/Sidebar.tsx`): 도메인 무관 rail 프리미티브. `xl`(1280px) 이상에서 좌측 고정 76px 세로 rail, 그 미만은 전부 모바일 취급해 하단 고정 플로팅 pill 아이콘 바로 반응형 전환 (목업이 데스크톱 1920px/모바일 390px 두 크기만 제공하고 중간 태블릿 크기가 없어서, 그 사이 전부를 모바일 레이아웃으로 처리하기로 함). nav 항목 목록(`items`)은 도메인이 주입
-- `PoliceAppShell`(`src/features/police/layout/PoliceAppShell.tsx`), `CompanyAppShell`(`src/features/company/layout/CompanyAppShell.tsx`): `Sidebar` + 콘텐츠 영역을 조합하는 도메인별 레이아웃. `routes.tsx`의 모든 경찰/본사 화면 라우트가 `ProtectedRoute` 안에서 이 셸로 감싸짐 (로그인 화면 2개는 셸 없음). 경찰 sidebar 항목은 role별로 다름 — 본청/지역청은 `현황`+`이력` 2개, 경찰서는 `현황`+`경호목록`+`이력`+`게스트` 4개, 게스트는 `경호목록` 1개만. 본사는 role 무관 `대시보드`+`경호관리`+`근무자`+`이력` 4개 고정. 로그아웃 버튼도 여기 포함 (`useAuthStore.getState().logout()` + 진영별 로그인으로 이동)
-- 로그인 화면 2개(`PoliceLoginPage`, `CompanyLoginPage`)는 `Card`+`Input`+`Label`+`Button`으로 재스타일링. `CardTitle`은 시맨틱 heading이 아닌 `div`라 접근성/테스트를 위해 쓰지 않고, 같은 스타일 클래스를 적용한 실제 `<h1>`을 직접 사용
+- `PoliceAppShell`(`src/features/police/layout/PoliceAppShell.tsx`), `CompanyAppShell`(`src/features/company/layout/CompanyAppShell.tsx`): `Sidebar` + 콘텐츠 영역을 조합하는 도메인별 레이아웃. `routes.tsx`의 모든 경찰/본사 화면 라우트가 `ProtectedRoute` 안에서 이 셸로 감싸짐 (로그인 화면은 셸 없음). 경찰 sidebar 항목은 role별로 다름 — 본청/지역청은 `현황`+`이력` 2개, 경찰서는 `현황`+`경호목록`+`이력`+`게스트` 4개, 게스트는 `경호목록` 1개만. 본사는 role 무관 `대시보드`+`경호관리`+`근무자`+`이력` 4개 고정. 로그아웃 버튼도 여기 포함 (`useAuthStore.getState().logout()` + 공용 로그인 `/`으로 이동)
+- 로그인 화면(`LoginPage.tsx`, 경찰/본사 공용)은 `Card`+`Input`+`Label`+`Button`으로 재스타일링. `CardTitle`은 시맨틱 heading이 아닌 `div`라 접근성/테스트를 위해 쓰지 않고, 같은 스타일 클래스를 적용한 실제 `<h1>`을 직접 사용
 - 로고 배지 텍스트("PGMS")는 목업에서 화면마다 다르게 표기된 것(회사는 "SL", 본청은 "본청" 등)을 통일한 것 — 실제 요구사항이 확정되면 변경
 - 본사 화면 상단 breadcrumb: 목업은 화면마다 "에스텍 본사 / 메뉴명"(상세는 "에스텍 본사 / 메뉴명 / 케이스ID") 형태로 조직명을 접두어로 붙이지만, 본사 모드는 에스텍 직원만 쓰는 화면이라 조직명 표시가 불필요하다고 판단해 "에스텍 본사" 접두어는 뺌(2026-08-21, 배치요청 목록 화면에서 결정, 이후 구현하는 본사 화면에도 동일 적용). 그 위에 추가로: breadcrumb 남은 부분이 바로 아래 `h1`과 완전히 겹치는 최상위 목록 화면(예: 경호관리 목록 — breadcrumb "경호관리" = h1 "경호관리")은 breadcrumb 자체를 생략하고 `h1`만 표시. 반대로 상세 화면(`h1`이 케이스 식별자 등 다른 텍스트라 겹치지 않는 경우, 예: `/admin/security-cases/:id`)은 "경호관리 / 26-02-강남경찰서"처럼 부모 메뉴명 + 현재 항목 breadcrumb를 유지
 - 경찰 화면 상단 breadcrumb: 본사와 달리 "지역청 / 경찰서명"(예: "서울지방경찰청 / 강남경찰서")으로 실제 소속 조직 정보를 담아 화면마다 다르므로, 위 본사 규칙과 달리 h1과 겹치는 목록 화면(예: 경찰서 경호목록 `/security-cases`)에서도 생략하지 않고 유지한다(2026-08-25, 경찰서 경호목록 화면에서 결정). 데이터는 응답으로 받은 케이스의 `jurisdiction` 필드에서 가져오며(mock 내부 매핑을 화면단에서 직접 import하지 않음), 목록이 비어 있으면 지역청 없이 소속 경찰서명만 표시. 단, 상세 화면(`/security-cases/:id`, 목업 s5)은 목업 자체가 지역청 없이 "강남경찰서"처럼 소속 경찰서명만 단독으로 보여줘서 그대로 따름 — 경찰 화면이라고 항상 "지역청/경찰서" 조합인 것은 아니고 화면별 목업을 우선한다(2026-08-25, 경호 상세화면에서 확인)
@@ -125,7 +127,7 @@ src/
       pages/, components/, hooks/, api/
     company/                # 본사 도메인
       pages/, components/, hooks/, api/
-    auth/                   # 로그인 화면(경찰/본사), 토큰관리, usePermission
+    auth/                   # 로그인 화면(경찰/본사 공용), 토큰관리, usePermission
       pages/, hooks/, api/
   shared/                   # 도메인 무관 공용 (버튼/테이블/상태뱃지/모달 등 UI 프리미티브)
     components/, hooks/, lib/, types/

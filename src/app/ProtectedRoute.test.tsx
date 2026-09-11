@@ -8,8 +8,7 @@ import { useToastStore } from '../shared/hooks/useToastStore'
 function renderProtected(initialPath: string, allow: Role[]) {
   const router = createMemoryRouter(
     [
-      { path: '/', element: <div>POLICE LOGIN</div> },
-      { path: '/admin', element: <div>COMPANY LOGIN</div> },
+      { path: '/', element: <div>LOGIN</div> },
       { path: '/security-cases', element: <div>SECURITY CASES DEFAULT</div> },
       {
         path: '/dashboard',
@@ -39,14 +38,16 @@ describe('ProtectedRoute', () => {
     useToastStore.setState({ toasts: [] })
   })
 
-  it('redirects unauthenticated users to the police login', () => {
+  it('redirects unauthenticated users to the login screen', () => {
     renderProtected('/dashboard', ['본청', '지역청'])
-    expect(screen.getByText('POLICE LOGIN')).toBeInTheDocument()
+    expect(screen.getByText('LOGIN')).toBeInTheDocument()
   })
 
-  it('redirects unauthenticated users to the company login under /admin', () => {
+  it('redirects unauthenticated users from an /admin route to the same single login screen', () => {
+    // 로그인 화면 통합(2026-09-11) — 더 이상 /admin 전용 로그인이 없어 경로와 무관하게
+    // 항상 같은 로그인 화면으로 간다.
     renderProtected('/admin/dashboard', ['시스템관리자'])
-    expect(screen.getByText('COMPANY LOGIN')).toBeInTheDocument()
+    expect(screen.getByText('LOGIN')).toBeInTheDocument()
   })
 
   it("redirects a user without the required role to their default route, with a toast", async () => {

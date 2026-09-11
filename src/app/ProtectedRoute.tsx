@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Navigate, useLocation } from 'react-router'
+import { Navigate } from 'react-router'
 import { useAuthStore, type Role } from '../features/auth/store/authStore'
 import { getDefaultRouteForRole } from '../features/auth/lib/defaultRoute'
 import { useToastStore } from '../shared/hooks/useToastStore'
@@ -11,7 +11,6 @@ interface ProtectedRouteProps {
 
 function ProtectedRoute({ allow, children }: ProtectedRouteProps) {
   const user = useAuthStore((state) => state.user)
-  const { pathname } = useLocation()
   const forbidden = user !== null && !allow.includes(user.role)
 
   // 토스트는 이 컴포넌트보다 오래 살아남아야 함 — 리다이렉트된 화면에서도
@@ -27,7 +26,8 @@ function ProtectedRoute({ allow, children }: ProtectedRouteProps) {
   }, [forbidden])
 
   if (!user) {
-    return <Navigate to={pathname.startsWith('/admin') ? '/admin' : '/'} replace />
+    // 로그인 화면이 하나로 통합돼(2026-09-11) 소속(경찰/본사) 무관하게 항상 여기로.
+    return <Navigate to="/" replace />
   }
 
   if (forbidden) {
