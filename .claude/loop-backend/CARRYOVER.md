@@ -35,20 +35,25 @@ B-2·C·D 통합 전달본: `requests/2026-09-08-미회신-B2-C-D.xlsx`(시트 3
 | 17 | [경찰서] 게스트 경호상세 | 조회권 **없는** 활성 건 상세 직접 호출 시 403/404 차단되는지 | 동래에 게스트 미부여 진행중 건이 생기면 (→ C절 일괄) |
 | ~~신규~~ | [경찰서] 취소 | **✅ 전부 소진(2026-09-11)** — 경호취소(2026-09-10)에 이어 접수취소(배치요구서 hard delete)도 사용자 확인 | |
 
-## C. URL 직접 접근 스코프 일괄 테스트 (사용자 결정, 2026-09-09)
+## C. URL 직접 접근 스코프 일괄 테스트 — ✅ 전부 소진(2026-09-11)
 
 목록을 안 거치고 주소창으로 상세 EP를 직접 호출했을 때 서버가 스코프를 강제하는지 —
-여러 화면에 흩어진 미검증 항목을 **한 번에 몰아서** 프로브한다. 지금은 목록에 걸러진
-id만 링크되어 실사용 문제는 없고, 직접 URL 입력 방어선만 필요. **여전히 대기**(2026-09-11
-재확인) — 아직 프로브 안 함.
+여러 화면에 흩어진 미검증 항목을 **한 번에 몰아서** 프로브했다. 전부 차단 확인, 회귀 없음.
+프로브: `local/_probe-url-scope.sh`(0단계 대상 ID 확보) + 본문 curl(무변경, 전부 GET).
 
-| EP | 확인할 것 |
-|---|---|
-| `History/Police/W/GetHistoryDetail?caseSeq=` | 본청/지역청 토큰이 **타 관할** `caseSeq` 넣으면 404/403인지 (현재 동래 건뿐이라 미검) |
-| `History/Stec/W/GetHistoryDetail?caseSeq=` | 본부관리자가 **남 배정** `caseSeq` — StecM3(0건)→404는 확인, 실제 타 본부 배정 건으로 재확인 |
-| `Deploy/Police/W/GetDeployDetail?deployReqSeq=` (게스트 토큰) | 조회권 **없는** 건 직접 호출 시 `GUEST_CASE_ACCESS` 강제되는지 (D 요청서 2번, 데이터 대기) |
-| `Deploy/Police/W/GetDeployDetail?deployReqSeq=` (본청/지역청) | 타 관할 `deployReqSeq` 차단 여부 |
-| 경호상세(`SecurityCaseDetailPage`) URL 직접 접근 상태 가드 | 접수 상태에서도 URL을 직접 알면 기본정보 등록이 가능한 우회 경로가 있는지 (loop-screens Phase 1 #3 이월, **2026-09-11 이 항목에 병합**) |
+| EP | 확인한 것 | 결과 |
+|---|---|---|
+| `History/Police/W/GetHistoryDetail?caseSeq=` | SPoliceM3(부산지역청)가 타 관할(강남경찰서, `caseSeq=29`) 호출 | **404**(대조군 SPoliceM1은 200) → 차단 확인 |
+| `History/Stec/W/GetHistoryDetail?caseSeq=` | StecM3(본부관리자, 배정 0건)가 StecM2 소유 종결 건(`caseSeq=51`) 호출 | **404** → 차단 확인(2026-09-08 기존 확인과 일치) |
+| `Deploy/Police/W/GetDeployDetail?deployReqSeq=` (게스트) | SPoliceGuest3가 조회권 없는 동래 건(`deployReqSeq=93`) 호출 | **404**(대조군 SPoliceM5는 200) → 차단 확인 |
+| `Deploy/Police/W/GetDeployDetail?deployReqSeq=` (지역청) | SPoliceM3가 타 관할(강남, `deployReqSeq=70`) 호출 | **404**(대조군 SPoliceM1은 200) → 차단 확인 |
+| `GuardCase/Stec/W/GetGuardCaseDetail?caseSeq=` (회귀 재확인) | StecM3가 StecM2 소유 건(`caseSeq=51`) 호출 | **403** "담당하지 않는 경호건입니다" → 2026-09-08과 동일, 회귀 없음. **#12 상태 "검증완료·문서보류" → 완료로 전환** |
+| 경호상세(`SecurityCaseDetailPage`, 피전) URL 직접 접근 | SPoliceM5로 접수 상태 건(`/security-cases/101`) 직접 이동 | 액션 "접수취소"만 노출, 배정 이후 액션 없음 → 정상. (loop-screens Phase 1 #3 이월분도 함께 해소 — 애초에 회사 측 "기본정보 등록"은 `GuardCase`가 배정 시점에만 생성돼 접수 상태엔 `caseSeq` 자체가 없어 그 경로로는 도달 불가) |
+
+**부수 발견(별건, 조치 불필요)**: `History/Police/W/GetHistoryDetail`이 이제 종결/취소가
+아닌 배정·경호중·경호완료 상태에도 200을 준다(대조군 M1으로 `caseSeq=29`(경호완료)·
+`caseSeq=53`(경호중) 둘 다 200 확인) — 예전 "History는 종결/취소만" 문서와 다름. 화면이
+이 상태들을 History 경로로 부르지 않아 현재 영향 없음, 참고로만 기록.
 
 ## D. 후속 작업 (별도 iteration)
 

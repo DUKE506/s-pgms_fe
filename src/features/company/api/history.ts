@@ -1,5 +1,5 @@
 import { apiFetch } from '../../auth/api/client'
-import { unwrapEnvelope } from '@/shared/api/envelope'
+import { assertOk, unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import {
   detailRowToSecurityCase,
@@ -107,8 +107,6 @@ export async function listCompanyHistory(): Promise<SecurityCase[]> {
 // 본인 배정 건, 범위 밖이면 404(실측).
 export async function getCompanyHistoryDetail(id: string): Promise<SecurityCase> {
   const res = await apiFetch(`/v1/History/Stec/W/GetHistoryDetail?caseSeq=${id}`)
-  if (!res.ok) {
-    throw new Error('이력 상세를 불러오지 못했습니다')
-  }
+  assertOk(res, '이력 상세를 불러오지 못했습니다')
   return detailRowToSecurityCase(await unwrapEnvelope<HistoryDetailRow>(res))
 }

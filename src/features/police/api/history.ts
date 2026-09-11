@@ -1,5 +1,5 @@
 import { apiFetch } from '../../auth/api/client'
-import { unwrapEnvelope } from '@/shared/api/envelope'
+import { assertOk, unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { useAuthStore } from '../../auth/store/authStore'
 import type { HistoryGuard, SecurityCase, SecurityCaseStatus } from '../types/securityCase'
@@ -200,8 +200,6 @@ export function listSecurityCaseHistory(): Promise<SecurityCase[]> {
 // 200(실측). 접수·진행중 건은 이 함수가 아니라 경호상세 화면으로 라우팅된다.
 export async function getPoliceStationHistoryDetail(id: string): Promise<SecurityCase> {
   const res = await apiFetch(`/v1/History/Police/W/GetHistoryDetail?caseSeq=${id}`)
-  if (!res.ok) {
-    throw new Error('이력 상세를 불러오지 못했습니다')
-  }
+  assertOk(res, '이력 상세를 불러오지 못했습니다')
   return detailRowToSecurityCase(await unwrapEnvelope<HistoryDetailRow>(res))
 }

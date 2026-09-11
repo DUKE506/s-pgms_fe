@@ -1,6 +1,6 @@
 import { apiFetch } from '../../auth/api/client'
 import { useAuthStore } from '../../auth/store/authStore'
-import { unwrapEnvelope } from '@/shared/api/envelope'
+import { assertOk, unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderCodeToLabel } from '@/shared/lib/subject'
 import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
@@ -272,9 +272,7 @@ export async function getSecurityCase(id: string): Promise<SecurityCase> {
   const res = await apiFetch(
     `/v1/Deploy/Police/W/GetDeployDetail?deployReqSeq=${encodeURIComponent(id)}`,
   )
-  if (!res.ok) {
-    throw new Error('경호건을 불러오지 못했습니다')
-  }
+  assertOk(res, '경호건을 불러오지 못했습니다')
   const d = await unwrapEnvelope<DeployDetailData>(res)
   const mapped = toSecurityCase(id, d)
   // d.mock은 테스트 더블에서만 온다(위 DeployDetailData 주석 참고).

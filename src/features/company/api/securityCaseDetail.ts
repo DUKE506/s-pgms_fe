@@ -1,5 +1,5 @@
 import { apiFetch } from '../../auth/api/client'
-import { unwrapEnvelope } from '@/shared/api/envelope'
+import { assertOk, unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderCodeToLabel } from '@/shared/lib/subject'
 import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
@@ -38,9 +38,7 @@ import type {
 
 async function fetchData<T>(path: string, errorMessage: string): Promise<T> {
   const res = await apiFetch(path)
-  if (!res.ok) {
-    throw new Error(errorMessage)
-  }
+  assertOk(res, errorMessage)
   return unwrapEnvelope<T>(res)
 }
 

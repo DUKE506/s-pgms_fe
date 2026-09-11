@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
 import DetailHeader from '@/shared/components/DetailHeader'
+import AccessBlockedScreen from '@/shared/components/AccessBlockedScreen'
+import { isNotFoundOrForbidden } from '@/shared/api/errors'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCase } from '../api/securityCaseDetail'
 import { getCaseGuards } from '../api/workers'
@@ -55,6 +57,10 @@ function SecurityCaseDetailPage() {
         <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
       </main>
     )
+  }
+
+  if (caseQuery.isError && isNotFoundOrForbidden(caseQuery.error)) {
+    return <AccessBlockedScreen label="경호건" fallbackTo="/admin/security-cases" />
   }
 
   if (caseQuery.isError || !caseQuery.data) {

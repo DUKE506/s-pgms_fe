@@ -134,6 +134,9 @@ describe('SecurityCaseDetailPage', () => {
     loginAs('hqmanager2')
     renderPage('case-seed-6')
 
-    expect(await screen.findByText('경호건을 불러오지 못했습니다')).toBeInTheDocument()
+    expect(
+      await screen.findByText('조회 권한이 없거나 존재하지 않는 경호건입니다'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '뒤로가기' })).toBeInTheDocument()
   })
 })
