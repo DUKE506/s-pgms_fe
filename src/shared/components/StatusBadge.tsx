@@ -23,7 +23,9 @@ function StatusBadge({ status, className }: StatusBadgeProps) {
         // 11px: 목업 실측값(docs/PGMS_UI_mock.dc.html 리스트 행 상태뱃지 기준, 2026-08-22)
         // h-6: text-trim이 line-height의 leading을 걷어내면서 기존 py-1 기반
         // 높이(약 23.7px)가 같이 줄어드는 걸 막기 위해 고정 높이로 전환 (2026-08-27)
-        'inline-flex h-6 items-center rounded-md px-3 text-[11px] font-semibold text-white',
+        // w-20: 상태마다 글자 수가 달라(접수 2자 ~ 경호완료 4자) 뱃지 길이가 들쭉날쭉하던 것을
+        // 가장 긴 라벨(경호완료) 기준 고정폭+중앙정렬로 통일 (2026-09-11)
+        'inline-flex h-6 w-20 items-center justify-center rounded-md text-[11px] font-semibold text-white',
         STATUS_COLOR[status],
         className,
       )}

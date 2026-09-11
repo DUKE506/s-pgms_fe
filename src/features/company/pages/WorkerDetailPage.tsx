@@ -129,13 +129,13 @@ function CaseCard({
           </span>
           <span className="truncate text-xs text-muted-foreground">{dateRange}</span>
         </div>
+        <span className="shrink-0 text-xs font-semibold text-foreground tabular-nums">
+          {summary.workDays}일 · {fmtHours(summary.totalHours)}시간
+        </span>
         <StatusBadge
           status={resolveDeployStatus(securityCase.statusName).status}
           className="shrink-0"
         />
-        <span className="shrink-0 text-xs font-semibold text-foreground tabular-nums">
-          {summary.workDays}일 · {fmtHours(summary.totalHours)}시간
-        </span>
       </button>
 
       {expanded && (
