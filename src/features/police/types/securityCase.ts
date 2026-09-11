@@ -127,8 +127,12 @@ export interface CaseAttachments {
   // 경로가 없으면(구 데이터 등) 다운로드 버튼을 숨긴다.
   securityPlanFilePath?: string | null
   workerConsentFileNames: Record<string, string>
-  // 근무자(guardSeq)별 동의서 저장 경로. 키는 workerConsentFileNames와 동일.
+  // 근무자(guardSeq)별 동의서 저장 경로. 키는 workerConsentFileNames와 동일. 본사(화면9,
+  // guardSeq 보유)에서만 쓴다.
   workerConsentFilePaths?: Record<string, string>
+  // 피전(화면4) 전용 — 업로드된 동의서만 그대로 나열(GetDeployDetail.docAgreeDetail은
+  // guardSeq가 없어 workerConsentFileNames처럼 키로 매칭할 수 없다, 2026-09-11).
+  consentDocs?: { name: string; fileName: string; filePath: string }[]
   destructionCertFileName: string | null
 }
 

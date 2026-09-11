@@ -38,6 +38,15 @@ interface DeployDocDetail {
   filePath?: string | null
 }
 
+// docAgreeDetail 항목 — 위 DeployDocDetail과 필드명이 완전히 다르다(2026-09-11 실측,
+// deployReqSeq 100). guardSeq 없이 guardName만 온다.
+interface DeployAgreeDetail {
+  agreePath?: string | null
+  agreeFileName?: string | null
+  agreeFileExt?: string | null
+  guardName: string
+}
+
 function docFileNameOf(detail: DeployDocDetail | null | undefined): string | null {
   if (!detail) return null
   return detail.drtFileName ?? detail.docFileName ?? detail.fileName ?? null
@@ -49,18 +58,14 @@ function docPathOf(detail: DeployDocDetail | null | undefined): string | null {
   return detail.docPath ?? detail.filePath ?? null
 }
 
-// docAgreeDetail(근무자별 동의서 배열) → { [guardSeq]: 값 } 맵. 파일명/경로 둘 다
-// 이 함수로 뽑는다(pick = docFileNameOf | docPathOf).
-function consentMap(
-  list: ({ guardSeq?: number } & DeployDocDetail)[] | undefined,
-  pick: (d: DeployDocDetail) => string | null,
-): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const item of list ?? []) {
-    const value = pick(item)
-    if (item.guardSeq != null && value) out[String(item.guardSeq)] = value
-  }
-  return out
+// docAgreeDetail(업로드된 동의서만 나열— 전체 근무자 명단이 아니다) → 렌더용 목록.
+// guardSeq가 없어(아래 DeployDetailData 주석 참고) 이름 그대로 쓴다.
+function toConsentDocs(
+  list: DeployAgreeDetail[] | undefined,
+): { name: string; fileName: string; filePath: string }[] {
+  return (list ?? [])
+    .filter((a) => a.agreePath && a.agreeFileName)
+    .map((a) => ({ name: a.guardName, fileName: a.agreeFileName!, filePath: a.agreePath! }))
 }
 
 // GetDeployDetail 응답 data 형태.
@@ -108,14 +113,13 @@ interface DeployDetailData {
 
   // 문서함 — 본사가 업로드하면 채워진다(2026-09-09 실측). 파기확인서는
   // docDestructionDetail.drtFileName, 경호계획서는 docGuardDetail(현재 실측 데이터가
-  // null이라 필드명 미확정 — 흔한 후보 세 개를 함께 본다). docAgreeDetail은 근무자별
-  // 동의서 배열(findings #6 요청 3, 후속).
+  // null이라 필드명 미확정 — 흔한 후보 세 개를 함께 본다).
   docGuardDetail?: DeployDocDetail | null
   docDestructionDetail?: DeployDocDetail | null
-  // 근무자별 개인정보동의서. 실측 데이터가 아직 없어(항상 []) shape 미확정 — 본사
-  // guardAgreementDtos({guardSeq,fileName,filePath})를 미러링해 방어적으로 읽는다
-  // (CARRYOVER: 데이터 생기면 재검증).
-  docAgreeDetail?: ({ guardSeq?: number } & DeployDocDetail)[]
+  // 근무자별 동의서(서약서+개인정보동의서 한 파일로 합쳐서 온다) — 업로드된 것만
+  // 배열에 들어있고(전체 근무자 명단 아님), guardSeq 없이 이름만(2026-09-11 실측,
+  // deployReqSeq 100 — 본사 guardAgreementDtos와 필드명이 다르다). issues findings #6.
+  docAgreeDetail?: DeployAgreeDetail[]
   downloadYn?: boolean
 
   // 테스트 더블(mocks/handlers/deploy.ts)만 채우는 필드 — 실제 응답엔 없다.
@@ -222,8 +226,8 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
     attachments: {
       securityPlanFileName: docFileNameOf(d.docGuardDetail),
       securityPlanFilePath: docPathOf(d.docGuardDetail),
-      workerConsentFileNames: consentMap(d.docAgreeDetail, docFileNameOf),
-      workerConsentFilePaths: consentMap(d.docAgreeDetail, docPathOf),
+      workerConsentFileNames: {},
+      consentDocs: toConsentDocs(d.docAgreeDetail),
       destructionCertFileName: docFileNameOf(d.docDestructionDetail),
     },
     destructionCertDownloaded: d.downloadYn ?? false,

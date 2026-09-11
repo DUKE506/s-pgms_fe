@@ -12,6 +12,7 @@ import StatusStepper from '../components/StatusStepper'
 import CaseBaseInfoCard from '@/shared/components/CaseBaseInfoCard'
 import DocumentsCard from '../components/DocumentsCard'
 import ConsentDocsCard from '../components/ConsentDocsCard'
+import DestructionCertCard from '../components/DestructionCertCard'
 import WorkerAssignmentPanel from '../components/WorkerAssignmentPanel'
 import PeriodRequestDialog from '../components/PeriodRequestDialog'
 import CancelPendingCaseDialog from '../components/CancelPendingCaseDialog'
@@ -186,7 +187,8 @@ function SecurityCaseDetailPage() {
         <div className="flex flex-1 flex-col gap-5">
           <CaseBaseInfoCard securityCase={securityCase} variant="police" />
           <DocumentsCard securityCase={securityCase} readOnly={isReadOnlyViewer} />
-          {securityCase.baseInfo && <ConsentDocsCard securityCase={securityCase} workers={workers} />}
+          {securityCase.baseInfo && <ConsentDocsCard securityCase={securityCase} />}
+          <DestructionCertCard securityCase={securityCase} />
         </div>
 
         <WorkerAssignmentPanel securityCase={securityCase} workers={workers} />

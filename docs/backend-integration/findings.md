@@ -898,9 +898,27 @@ blob 받아 `a.download` 저장 — 파기확인서 다운로드와 같은 패�
 본사 `AttachmentsSection` 다운로드 배선. 브라우저 검증(SPoliceM5 `/security-cases/93` —
 `/files/…` 200·콘솔 에러 0 / StecM1 `/admin/security-cases/53` — 다운로드 버튼 표시).
 
-**잔존**: 동의서(`docAgreeDetail`)는 실서버에 업로드 파일이 없어(항상 `[]`) 응답 shape
-미확정 — 본사 `guardAgreementDtos` 미러링으로 방어적 매핑, 데이터 생기면 재검증(CARRYOVER).
-피전 `ConsentDocsCard`는 `baseInfo.defaultWorkers`가 비어(findings #6) 아직 렌더 안 됨.
+**잔존**: 동의서(`docAgreeDetail`/`guardAgreementDtos`)는 실서버에 업로드 파일이 없어(항상
+`[]`) 응답 shape 미확정이었음 — 본사 `guardAgreementDtos` 미러링으로 방어적 매핑.
+
+**2026-09-11 본사 쪽 실데이터 확보·검증 완료(caseSeq 61, 사용자가 동의서 1건 업로드)**:
+`GetCaseDoc.guardAgreementDtos = [{guardSeq,guardName,docSeq,filePath,fileName,fileExt}]` —
+기존 코드가 가정한 shape와 정확히 일치, **코드 변경 없이 정상 동작**(브라우저 검증
+`/admin/security-cases/61`, 김가드 항목에 다운로드/재업로드 버튼 표시). 본사 잔존 🟢.
+
+**피전은 필드명이 완전히 다름 → ✅ 해소(2026-09-11)** — 같은 건을
+`Deploy/Police/W/GetDeployDetail?deployReqSeq=100`(caseSeq 61)로 보면
+`docAgreeDetail = [{agreePath,agreeFileName,agreeFileExt,guardName}]`로 본사와 **완전히
+다른 필드명**이고 **`guardSeq` 자체가 없음**(이름만). 대신 이 배열엔 **업로드된 것만**
+들어있어(전체 근무자 명단이 아님) — 사용자 결정: `baseInfo.defaultWorkers` 로스터를
+돌며 매칭할 필요 없이 **`docAgreeDetail`을 그대로 렌더**하면 된다(서약서+동의서가
+파일 하나에 합쳐서 온다는 것도 확인). `DeployAgreeDetail` 타입 신설(실제 필드명),
+`toConsentDocs`가 `{name,fileName,filePath}[]`로 변환 → `CaseAttachments.consentDocs`
+(신규 필드). `ConsentDocsCard`를 로스터 순회 방식에서 `consentDocs` 배열을 그대로
+렌더하는 방식으로 재작성(`workers` prop도 필요 없어져 제거) — `baseInfo.defaultWorkers`
+의존 완전히 제거돼 findings #6 요청3의 "roster가 없어 카드가 안 뜨는" 문제 자체가
+해소됨. 브라우저 검증(`SPoliceM5 /security-cases/100`, 김가드 항목 다운로드 버튼과
+함께 렌더, 콘솔 에러 0).
 
 ## 19. 🔴 `GetDeployList`·`GetDeployDetail` 응답에 숫자 `status`(경호상태 코드)가 없음 — `statusName`이 신청 대기와 뒤섞임
 
@@ -929,6 +947,17 @@ blob 받아 `a.download` 저장 — 파기확인서 다운로드와 같은 패�
 **영향받는 화면/코드**: `features/police/api/securityCases.ts`(`toSecurityCase`),
 `features/police/api/securityCaseDetail.ts`(`toSecurityCase`·`toSecurityCaseFromEdit`),
 `features/police/pages/SecurityCaseListPage.tsx`, `shared/lib/deployStatus.ts`.
+
+**2026-09-11 라이브 재확인 — 요청 대상 엔드포인트는 여전히 미회신**: `Deploy/Police/W/
+GetDeployList`·`GetDeployDetail`·`GetDeployDetailUpdate` 3곳 다 라이브로 다시 찔러봤으나
+숫자 `status`/`guardCaseStatus` 없음(`statusName`만) — 피전 쪽은 `resolveDeployStatus`
+임시 처리 계속 유지. **대신 요청한 적 없는 본사 `GuardCase/Stec/W/GetGuardCaseList`
+(화면8, 경호목록)에 `guardCaseStatus`(0:배정 1:경호중 2:경호완료 3:종결 4:경호취소)가
+새로 붙은 걸 발견** — `GetHistoryList`와 같은 코드 체계. 본사 이 화면도 연장/단축 신청
+중엔 `statusName`이 "연장"/"단축"으로 새는 잠재 문제가 있어(findings #19와 같은 종류),
+`shared/lib/deployStatus.ts::resolveGuardCaseStatus(code, statusName)` 신설 →
+`guardCaseRowToSecurityCase`가 코드 우선, 코드 없으면 statusName 폴백으로 전환(사용자
+결정, 이번 커밋). 피전 쪽 본래 요청은 그대로 미해결.
 
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
 

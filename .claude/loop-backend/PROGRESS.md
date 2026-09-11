@@ -53,6 +53,69 @@
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
 
+- 2026-09-11: **CARRYOVER 대기 항목 5건 정리** (사용자가 백엔드 회신·자체 테스트
+  결과를 가져옴). loop-backend iteration 아님 — 화면 단위 수정 패스.
+  - **a. 1970 표시** — 라이브 재확인(`GetDeployList`, ST0011~14) 여전히
+    `startDt`/`endDt` null → 1970 재현됨. 사용자 확인: 백엔드 개발자가 누락을
+    인지, 재작업 예정 — **백엔드 대기로 전환**, 프론트 작업 없음.
+  - **b. 본사 동의서** — caseSeq 61 실데이터(사용자 업로드)로 확인, 기존 코드
+    (`GetCaseDoc.guardAgreementDtos`)가 이미 맞게 짜여 있어 **코드 변경 없이 완료**.
+  - **c. 피전 동의서 재작업** — `Deploy/Police/W/GetDeployDetail.docAgreeDetail`의
+    실제 필드명(`agreePath`/`agreeFileName`/`agreeFileExt`/`guardName`, `guardSeq`
+    없음)으로 `DeployAgreeDetail` 타입 신설. 기존엔 `baseInfo.defaultWorkers`
+    로스터를 돌며 각자 파일을 찾는 구조라 로스터가 항상 비어(findings #6) 카드
+    자체가 안 떴는데, **로스터 매칭을 버리고 `docAgreeDetail`(업로드된 것만)을
+    그대로 렌더**하는 걸로 재설계(사용자 결정 — 서약서+동의서 한 파일). `toConsentDocs`
+    신규, `CaseAttachments.consentDocs` 필드 추가, `ConsentDocsCard` 재작성(`workers`
+    prop 제거, roster 의존 완전 제거). (구) `consentMap` 삭제.
+  - **d. crimeType** — 사용자 확인 + 라이브 프로브 추가 샘플로 재확인, 레거시 한글
+    폴백은 방어 코드라 유지 — **추가 작업 없음, 종료**.
+  - **e. 본사 경호목록 상태 소스 전환** — `GuardCase/Stec/W/GetGuardCaseList`에
+    신규 확인된 `guardCaseStatus`(0:배정/1:경호중/2:경호완료/3:종결/4:경호취소,
+    `GetHistoryList`와 같은 코드 체계)를 상태 소스로. `shared/lib/deployStatus.ts::
+    resolveGuardCaseStatus(code, statusName)` 신설(코드 우선, 없으면 statusName
+    폴백 — findings #19가 요청한 피전 쪽 엔드포인트엔 여전히 없어서 그쪽은
+    `resolveDeployStatus` 그대로 유지). `GuardCaseRow`에 필드 추가,
+    `guardCaseRowToSecurityCase` 적용. 테스트 더블(`guardCase.ts`)에도 매핑 추가.
+  - 검증: `npm run test` 137/137 · lint · `tsc -b` 통과. 실백엔드 `run-s-pgms`:
+    본사 경호목록 렌더 회귀 없음(현재 연장/단축 대기 건이 없어 시각적 차이는 없음,
+    콘솔 에러 0) · 피전 동의서 카드(`/security-cases/100`, 김가드 항목 다운로드
+    버튼과 함께 렌더, 콘솔 에러 0).
+  - **문서**: findings.md #19에 라이브 재확인 결과 추가, docAgreeDetail 잔존 항목
+    해소 기록. CARRYOVER A(crimeType 종료·B-2 status 재확인)·B(접수취소 소진)·
+    D(동의서 전부 완료·guardCaseStatus 전환 완료) 갱신.
+  - **(후속) 문서함 표시 문구 정리** — 사용자 피드백: 동의서 카드 행이 의미 없는
+    테스트 파일명("26년 명절(추석) 선물 리스트_0.pdf")을 그대로 보여주고 있어
+    혼란스러움. `ConsentDocsCard` 행 제목을 "보안서약 및 개인정보동의서 · {이름}"
+    (라벨+누구인지)으로, 부제는 "업로드 완료"로 — 파일명 텍스트 노출 제거(다운로드
+    시 파일명으로는 여전히 씀). `DocumentsCard`의 파기확인서 행도 같은 패턴으로
+    통일 — 제목은 "파기확인서" 고정, 부제가 대기문구 ↔ 파일명으로 전환(기존엔
+    제목 자체가 파일명으로 바뀌었음). 경호계획서 행은 미변경(요청 범위 아님).
+    브라우저 검증(`/security-cases/100` 동의서, `/security-cases/92` 파기확인서
+    업로드 완료 상태), 콘솔 에러 0.
+  - **(후속) 문서함 카드 4개로 분리** — 사용자 지적: 동의서만 별도 카드로 빼져있고
+    나머지(배치요구서·경호계획서·파기확인서)는 "문서함" 카드 하나에 몰려있어
+    어중간함. 본사 `AttachmentsSection`은 이미 문서 종류마다 카드가 분리돼
+    있음(제목+설명 한 줄+문서 행) — 같은 패턴으로 통일. `DocumentsCard`가 카드
+    하나 대신 `DocCard` 3장을 반환하는 프래그먼트로 재작성(내용/동작은 그대로,
+    레이아웃만 분리). 브라우저 검증(`/security-cases/100` 4장 분리 렌더,
+    `/security-cases/101` 접수 상태는 배치요구서 카드만), 콘솔 에러 0.
+  - **(후속) 순서·문구·색상 정리** — 사용자 피드백 3건. ① 동의서·파기확인서 카드
+    순서 교체(배치요구서→경호계획서→**동의서→파기확인서**) — `DestructionCertCard`
+    신규 분리(원래 `DocumentsCard` 안에 있던 파기확인서 블록을 페이지에서 독립
+    렌더할 수 있게 꺼냄, `DocRow`/`DocCard`는 `DocumentsCard.tsx`에서 export해
+    공유). ② 동의서 행의 "업로드 완료" 문구 제거 — 피전이 업로드한 것처럼 보이는
+    오해 소지 + 업로드된 것만 보여서 불필요 → 파일명으로 교체. ③ 동의서 행이
+    본사 스타일(초록 강조)을 그대로 물려받아 경호계획서·파기확인서(파란/중립)와
+    색이 다르던 것 — 이유 없어서 `ConsentDocsCard`도 `DocRow`를 재사용하도록
+    변경해 자동 통일. 브라우저 검증(`/security-cases/100`), 콘솔 에러 0.
+  - **(후속) 활성화 색상까지 본사와 동일하게** — `DocRow`에 `accent` prop 추가
+    (`green`/`blue`, 본사 `AttachmentsSection`과 동일 배색 — 업로드 파일=초록,
+    배치요구서 같은 상시 웹폼 기록=파랑). 배치요구서 행만 `accent="blue"`,
+    나머지(경호계획서·파기확인서·동의서)는 기본값 초록. 대기중(pending) 상태는
+    미변경. 브라우저 검증(`/security-cases/100`), 콘솔 에러 0.
+  - **다음**: 커밋 대기.
+
 - 2026-09-11: **추가 수정 3건** (사용자 재검증 중 나온 것). loop-backend iteration
   아님 — 화면 단위 수정 패스.
   - **① 배치요청 목록 행 클릭 → 배치요구서 원본 연결**(matrix #7 신규 행) — 지금까지
@@ -72,12 +135,18 @@
     스케줄(`ScheduleSection`)의 사전미팅 "수정"/"삭제"·그룹 카드 "수정"은 텍스트
     링크 → 아이콘 전용 `Button variant="ghost"/"destructive" size="icon-sm"`로
     전환(패딩·아이콘색·배경색·radius·hover 전부 기존 "더보기" 버튼과 동일 패턴 재사용).
+  - **④ (후속) 수정 아이콘 버튼 색상 통일** — 사용자 요청으로 ③의 "수정" 계열 버튼
+    (경호정보 카드 pill 포함) 색을 파랑/기본색 → `text-muted-foreground`(hover 시
+    `text-foreground`)로 통일 — `DetailHeader` 뒤로가기 버튼과 동일 톤. 삭제
+    (destructive, 빨강)는 그대로 유지.
   - 검증: `npm run test` 137/137(그룹 수정 버튼 셀렉터를 텍스트→라벨 기반으로 수정) ·
     lint · build · `tsc -b` 통과. 실백엔드 `run-s-pgms`: 배치요청 원본보기 실데이터
-    렌더(대상자 "이동희" 등), 임시조치 4호 노출, 아이콘 버튼 3곳 렌더 확인, 콘솔
-    에러 0.
+    렌더(대상자 "이동희" 등), 임시조치 4호 노출, 아이콘 버튼 3곳 렌더·색상 확인, 콘솔
+    에러 0. **2026-09-11 사용자가 직접 재검증**: 모바일 반응형, 배치요청 "배정"·
+    연장/단축 "승인" 실동작, 경호계획서 정보 수정 저장 왕복(임시조치 4호 포함),
+    경호계획서 정보 미등록 상태의 사전미팅 안내문구 — 전부 확인 완료.
   - **문서**: matrix.md 배치요청 목록에 신규 행 추가.
-  - **다음**: 커밋 대기.
+  - 커밋 `192717e`.
 
 - 2026-09-11: **운영팀 미팅 후 수정사항 4건 처리** (사용자가 운영팀 미팅에서 받아온 결정
   사항 반영). loop-backend iteration 아님 — 화면 단위 수정 패스.
@@ -99,6 +168,13 @@
     `yyyy.MM.dd` 포맷, 완성 시 `yyyy-MM-dd`로 `onChange`)으로 전환(`variant` prop,
     기본 `'text'`). 이력 조회 기간 필터 2곳(피전·본사)만 `variant="calendar"`로 유지.
     신규접수·수정 폼(생년월일·배치기간)·본사 경호계획 폼(배치기간)·사전미팅 날짜 적용.
+  - **⑤ (후속) 사전미팅 참석 근무자 후보 필터링** — 사용자 지적: ③의 체크리스트가
+    회사 전체 근무자를 보여주고 있었는데, 경호계획서 정보(`baseInfo.defaultWorkers`,
+    경호풀)에 등록된 근무자만 나와야 함. `PreMeetingDialog`에서
+    `defaultWorkers`의 `workerId` 집합으로 `workers` prop을 필터링한
+    `eligibleWorkers`를 만들어 체크리스트에 사용(별도 API 불필요 — 그룹 근무자
+    배정·동의서 업로드 대상자 선정과 같은 소스). 브라우저 검증(ST0009, 전체
+    5명 중 경호풀 등록된 2명만 노출 확인).
   - 검증: `npm run test` **137/137**(취소·거부 테스트 3건 삭제) · lint · build · `tsc -b`
     통과. 실백엔드 `run-s-pgms`: StecM1으로 배치요청/연장/단축 화면(⋮ 메뉴 확인, 연장·
     단축은 대기 건 없어 빈 목록만 확인) · 경호상세(ST0014, 경호취소 버튼 없음·"경호계획서
@@ -109,7 +185,7 @@
     확인(SPoliceM5).
   - **문서**: findings.md #2 🟢, SaveCaseMeeting 섹션 🟢, matrix.md 3곳(취소·경호취소·
     거부 요약) UI 제거 표기, CARRYOVER A절 B-2 행에 2건 요청 철회 반영.
-  - **다음**: 커밋 대기 — 사용자 확인 후 커밋 메시지/분리 여부 논의.
+  - 커밋 `e1edefa`.
 
 - 2026-09-10: **수정사항 7건 처리** (사용자 재검증 중 나온 UI/연동 이슈 모음, 커밋 4개).
   loop-backend iteration 아님 — 화면 단위 버그픽스 패스.

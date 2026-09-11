@@ -64,6 +64,15 @@ function codeSeqOf(role: string) {
   return role === '시스템관리자' ? 1 : role === '운영관리자' ? 2 : 3
 }
 
+// GetGuardCaseList의 guardCaseStatus 흉내(2026-09-11 실측 — resolveGuardCaseStatus 참고).
+const GUARD_CASE_STATUS_CODE: Record<string, number> = {
+  배정: 0,
+  경호중: 1,
+  경호완료: 2,
+  종결: 3,
+  취소: 4,
+}
+
 // GET GetExtendRequestList / GetShortenRequestList 공용. pendingPeriodRequest.type이
 // 일치하는 진행 중 건을 GetDeployRequestList와 같은 항목 형태로 반환한다. 본부관리자는
 // 본인 배정 건만(WORK-009 재현).
@@ -197,6 +206,7 @@ export const guardCaseTestHandlers = [
         groupName: c.policeStation,
         userName: nameOfAssignee(c.assigneeId),
         statusName: c.status,
+        guardCaseStatus: GUARD_CASE_STATUS_CODE[c.status] ?? null,
         startDate: c.startDate,
         endDate: c.endDate,
       }))
