@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useParams } from 'react-router'
 import { FileText, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import StatusBadge from '@/shared/components/StatusBadge'
 import DetailHeader from '@/shared/components/DetailHeader'
 import AccessBlockedScreen from '@/shared/components/AccessBlockedScreen'
@@ -94,9 +95,27 @@ function SecurityCaseDetailPage() {
           요약/스케줄/첨부 뷰가 XL에서 전체 폭을 쓴다 */}
       <div className="flex flex-col gap-5">
         {!editingBaseInfo && (
-          <div className="flex items-center gap-3.5">
+          <div className="flex flex-wrap items-center gap-3.5">
             <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
             <StatusBadge status={securityCase.status} />
+            {securityCase.pendingPeriodRequest && (
+              // 경찰이 연장/단축을 요청해도 본사가 연장요청/단축요청 탭에 직접
+              // 들어가지 않으면 알 방법이 없어 상세 배지 옆에 바로 노출(사용자
+              // 요청, 2026-09-11 — roadmap Phase 3.5 백로그 항목). 클릭 액션은
+              // 없는 안내 문구라 <button>이 아니라 사전미팅 삭제 버튼과 같은
+              // destructive 배색(연한 빨강 테두리·배경)만 재사용, 아이콘 대신
+              // 글자로(사용자 디자인 피드백).
+              <span
+                className={cn(
+                  buttonVariants({ variant: 'destructive', size: 'sm' }),
+                  'pointer-events-none',
+                )}
+              >
+                <span className="text-trim">
+                  현재 {securityCase.pendingPeriodRequest.type} 요청이 있습니다
+                </span>
+              </span>
+            )}
           </div>
         )}
 

@@ -3,6 +3,7 @@ import { assertOk, unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { genderCodeToLabel } from '@/shared/lib/subject'
 import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
+import { resolveDeployStatus } from '@/shared/lib/deployStatus'
 import {
   formatMeasurePeriod,
   hhmm,
@@ -17,7 +18,6 @@ import type {
   PreMeeting,
   ScheduleGroup,
   SecurityCase,
-  SecurityCaseStatus,
   WorkSchedule,
 } from '../../police/types/securityCase'
 
@@ -60,6 +60,40 @@ async function sendJson(
 
 // 조치 5개 ↔ summaryN 매핑 / 시각 포맷 헬퍼는 피전 상세와 공유한다
 // (@/shared/lib/caseMeasures). 손실 매핑 근거는 exclusions.md, 구조화 요청은 issues.md #11.
+
+// 연장/단축 신청 대기 여부 — GetGuardCaseDetail의 statusName은 신청 중이어도
+// "경호중" 그대로다(피전 GetDeployDetail과 달리 실측 확인, 2026-09-11 — toHeader의
+// resolveDeployStatus 정규화는 그래서 이 엔드포인트엔 사실상 적용될 일이 없고, 나중에
+// 백엔드가 이 응답에도 신호를 넣어주면 대비용으로만 남는다). 대신 연장/단축 요청
+// 목록(화면10, GetExtendRequestList·GetShortenRequestList)에 이 caseSeq가 있는지로
+// 판정한다 — 경호중 건에서만 뜻이 있어 그때만 호출한다.
+interface PeriodRequestExistsRow {
+  caseSeq: number
+}
+
+async function findPendingPeriodRequestType(
+  caseSeq: string,
+): Promise<'연장' | '단축' | undefined> {
+  // 안내문구는 부가 정보다 — 이 조회가 실패해도(스코프 등) 상세 화면 전체가
+  // 깨지면 안 되므로 실패 시 조용히 undefined(문구 없음)로 넘어간다.
+  try {
+    const [extend, shorten] = await Promise.all([
+      fetchData<PeriodRequestExistsRow[]>(
+        '/v1/GuardCase/Stec/W/GetExtendRequestList',
+        '연장 요청 목록을 불러오지 못했습니다',
+      ),
+      fetchData<PeriodRequestExistsRow[]>(
+        '/v1/GuardCase/Stec/W/GetShortenRequestList',
+        '단축 요청 목록을 불러오지 못했습니다',
+      ),
+    ])
+    if (extend.some((r) => String(r.caseSeq) === caseSeq)) return '연장'
+    if (shorten.some((r) => String(r.caseSeq) === caseSeq)) return '단축'
+    return undefined
+  } catch {
+    return undefined
+  }
+}
 
 // ─── 조회 ────────────────────────────────────────────────────────────────────
 
@@ -165,6 +199,11 @@ interface CaseMeetingData {
 
 function toHeader(id: string, d: GuardCaseDetailData): SecurityCase {
   const split = splitMgmtNo(d.mgmtNo)
+  // 연장/단축 신청 대기 건은 statusName이 "연장"/"단축"으로 온다(피전 GetDeployDetail과
+  // 같은 문제, findings #19) — 경호중으로 정규화하고 신청 대기 여부는 별도로 뽑아
+  // 상세 배지 옆 안내문구에 쓴다(사용자 요청, 2026-09-11). 요청일/희망종료일은 이
+  // 응답에 없어(연장/단축 요청 목록 화면 소관) requestedEndDate/requestedAt은 빈 값.
+  const { status, pendingRequestType } = resolveDeployStatus(d.statusName)
   return {
     id,
     receiptNumber: split.receiptNumber,
@@ -173,7 +212,10 @@ function toHeader(id: string, d: GuardCaseDetailData): SecurityCase {
     // 앞 "YY-MM-"만 떼어 경찰서명으로 쓴다.
     policeStation: split.receiptNumber.replace(/^\d{2}-\d{2}-/, ''),
     jurisdiction: '',
-    status: d.statusName as SecurityCaseStatus,
+    status,
+    ...(pendingRequestType
+      ? { pendingPeriodRequest: { type: pendingRequestType, requestedEndDate: '', requestedAt: '' } }
+      : {}),
     caseType: crimeCodeToCaseType(d.crimeType),
     subject: {
       nameInitial: d.suspectUserName ?? '',
@@ -384,7 +426,7 @@ export async function getSecurityCase(id: string): Promise<SecurityCase> {
     return { ...header, ...detail.mock, id }
   }
 
-  const [guards, scheduleDays, doc, meeting] = await Promise.all([
+  const [guards, scheduleDays, doc, meeting, pendingRequestType] = await Promise.all([
     fetchData<CaseGuardRow[]>(
       `/v1/GuardCase/Stec/W/GetCaseGuardList?caseSeq=${caseSeq}`,
       '근무자 목록을 불러오지 못했습니다',
@@ -401,6 +443,8 @@ export async function getSecurityCase(id: string): Promise<SecurityCase> {
       `/v1/GuardCase/Stec/W/GetCaseMeeting?caseSeq=${caseSeq}`,
       '사전미팅 정보를 불러오지 못했습니다',
     ),
+    // 연장/단축 신청은 경호중 건에서만 뜻이 있다 — 그 외 상태는 조회 자체를 건너뛴다.
+    header.status === '경호중' ? findPendingPeriodRequestType(id) : Promise.resolve(undefined),
   ])
 
   // 배치요구서 원본(deploySeq는 GetCaseDoc이 준다 — 46→81 등).
@@ -414,6 +458,13 @@ export async function getSecurityCase(id: string): Promise<SecurityCase> {
     baseInfo: planRegistered ? toBaseInfo(detail, guards) : undefined,
     workSchedule: scheduleDays.length > 0 ? toWorkSchedule(scheduleDays, meeting) : undefined,
     attachments: toAttachments(doc),
+    // header가 이미 statusName 기반으로 채웠으면 그걸 우선(요청 종료일 포함), 아니면
+    // 연장/단축 요청 목록 조회 결과로 보강(현재 실백엔드 경로 — 위 주석 참고).
+    ...(!header.pendingPeriodRequest && pendingRequestType
+      ? {
+          pendingPeriodRequest: { type: pendingRequestType, requestedEndDate: '', requestedAt: '' },
+        }
+      : {}),
   }
   return deployReq ? mergeDeployRequest(result, deployReq) : result
 }

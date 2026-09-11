@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import SecurityCaseDetailPage from './SecurityCaseDetailPage'
 import { companyAccounts } from '../../../mocks/data/accounts'
-import { assignManager, securityCases } from '../../../mocks/data/securityCases'
+import { assignManager, requestPeriodChange, securityCases } from '../../../mocks/data/securityCases'
 import { useAuthStore } from '../../auth/store/authStore'
 
 function renderPage(caseId: string) {
@@ -138,5 +138,25 @@ describe('SecurityCaseDetailPage', () => {
       await screen.findByText('조회 권한이 없거나 존재하지 않는 경호건입니다'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '뒤로가기' })).toBeInTheDocument()
+  })
+
+  it('연장/단축 요청이 대기 중이면 상태뱃지 옆에 안내 문구가 뜬다', async () => {
+    // case-seed-7(경호중, 26-03-강남경찰서)에 연장 요청을 걸어 실백엔드가
+    // statusName을 "연장"으로 주는 상황을 재현(findings #19와 같은 문제,
+    // 경찰이 연장·단축을 요청해도 본사가 탭에 안 들어가면 알 방법이 없어
+    // 상세 배지 옆에 바로 노출 — 사용자 요청, 2026-09-11).
+    loginAsAdmin()
+    const record = securityCases.find((c) => c.receiptNumber === '26-03-강남경찰서')!
+    requestPeriodChange(record.id, '연장', '2026-01-26')
+
+    try {
+      renderPage(record.id)
+      expect(await screen.findByText('현재 연장 요청이 있습니다')).toBeInTheDocument()
+      // 상태 자체는 경호중으로 정규화돼 있어야 한다 — StatusBadge가 "연장"이라는
+      // 값을 못 받아서 깨지면 안 됨(toHeader의 resolveDeployStatus 정규화 확인).
+      expect(screen.getByText('경호중')).toBeInTheDocument()
+    } finally {
+      record.pendingPeriodRequest = undefined
+    }
   })
 })
