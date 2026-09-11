@@ -7,10 +7,13 @@ import { useToastStore } from '../../../shared/hooks/useToastStore'
 interface DeleteWorkerDialogProps {
   target: Worker | null
   onOpenChange: (open: boolean) => void
+  // 근무자 상세 화면에서 쓸 때 삭제 후 목록으로 돌려보내는 용도(목록 화면은 그 자리에
+  // 머물러야 해서 안 넘김).
+  onSuccess?: () => void
 }
 
 // 근무자 삭제 — DELETE Guard/Stec/W/DeleteGuardInfo?guardSeq=. 사유 없이 확인만.
-function DeleteWorkerDialog({ target, onOpenChange }: DeleteWorkerDialogProps) {
+function DeleteWorkerDialog({ target, onOpenChange, onSuccess }: DeleteWorkerDialogProps) {
   const queryClient = useQueryClient()
   const showToast = useToastStore((state) => state.show)
 
@@ -20,6 +23,7 @@ function DeleteWorkerDialog({ target, onOpenChange }: DeleteWorkerDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['workers'] })
       showToast('근무자가 삭제되었습니다', 'success')
       onOpenChange(false)
+      onSuccess?.()
     },
     onError: () => {
       showToast('근무자 삭제에 실패했습니다', 'error')

@@ -61,13 +61,14 @@ Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
 | 3 | [본사/경찰] 최초 로그인 강제 비밀번호 변경 플로우 | 완료 | `f07b797` | `mustChangePassword` boolean 플래그 기반, 경찰(게스트)·본사(관리자) 로그인 양쪽 적용 — 아래 iteration 로그 참고 |
 
 **발견된 후속 항목(백로그)**:
-- [본사] 경호 상세 화면에서 담당자(본부관리자) 변경 기능 — roadmap.md Phase 3.6 후속 항목 참고, 미구현
+- ~~[본사] 경호 상세 화면에서 담당자(본부관리자) 변경 기능~~ — **폐기(2026-09-11, 사용자 결정)**:
+  본부관리자에 이름·전화번호·직급 등을 넣지 않기로 확정해 이 기능 자체가 불필요해짐
 
 ## Phase 3.7 — 근무자 상세 (신규, 목업 미설계)
 
 | # | 항목 | 상태 | 커밋 | 비고 |
 |---|---|---|---|---|
-| 1 | [본사] 근무자 상세 (근무 이력) | 승인대기(1차) | — | **목업에 없는 신규 화면.** 백엔드가 `GET Guard/Stec/W/GetGuardSchedule?guardSeq=&fromDate=&toDate=`(근무자 한 명의 일자별 근무 일정)를 추가해와서, 붙일 화면을 만든 것. `/admin/workers/:id` 라우트 신설, 근무자 목록 행 클릭 → 진입. 상단 요약 타일 3개(근무일/총시간/휴무) + 월별 그룹 리스트(일자 행: 흰 배경+radius+왼쪽 컬러바, 시각, 일자별 시간합, 월 헤더에 월 합). 뒤로가기는 공용 `DetailHeader` 재사용. **데이터는 아직 mock** — `/api/workers/:id/schedule` 더블이 실 응답 shape(`{guardSeq,name,dates,schdules:[{startDt,endDt,isWork}]}`, `schdules` 오타 포함)를 흉내냄. 실 API 연결·디자인 추가 수정은 후속(2026-09-10, 운영부서 점검용 급조). CARRYOVER-backend D절 |
+| 1 | [본사] 근무자 상세 (근무 이력) | 승인대기(2차) | — | **목업에 없는 신규 화면.** `/admin/workers/:id` 라우트, 근무자 목록 행 클릭 → 진입. **2026-09-11 실 API 전환 + 디자인 재설계**: 백엔드가 `GetGuardSchedule` 응답을 경호건 단위(`cases[]`, 그 안에 일자별 `schedules[]`)로 바꿔서(오타 `schdules`→`schedules`도 수정), 화면도 "월별 평면 리스트"에서 **경호건별 카드 리스트(접힘) + 클릭 시 그 경호건만 펼쳐 일자별 근무 표시**로 재설계(사용자 결정). 상단 요약 타일 3개(근무일/총시간/휴무)는 전체 경호건 합산 유지. `getWorkerSchedule` 실 API 배선(`mocks/handlers/workers.ts`의 mock 스케줄 핸들러 제거, `mocks/data/workerSchedules.ts` 삭제), 테스트 더블은 `mocks/handlers/guard.ts`(`GetGuardSchedule`)로 이관. 테스트 3건 신규(140/140). 실백엔드 StecM1 `/admin/workers/13`(김가드) 카드 7개(경호중 2·경호완료 2·종결 3) 렌더·클릭 펼침/접힘·요약타일(26일·219시간) 확인, 콘솔 에러 0. CARRYOVER-backend D절 소진. **사용자 승인 대기.** |
 
 ## 최근 iteration 로그
 
@@ -770,3 +771,39 @@ Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
   설정 → 재로그인 요구 확인 → 새 비밀번호로 재로그인 성공(경호목록 진입).
   본사: 관리자 계정 관리에서 비밀번호 초기화 → 같은 플로우로 재로그인
   성공(본사 전체 대시보드 진입). 콘솔 에러 없음.
+- 2026-09-11: Phase 3.7 #1(근무자 상세) 근무 이력 실 API 연결 + 디자인 재설계.
+  loop-backend 성격 iteration(화면은 이미 있고 API+화면 구조 변경) — 착수 전
+  `GetGuardSchedule` 응답 shape를 라이브 프로브로 재확인한 결과, 2026-09-10에
+  파악했던 "평면 날짜 배열(오타 `schdules`)"이 아니라 **경호건(`cases[]`) 단위로
+  그룹핑되고 그 안에 일자별 `schedules[]`**가 도는 구조로 바뀌어 있었음(오타도
+  `schedules`로 수정됨). 사용자와 방향 논의 — 기존 "월별 평면 리스트" 설계 대신
+  **경호건별 카드 리스트(기본 접힘) + 클릭한 카드만 그 경호건의 일자별 근무를
+  펼치는 구조**로 가기로 결정(백엔드가 이미 경호건 단위로 묶어 주니 자연스러움).
+
+  구현: `features/company/api/workers.ts`의 `getWorkerSchedule`을
+  `GET Guard/Stec/W/GetGuardSchedule?guardSeq=`로 교체(404는 "이력 없음"으로
+  흡수), 타입을 `WorkerSchedule{guardSeq,name,cases:WorkerScheduleCase[]}`로
+  재정의. `WorkerDetailPage`를 카드 리스트(`CaseCard`, 날짜별 묶음
+  `groupByDate`+중복 방어 `dedupeShifts`는 기존 로직 재사용)로 재작성 —
+  카드 헤더는 관리번호·경호코드·기간·`StatusBadge`(`resolveDeployStatus`로
+  연장/단축 정규화)·근무일/시간 요약, 펼치면 기존 스타일 그대로 일자별 행.
+  카드는 최근 근무한 경호건이 위로 오게 정렬. 상단 요약 타일 3개는 전체
+  경호건 합산 유지. mock 정리: `mocks/handlers/workers.ts`의
+  `/api/workers/:id/schedule` 핸들러·`mocks/data/workerSchedules.ts` 삭제,
+  테스트 전용 더블을 `mocks/handlers/guard.ts`에 `GetGuardSchedule`로 신규
+  (guardSeq 1만 이력 채움, 나머지는 빈 이력 케이스). `WorkerDetailPage.test.tsx`
+  신규 3건(카드 정렬+합산, 클릭 펼침/다른 카드 안 건드림, 빈 이력 안내문구).
+
+  검증: `npm run test` 140/140(+3) · lint(기존 warning 2) · `tsc -b`/build 통과.
+  실백엔드 `run-s-pgms`(`API_PROXY_TARGET`로 실 서버 프록시): StecM1
+  `/admin/workers/13`(김가드) — 카드 7개가 전부 접힌 채로 렌더(경호중 2·
+  경호완료 2·종결 3), 요약 타일 26일·219시간·0휴무(경호건 합산 정확), 카드
+  클릭 시 그 경호건만 펼쳐져 일자별 근무(예: 08.20 (목) 09:00~13:00·4시간)
+  표시되고 다른 카드는 계속 접힘 상태 유지, 콘솔 에러 0(스크린샷
+  `worker-detail-02-loaded-collapsed`·`worker-detail-03-expanded`).
+
+  **문서**: CARRYOVER-backend D절 두 항목(1970 표시·근무자 상세) 완료 반영,
+  A절에 이력조회 사건유형/5개조치 유지 요청 신규 행 추가, findings.md 해당
+  항목에 요청 전달 예정 기록. 이 표 Phase 3.7 #1 "승인대기(2차)"로 갱신,
+  Phase 3.6 후속 "담당자 변경 기능" 폐기 반영.
+  **다음**: 스크린샷 사용자 승인 대기 → 승인 시 커밋.

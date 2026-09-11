@@ -143,28 +143,38 @@ export async function getCaseGuards(id: string): Promise<Worker[]> {
   }))
 }
 
-// 근무자 상세 화면의 "근무 이력" — 근무자 한 명의 근무 일정을 일자별로 준다.
-// 하루당 한 항목: { guardSeq, name, dates:"YYYY-MM-DD", schdules:[{startDt,endDt,isWork}] }.
-// ⚠️ 필드명 schdules(오타)는 실제 응답 그대로. 응답에 경호건·부서 정보는 없다.
-//
-// TODO(데이터 연동): GET /api/v1/Guard/Stec/W/GetGuardSchedule?guardSeq=&fromDate=&toDate=
-// 로 교체(2026-09-10 프로브 확인). 지금은 목업 UI용 mock 경로(/api/workers/:id/schedule).
+// 근무자 상세 화면의 "근무 이력" — 근무자 한 명의 근무 일정을 경호건(cases) 단위로
+// 그룹핑해 그 안에 일자별(schedules) 근무를 담아 준다(2026-09-11 프로브 재확인 —
+// 이전엔 경호건 구분 없이 날짜만 평면으로 오는 걸로 알았으나 실제로는 cases[] 구조,
+// 필드명 오타(schdules)도 없음). 경호취소된 건은 응답에서 빠진다. 근무가 없으면
+// cases가 빈 배열, 없는 경호원이면 404.
 export interface WorkerScheduleShift {
+  date: string
   startDt: string
   endDt: string
   isWork: boolean
 }
-export interface WorkerScheduleDay {
+export interface WorkerScheduleCase {
+  caseSeq: number
+  guardCode: string
+  mgmtNo: string
+  statusName: string
+  schedules: WorkerScheduleShift[]
+}
+export interface WorkerSchedule {
   guardSeq: number
   name: string
-  dates: string
-  schdules: WorkerScheduleShift[]
+  cases: WorkerScheduleCase[]
 }
 
-export async function getWorkerSchedule(id: string): Promise<WorkerScheduleDay[]> {
-  const res = await apiFetch(`/workers/${encodeURIComponent(id)}/schedule`)
+export async function getWorkerSchedule(id: string): Promise<WorkerSchedule> {
+  const res = await apiFetch(`/v1/Guard/Stec/W/GetGuardSchedule?guardSeq=${encodeURIComponent(id)}`)
+  if (res.status === 404) {
+    // 근무 이력 자체가 없는 근무자도 이 화면에선 정상 진입 상태 — 빈 이력으로 처리.
+    return { guardSeq: Number(id), name: '', cases: [] }
+  }
   if (!res.ok) {
     throw new Error('근무 이력을 불러오지 못했습니다')
   }
-  return res.json() as Promise<WorkerScheduleDay[]>
+  return unwrapEnvelope<WorkerSchedule>(res)
 }

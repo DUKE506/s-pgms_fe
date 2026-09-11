@@ -41,6 +41,49 @@ export function resetGuardDouble() {
   nextSeq = 11
 }
 
+// 근무자 상세 화면의 "근무 이력" — GetGuardSchedule 실제 응답(2026-09-11 프로브 재확인)이
+// 경호건(cases) 단위로 그룹핑해 그 안에 일자별(schedules) 근무를 담아 준다. guardSeq 1
+// (최민준)만 이력을 채워 카드 리스트+펼치기 검증, 나머지는 빈 이력(cases:[]) 케이스로 둔다.
+interface GuardScheduleShift {
+  date: string
+  startDt: string
+  endDt: string
+  isWork: boolean
+}
+interface GuardScheduleCase {
+  caseSeq: number
+  guardCode: string
+  mgmtNo: string
+  statusName: string
+  schedules: GuardScheduleShift[]
+}
+
+const scheduleSeed: Record<number, GuardScheduleCase[]> = {
+  1: [
+    {
+      caseSeq: 101,
+      guardCode: 'ST0101',
+      mgmtNo: '26-08-강남경찰서',
+      statusName: '경호완료',
+      schedules: [
+        { date: '2026-08-20', startDt: '2026-08-20T09:00:00', endDt: '2026-08-20T13:00:00', isWork: true },
+        { date: '2026-08-21', startDt: '2026-08-21T09:00:00', endDt: '2026-08-21T18:00:00', isWork: true },
+      ],
+    },
+    {
+      caseSeq: 108,
+      guardCode: 'ST0108',
+      mgmtNo: '26-09-강남경찰서',
+      statusName: '경호중',
+      schedules: [
+        { date: '2026-09-10', startDt: '2026-09-10T09:00:00', endDt: '2026-09-10T18:00:00', isWork: true },
+        { date: '2026-09-11', startDt: '2026-09-11T00:00:00', endDt: '2026-09-11T00:00:00', isWork: false },
+        { date: '2026-09-12', startDt: '2026-09-12T09:00:00', endDt: '2026-09-12T18:00:00', isWork: true },
+      ],
+    },
+  ],
+}
+
 function stecUserFromBearer(request: Request) {
   const token = (request.headers.get('authorization') ?? '').replace(/^Bearer /, '')
   const accountId = token.split('.')[1]
@@ -122,5 +165,23 @@ export const guardTestHandlers = [
     }
     guards.splice(idx, 1)
     return HttpResponse.json({ message: 'ok', data: true, code: 200 })
+  }),
+
+  http.get('/api/v1/Guard/Stec/W/GetGuardSchedule', ({ request }) => {
+    const denied = requireStec(request)
+    if (denied) return denied
+    const seq = Number(new URL(request.url).searchParams.get('guardSeq'))
+    const row = guards.find((g) => g.guardSeq === seq)
+    if (!row) {
+      return HttpResponse.json(
+        { message: '등록되지 않은 경호원입니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    return HttpResponse.json({
+      message: 'ok',
+      data: { guardSeq: row.guardSeq, name: row.name, cases: scheduleSeed[seq] ?? [] },
+      code: 200,
+    })
   }),
 ]
