@@ -1,3 +1,4 @@
+import { SquarePen } from 'lucide-react'
 import type { MeasurePeriod, SecurityCase } from '@/features/police/types/securityCase'
 
 // 경호건 "경호정보" 조회 카드 — [경찰서] 경호 상세, [본사] 경호 상세, [본사] 이력 상세가
@@ -84,8 +85,9 @@ function CaseBaseInfoCard({ securityCase, variant, onEdit }: CaseBaseInfoCardPro
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-md border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+            className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
           >
+            <SquarePen className="size-3.5" />
             수정
           </button>
         )}

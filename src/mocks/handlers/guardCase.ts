@@ -119,6 +119,49 @@ export const guardCaseTestHandlers = [
     return HttpResponse.json({ message: 'ok', data, code: 200 })
   }),
 
+  // 배치요구서 원본 상세 — GET GuardCase/Stec/W/GetDeployDetail?deployReqSeq=
+  // (docs/backend-integration/responses/GuardCase-Stec-GetDeployDetail.md). 화면7
+  // (배치요청 목록) 행 클릭 시 DispatchRequestViewDialog가 부른다(2026-09-11,
+  // requests.ts::getDeployRequestDetail). 화면9(경호 상세)도 같은 EP를 쓰지만
+  // 그쪽은 GetGuardCaseDetail의 mock 필드로 이미 채워져 있어 실제로는 호출 안 됨
+  // (getSecurityCase의 detail.mock 분기).
+  http.get('/api/v1/GuardCase/Stec/W/GetDeployDetail', ({ request }) => {
+    const denied = requireStec(request)
+    if (denied) return denied
+    const seq = new URL(request.url).searchParams.get('deployReqSeq')
+    const record = securityCases.find((c) => deploySeqOf(c) === Number(seq))
+    if (!record) {
+      return HttpResponse.json(
+        { message: '존재하지 않는 배치요구서입니다.', data: null, code: 404 },
+        { status: 404 },
+      )
+    }
+    const data = {
+      deployReqSeq: deploySeqOf(record),
+      crimeType: record.caseType,
+      suspectUserName: record.subject.nameInitial,
+      suspectGender: record.subject.gender === '여' ? 1 : record.subject.gender === '남' ? 0 : null,
+      suspectBirth: record.subject.birthDate || null,
+      suspectJob: record.subject.occupation || null,
+      suspectAddress: record.subject.residence || null,
+      caseSummary: record.caseSummary || null,
+      caseMemo: record.additionalNotes || null,
+      periodFrom: record.startDate || null,
+      periodTo: record.endDate || null,
+      guardHomeLoc: record.location.residence || null,
+      guardWorkLoc: record.location.workplace || null,
+      etcLoc1: record.location.etc1 || null,
+      etcLoc2: record.location.etc2 || null,
+      documentDt: record.createdAt ? record.createdAt.slice(0, 10) : null,
+      clientDept: record.requester.dept || null,
+      clientPosition: record.requester.position || null,
+      clientName: record.requester.name || null,
+      investigator: record.policeContact.investigator || null,
+      responsibleOfficer: record.policeContact.victimOfficer || null,
+    }
+    return HttpResponse.json({ message: 'ok', data, code: 200 })
+  }),
+
   // 경호목록 조회 — GET GuardCase/Stec/W/GetGuardCaseList.
   // 진행 중 건(배정·경호중·경호완료)만. 응답은 {meta, data:[...]}를 envelope로 한 번
   // 더 감싼 형태. 운영/시스템관리자는 전체, 본부관리자는 본인 배정 건만(WORK-009).

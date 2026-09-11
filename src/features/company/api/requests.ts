@@ -1,6 +1,9 @@
 import { apiFetch } from '../../auth/api/client'
 import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
+import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
+import { genderCodeToLabel } from '@/shared/lib/subject'
+import { fetchDeployRequestDetail, type DeployRequestDetailData } from './securityCaseDetail'
 import type { SecurityCase } from '../../police/types/securityCase'
 
 // GET /api/v1/GuardCase/Stec/W/GetDeployRequestList 의 항목 형태
@@ -51,6 +54,52 @@ export async function listPendingRequests(): Promise<SecurityCase[]> {
   }
   const rows = await unwrapEnvelope<DeployRequestRow[]>(res)
   return rows.map(toSecurityCase)
+}
+
+// 배치요구서 원본 상세(DispatchRequestViewDialog) — GetDeployRequestList가 목록 필드
+// (관리번호·경찰서·지역청·요청일·배치기간)만 주기 때문에, 행을 열 때 배치요구서 전체
+// 내용을 이 EP로 따로 조회해 base 위에 덮어씌운다. 화면9(경호 상세)의 배치요구서
+// 병합(mergeDeployRequest, securityCaseDetail.ts)은 "이미 있는 값만 보완"하는
+// merge지만, 여기 base는 배정 전이라 사건유형·대상자·경찰관정보까지 전부 비어있어
+// 응답 필드를 그대로 채워 넣는다. 실패해도 목록 필드만으로 다이얼로그는 뜬다
+// (fetchDeployRequestDetail이 이미 에러를 삼키고 null을 돌려줌).
+function toDispatchDetail(base: SecurityCase, d: DeployRequestDetailData): SecurityCase {
+  return {
+    ...base,
+    caseType: crimeCodeToCaseType(d.crimeType),
+    subject: {
+      nameInitial: d.suspectUserName ?? base.subject.nameInitial,
+      gender: d.suspectGender != null ? genderCodeToLabel(d.suspectGender) : base.subject.gender,
+      birthDate: d.suspectBirth ?? base.subject.birthDate,
+      occupation: d.suspectJob ?? base.subject.occupation,
+      residence: d.suspectAddress ?? base.subject.residence,
+    },
+    caseSummary: d.caseSummary ?? base.caseSummary,
+    additionalNotes: d.caseMemo ?? base.additionalNotes,
+    startDate: d.periodFrom ?? base.startDate,
+    endDate: d.periodTo ?? base.endDate,
+    location: {
+      residence: d.guardHomeLoc ?? base.location.residence,
+      workplace: d.guardWorkLoc ?? base.location.workplace,
+      etc1: d.etcLoc1 ?? base.location.etc1,
+      etc2: d.etcLoc2 ?? base.location.etc2,
+    },
+    policeContact: {
+      victimOfficer: d.responsibleOfficer ?? base.policeContact.victimOfficer,
+      investigator: d.investigator ?? base.policeContact.investigator,
+    },
+    requester: {
+      dept: d.clientDept ?? base.requester.dept,
+      position: d.clientPosition ?? base.requester.position,
+      name: d.clientName ?? base.requester.name,
+    },
+    createdAt: d.documentDt ?? base.createdAt,
+  }
+}
+
+export async function getDeployRequestDetail(base: SecurityCase): Promise<SecurityCase> {
+  const detail = await fetchDeployRequestDetail(Number(base.id))
+  return detail ? toDispatchDetail(base, detail) : base
 }
 
 // GET /api/v1/GuardCase/Stec/W/GetGuardCaseList 의 항목 형태 (실측:

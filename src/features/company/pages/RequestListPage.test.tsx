@@ -89,17 +89,19 @@ describe('RequestListPage', () => {
     expect(assigned.securityCode).toMatch(/^ST\d{3}$/)
   })
 
-  it('행을 클릭하면 배치요구서 모달이 뜬다', async () => {
+  it('행을 클릭하면 배치요구서 모달이 뜨고 원본 상세(GetDeployDetail)가 채워진다', async () => {
     loginAsAdmin()
     renderPage()
     await screen.findAllByText('26-02-분당경찰서')
 
     fireEvent.click(withinTable().getByText('26-02-분당경찰서'))
 
-    // GetDeployRequestList는 목록 필드(관리번호·경찰서·기간)만 주고 배치요구서
-    // 원본은 안 준다(본사가 볼 API 없음, issues #7) — 다이얼로그는 그 필드만 표시.
+    // GetDeployRequestList(목록)는 관리번호·경찰서·기간만 주고, 대상자·사건개요 등
+    // 배치요구서 원본은 행을 열 때 GetDeployDetail을 따로 조회해 채운다(2026-09-11).
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('배치요구서')).toBeInTheDocument()
     expect(within(dialog).getByText(/분당경찰서/)).toBeInTheDocument()
+    expect(await within(dialog).findByText('김○○')).toBeInTheDocument()
+    expect(within(dialog).getByText('스토킹')).toBeInTheDocument()
   })
 })

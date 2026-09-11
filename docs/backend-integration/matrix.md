@@ -273,6 +273,7 @@
 | 본부 배정 | `assignManager` | `POST GuardCase/Stec/W/AddGuardCase` | ✅ DTO `{deploySeq,userSeq}`, 성공 `{data:true}`(seq 안 줌). **여기서 GuardCase가 처음 생성됨** — 배정 즉시 `statusName:"배정"` + `mgmtNo`에 `ST####`. deploySeq 81 실배정(caseSeq 46)해 검증·유지(8·9 입력 데이터). 응답 샘플: `GuardCase-Stec-AddGuardCase.md` |
 | 취소 | ~~`cancelPendingRequest`~~ | `POST GuardCase/Stec/W/CancelGuardCase {deployReqSeq}` | ✅ 연동(2026-09-09, findings #9 🟢) 했으나 **2026-09-11 운영팀 결정으로 UI에서 제거**(⋮ "취소" 메뉴·다이얼로그·함수 삭제). API 자체는 살아있음 — 재도입 시 그대로 재사용 가능 |
 | (인프라) refresh single-flight | — | `POST Login/W/RefreshToken` | `client.ts` 수정 — 동시 401 시 각자 refresh 호출 → 실백엔드 1회용 RefreshToken이 회전돼 두 번째부터 401 → 강제 로그아웃되던 문제. 진행 중 refresh를 공유하도록 single-flight화(아직 mock인 화면에 실백엔드 계정으로 들어갈 때 재현됨) |
+| 행 클릭 → 배치요구서 원본보기 | `getDeployRequestDetail`(신규, `requests.ts`) | `GET GuardCase/Stec/W/GetDeployDetail?deployReqSeq=` | ✅ 연동(**2026-09-11**). 지금까지 `DispatchRequestViewDialog`가 목록 필드(관리번호·경찰서·기간)만 표시해 대상자·사건개요 등 대부분 "-"였음 — 화면9가 이미 쓰던 이 EP를 화면7도 재사용해 원본 전체를 채움. `fetchDeployRequestDetail`(company/api/securityCaseDetail.ts)을 export하고 `DeployRequestDetailData`에 `crimeType`·`suspectUserName`·`investigator`·`responsibleOfficer` 4필드 추가(응답엔 원래 있었으나 화면9는 안 읽어 인터페이스에 없었음). 브라우저 검증(StecM1, deployReqSeq 실측 — 대상자 "이동희" 등 전체 필드 렌더), 콘솔 에러 0. 테스트 더블(`mocks/handlers/guardCase.ts`) 신규 |
 
 #### 경호목록 (`/admin/security-cases`)
 

@@ -53,6 +53,32 @@
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
 
+- 2026-09-11: **추가 수정 3건** (사용자 재검증 중 나온 것). loop-backend iteration
+  아님 — 화면 단위 수정 패스.
+  - **① 배치요청 목록 행 클릭 → 배치요구서 원본 연결**(matrix #7 신규 행) — 지금까지
+    `DispatchRequestViewDialog`가 목록 필드만 표시해 대상자·사건개요 등 대부분
+    "-"였음. 화면9가 이미 쓰던 `GuardCase/Stec/W/GetDeployDetail`을 화면7도
+    재사용(`getDeployRequestDetail`, `requests.ts` 신규). 응답에 있던
+    `crimeType`·`suspectUserName`·`investigator`·`responsibleOfficer` 4필드를
+    `DeployRequestDetailData`에 추가(화면9는 안 읽어 인터페이스에 없었음) +
+    `fetchDeployRequestDetail` export. 테스트 더블 신규(`guardCase.ts`).
+  - **② 경호계획서 정보 등록 — 11.임시조치 "4호" 누락 수정** — `TEMPORARY_MEASURES`
+    배열에 1·2·3·5호·신청예정만 있고 4호가 빠져있던 단순 버그(`BaseInfoForm.tsx`).
+    조치 5개(7~11번, `summary1~5`) ↔ 서버 전달 방식은 `shared/lib/caseMeasures.ts`
+    (항목은 `, ` 조인, 기간은 "시작일 ~ 종료일" 문자열 — 손실 매핑, findings #11
+    구조화 요청 잔존) — 사용자 요청으로 코드 위치 확인.
+  - **③ 수정/삭제 버튼 아이콘화** — 경호정보 카드(`CaseBaseInfoCard`, 피전·본사·
+    이력상세 공유) "수정" 버튼에 `SquarePen` 아이콘 추가(텍스트 유지). 근무
+    스케줄(`ScheduleSection`)의 사전미팅 "수정"/"삭제"·그룹 카드 "수정"은 텍스트
+    링크 → 아이콘 전용 `Button variant="ghost"/"destructive" size="icon-sm"`로
+    전환(패딩·아이콘색·배경색·radius·hover 전부 기존 "더보기" 버튼과 동일 패턴 재사용).
+  - 검증: `npm run test` 137/137(그룹 수정 버튼 셀렉터를 텍스트→라벨 기반으로 수정) ·
+    lint · build · `tsc -b` 통과. 실백엔드 `run-s-pgms`: 배치요청 원본보기 실데이터
+    렌더(대상자 "이동희" 등), 임시조치 4호 노출, 아이콘 버튼 3곳 렌더 확인, 콘솔
+    에러 0.
+  - **문서**: matrix.md 배치요청 목록에 신규 행 추가.
+  - **다음**: 커밋 대기.
+
 - 2026-09-11: **운영팀 미팅 후 수정사항 4건 처리** (사용자가 운영팀 미팅에서 받아온 결정
   사항 반영). loop-backend iteration 아님 — 화면 단위 수정 패스.
   - **① 본사 취소·거부·경호취소 버튼 제거** — 배치요청 ⋮ "취소"(`cancelPendingRequest`),

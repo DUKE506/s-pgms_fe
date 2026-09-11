@@ -299,10 +299,14 @@ function toAttachments(doc: CaseDocData): CaseAttachments {
 // 배치기간(periodFrom/periodTo)을 준다(issues #7·#10). 경찰용 Deploy/Police/W/GetDeployDetail과
 // 경로가 겹치므로 주의. 필드명: 읽기 응답은 suspectBirth/etcLoc1/etcLoc2
 // (쓰기 DTO는 suspectBirthDate/guardEtcLoc1/guardEtcLoc2).
-// 이 응답에도 crimeType이 있으나 사건유형은 toHeader가 GetGuardCaseDetail에서
-// 이미 채우므로(crimeCodeToCaseType) 여기선 읽지 않는다.
-interface DeployRequestDetailData {
+// 이 응답의 crimeType/suspectUserName/investigator/responsibleOfficer는 화면9(경호
+// 상세)에서는 안 읽는다 — GetGuardCaseDetail(toHeader)이 이미 채우기 때문. 화면7
+// (배치요청 목록, requests.ts::getDeployRequestDetail)은 배정 전이라 GetGuardCaseDetail
+// 자체가 없어 이 필드들이 유일한 소스라 함께 export한다.
+export interface DeployRequestDetailData {
   deployReqSeq: number
+  crimeType: string | null
+  suspectUserName: string | null
   suspectGender: number | null
   suspectBirth: string | null
   suspectJob: string | null
@@ -319,9 +323,11 @@ interface DeployRequestDetailData {
   clientDept: string | null
   clientPosition: string | null
   clientName: string | null
+  investigator: string | null
+  responsibleOfficer: string | null
 }
 
-async function fetchDeployRequestDetail(
+export async function fetchDeployRequestDetail(
   deploySeq: number,
 ): Promise<DeployRequestDetailData | null> {
   try {

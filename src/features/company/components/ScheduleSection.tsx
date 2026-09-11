@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, SquarePen, Trash2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Button } from '@/components/ui/button'
 import { setPreMeeting } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import PreMeetingDialog from './PreMeetingDialog'
@@ -125,23 +126,26 @@ function ScheduleSection({
           <div className="text-sm font-bold text-foreground">사전미팅</div>
           {!readOnly &&
             (schedule.preMeeting ? (
-              <div className="flex items-center gap-3 text-[11px] font-semibold">
-                <button
+              <div className="flex items-center gap-1.5">
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => setPreMeetingDialogOpen(true)}
-                  className="text-primary hover:underline"
+                  className="text-muted-foreground"
                   aria-label="사전미팅 수정"
                 >
-                  수정
-                </button>
-                <button
+                  <SquarePen />
+                </Button>
+                <Button
                   type="button"
+                  variant="destructive"
+                  size="icon-sm"
                   onClick={() => deletePreMeetingMutation.mutate()}
-                  className="text-destructive hover:underline"
                   aria-label="사전미팅 삭제"
                 >
-                  삭제
-                </button>
+                  <Trash2 />
+                </Button>
               </div>
             ) : (
               <button
@@ -215,13 +219,16 @@ function ScheduleSection({
                     {day.groups.map((group, i) => (
                       <div key={group.id} className="group/schedule relative">
                         {!readOnly && (
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => onEditGroup?.(day.date, group)}
-                            className="absolute top-3.5 right-3.5 text-[11px] font-semibold text-primary hover:underline"
+                            className="absolute top-2.5 right-2.5 text-muted-foreground"
+                            aria-label={`그룹 ${i + 1} 수정`}
                           >
-                            수정
-                          </button>
+                            <SquarePen />
+                          </Button>
                         )}
                         <GroupCard group={group} label={`그룹 ${i + 1}`} workers={workers} />
                       </div>

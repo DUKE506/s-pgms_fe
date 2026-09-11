@@ -84,8 +84,7 @@ describe('SecurityCaseDetailPage', () => {
     expect(firstDay.groups[0].assignments[0].isOff).toBe(false)
 
     // 3) 첫 일자의 그룹을 열어 시간을 수정하고 저장
-    const editButtons = screen.getAllByRole('button', { name: '수정' })
-    fireEvent.click(editButtons[editButtons.length - 1])
+    fireEvent.click(screen.getByRole('button', { name: '그룹 1 수정' }))
     await screen.findByText('그룹 추가/수정')
 
     fireEvent.click(screen.getByLabelText('근무자 1 시작시간 시'))
@@ -107,13 +106,13 @@ describe('SecurityCaseDetailPage', () => {
     })
 
     // 그룹1 수정 모달엔 삭제 버튼이 없다
-    fireEvent.click(screen.getAllByRole('button', { name: '수정' })[1])
+    fireEvent.click(screen.getByRole('button', { name: '그룹 1 수정' }))
     await screen.findByText('그룹 추가/수정')
     expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '취소' }))
 
     // 그룹2 수정 모달에서 삭제
-    fireEvent.click(screen.getAllByRole('button', { name: '수정' })[2])
+    fireEvent.click(screen.getByRole('button', { name: '그룹 2 수정' }))
     await screen.findByText('그룹 추가/수정')
     fireEvent.click(screen.getByRole('button', { name: '삭제' }))
     await waitFor(() => {

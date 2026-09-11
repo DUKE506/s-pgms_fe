@@ -32,7 +32,7 @@ const SAFETY_MEASURES = ['맞춤형 순찰', '임시숙소', '스마트워치', 
 const EMERGENCY_MEASURES = ['1호', '2호']
 const PROVISIONAL_MEASURES = ['1호', '2호', '3호', '3-2호', '4호', '신청예정']
 const EMERGENCY_TEMP_MEASURES = ['1호', '2호', '3호']
-const TEMPORARY_MEASURES = ['1호', '2호', '3호', '5호', '신청예정']
+const TEMPORARY_MEASURES = ['1호', '2호', '3호', '4호', '5호', '신청예정']
 
 interface FormState {
   workHours: string
