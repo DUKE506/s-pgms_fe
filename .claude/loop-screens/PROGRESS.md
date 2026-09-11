@@ -68,7 +68,7 @@ Phase 2 완료. Phase 3부터는 이 표에 이어서 추가.
 
 | # | 항목 | 상태 | 커밋 | 비고 |
 |---|---|---|---|---|
-| 1 | [본사] 근무자 상세 (근무 이력) | 승인대기(2차) | — | **목업에 없는 신규 화면.** `/admin/workers/:id` 라우트, 근무자 목록 행 클릭 → 진입. **2026-09-11 실 API 전환 + 디자인 재설계**: 백엔드가 `GetGuardSchedule` 응답을 경호건 단위(`cases[]`, 그 안에 일자별 `schedules[]`)로 바꿔서(오타 `schdules`→`schedules`도 수정), 화면도 "월별 평면 리스트"에서 **경호건별 카드 리스트(접힘) + 클릭 시 그 경호건만 펼쳐 일자별 근무 표시**로 재설계(사용자 결정). 상단 요약 타일 3개(근무일/총시간/휴무)는 전체 경호건 합산 유지. `getWorkerSchedule` 실 API 배선(`mocks/handlers/workers.ts`의 mock 스케줄 핸들러 제거, `mocks/data/workerSchedules.ts` 삭제), 테스트 더블은 `mocks/handlers/guard.ts`(`GetGuardSchedule`)로 이관. 테스트 3건 신규(140/140). 실백엔드 StecM1 `/admin/workers/13`(김가드) 카드 7개(경호중 2·경호완료 2·종결 3) 렌더·클릭 펼침/접힘·요약타일(26일·219시간) 확인, 콘솔 에러 0. CARRYOVER-backend D절 소진. **사용자 승인 대기.** |
+| 1 | [본사] 근무자 상세 (근무 이력) | 완료 | `1f0a9be`·`153e0ab` | **목업에 없는 신규 화면.** `/admin/workers/:id` 라우트, 근무자 목록 행 클릭 → 진입. **2026-09-11 실 API 전환 + 디자인 재설계**: 백엔드가 `GetGuardSchedule` 응답을 경호건 단위(`cases[]`, 그 안에 일자별 `schedules[]`)로 바꿔서(오타 `schdules`→`schedules`도 수정), 화면도 "월별 평면 리스트"에서 **경호건별 카드 리스트(접힘) + 클릭 시 그 경호건만 펼쳐 일자별 근무 표시**로 재설계(사용자 결정). 상단 요약 타일 3개(근무일/총시간/휴무)는 전체 경호건 합산 유지. `getWorkerSchedule` 실 API 배선(`mocks/handlers/workers.ts`의 mock 스케줄 핸들러 제거, `mocks/data/workerSchedules.ts` 삭제), 테스트 더블은 `mocks/handlers/guard.ts`(`GetGuardSchedule`)로 이관. 정보수정/삭제 버튼 추가(목록과 동일한 실 API 다이얼로그 재사용, 삭제 후 목록 이동). 디자인 후속 수정(카드 흰 배경, 일자별 행 divide 구분선, 헤더 "이름 · 사번", 카드 내 상태뱃지·요약 위치 교체) + 상태뱃지 폭 통일(공용 `StatusBadge`, 전체 화면 반영). 테스트 5건(142/142). 실백엔드 StecM1 `/admin/workers/13`(김가드) 카드 7개(경호중 2·경호완료 2·종결 3) 렌더·클릭 펼침/접힘·요약타일(26일·219시간)·정보수정/삭제 다이얼로그 확인, 콘솔 에러 0. CARRYOVER-backend D절 소진. **사용자 승인 완료(2026-09-11)** — 기본정보(마스터 CRUD)·근무 이력 전부 실 API, 이 화면 백엔드 연동도 함께 종료. |
 
 ## 최근 iteration 로그
 
