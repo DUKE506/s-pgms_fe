@@ -278,11 +278,11 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-case', securityCase.id] })
-      showToast('기본정보가 등록되었습니다', 'success')
+      showToast('경호계획서 정보가 등록되었습니다', 'success')
       onRegistered()
     },
     onError: () => {
-      showToast('기본정보 등록에 실패했습니다', 'error')
+      showToast('경호계획서 정보 등록에 실패했습니다', 'error')
     },
   })
 
@@ -294,9 +294,9 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
     // w-full로 우선 꽉 채운 다음 max-w-3xl로 캡을 씌워야 의도대로 중앙정렬된 768px 폼이 됨.
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
       <div>
-        <h2 className="text-xl font-bold text-foreground">기본정보 등록</h2>
+        <h2 className="text-xl font-bold text-foreground">경호계획서 정보 등록</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          배치요구서를 확인한 후 기본정보를 등록하세요. 등록하면 경호계획서·근무 스케줄·파기확인서
+          배치요구서를 확인한 후 경호계획서 정보를 등록하세요. 등록하면 근무 스케줄·파기확인서
           섹션이 활성화됩니다.
         </p>
       </div>

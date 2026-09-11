@@ -156,19 +156,26 @@ function ScheduleSection({
             ))}
         </div>
         {schedule.preMeeting ? (
-          <div className="flex flex-col gap-2.5">
-            <div className="text-xs font-semibold text-foreground">{schedule.preMeeting.date}</div>
-            <div className="flex flex-col gap-2">
-              {schedule.preMeeting.assignments.map((a, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-800">
-                    {workerName(workers, a.workerId)}
-                  </span>
-                  <span className="text-xs font-medium text-foreground">
-                    {a.startTime} ~ {a.endTime}{' '}
-                    <span className="text-muted-foreground">· {duration(a.startTime, a.endTime)}</span>
-                  </span>
-                </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-semibold text-foreground">
+                {schedule.preMeeting.date}
+              </span>
+              <span className="text-xs font-medium text-foreground">
+                {schedule.preMeeting.startTime} ~ {schedule.preMeeting.endTime}{' '}
+                <span className="text-muted-foreground">
+                  · {duration(schedule.preMeeting.startTime, schedule.preMeeting.endTime)}
+                </span>
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {schedule.preMeeting.workerIds.map((workerId) => (
+                <span
+                  key={workerId}
+                  className="rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-semibold text-indigo-800"
+                >
+                  {workerName(workers, workerId)}
+                </span>
               ))}
             </div>
           </div>

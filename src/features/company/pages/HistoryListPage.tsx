@@ -102,6 +102,7 @@ function HistoryListPage() {
 
         <div className="flex items-center gap-2">
           <DateField
+            variant="calendar"
             value={dateFrom}
             onChange={setDateFrom}
             placeholder="기간 시작"
@@ -111,6 +112,7 @@ function HistoryListPage() {
           />
           <span className="text-sm text-muted-foreground">~</span>
           <DateField
+            variant="calendar"
             value={dateTo}
             onChange={setDateTo}
             placeholder="기간 종료"

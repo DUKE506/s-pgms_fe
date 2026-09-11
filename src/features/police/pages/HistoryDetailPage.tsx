@@ -92,7 +92,7 @@ function HistoryDetailPage() {
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           <div className="rounded-xl border border-border bg-card p-5.5">
-            <div className="mb-4 text-sm font-bold text-foreground">기본정보</div>
+            <div className="mb-4 text-sm font-bold text-foreground">경호정보</div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="대상자명" value={c.subject.nameInitial} />
               <Field label="사건유형" value={c.caseType} />

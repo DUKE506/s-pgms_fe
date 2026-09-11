@@ -101,7 +101,7 @@ childGroupName}]}]`). 이건 **경찰 조직(지방청/경찰서) 축**이라 �
 
 ---
 
-## 2. 🔴 연장/단축 신청 "거부" API가 없음
+## 2. 🟢 연장/단축 신청 "거부" API가 없음 — 운영팀 결정으로 해소(요청 철회)
 
 **발견 경위**: `docs/api-swagger.json` 확인 중(2026-08-31), 화면×API 매트릭스 작성 중 재확인.
 
@@ -128,9 +128,14 @@ childGroupName}]}]`). 이건 **경찰 조직(지방청/경찰서) 축**이라 �
 거부 EP 신설(위 1안)은 **B-2 섹션 종료 시 일괄 요청**에 포함. 회신이 오면 그때 연결한다.
 (`exclusions.md` [본사] 연장/단축 요청 목록 항목에도 기록.)
 
-**영향받는 화면/코드**: `PeriodRequestListPage.tsx`(거부 메뉴 비활성),
-`PeriodRequestActionDialog.tsx`(거부 분기 dormant), `features/company/api/requests.ts`
-의 `rejectPeriodRequest`(throw).
+**최종 해소(2026-09-11, 운영팀 미팅 결정)**: 거부 EP를 기다리지 않고 **본사 화면에서
+거부 기능 자체를 제거**(배치요청 "취소"·경호취소와 함께 — 운영상 안 쓰는 기능으로 판단).
+`disabled` 메뉴 항목·`rejectPeriodRequest`(throw)·`PeriodRequestActionDialog`의
+action 분기를 전부 삭제, 승인 단일 경로만 남김. B-2 일괄 요청 대상에서도 제외 —
+더는 백엔드에 거부 EP 신설을 요청하지 않는다.
+
+**영향받는 화면/코드(이력용, 제거됨)**: `PeriodRequestListPage.tsx`, `PeriodRequestActionDialog.tsx`,
+`features/company/api/requests.ts`의 (구)`rejectPeriodRequest`.
 
 ---
 
@@ -1563,17 +1568,21 @@ GetDeployDetail*`(배치요구서 기간 보유)을 부르면 **403**(2026-09-04
 
 ### PUT SaveCaseMeeting — 사전미팅 저장
 
-#### 근무자별 개별 시간이 미팅 전체 1구간으로 합쳐짐
-- **왜 제외했는지**: `PreMeetingDialog`은 근무자마다 시작/종료 시간을 따로 받는데
+#### ✅ 해소(2026-09-11) — 근무자별 개별 시간이 미팅 전체 1구간으로 합쳐짐
+- **왜 제외했었는지**: `PreMeetingDialog`은 근무자마다 시작/종료 시간을 따로 받는데
   `SaveCaseMeetingDto`는 미팅 전체 1구간(`meetingStart`/`meetingEnd`) + `guardSeqs[]`뿐.
   `GetCaseMeeting`도 `guardInfo:[{guardSeq,guardName}]` — 시간은 미팅 레벨만. 사용자
   결정(2026-09-04, 조치 섹션과 동일): 폼은 그대로 두고 저장 시 가장 이른 시작 ~ 가장
   늦은 종료로 합쳐 보낸다.
-- **사용자가 잃는 것**: 근무자별로 다른 시간을 입력해 저장하면, 재조회 시 전원이 같은
-  구간(합쳐진 min~max)으로 보인다.
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / issues #11(사전미팅 항목 — DTO에
-  `guards:[{guardSeq,start,end}]` 확장) 반영 시. 아니면 폼을 단일 구간으로 단순화(백엔드
-  회신에 따라).
+- **해소**: 운영팀 미팅 후 결정(2026-09-11) — DTO 확장(issues #11)을 기다리지 않고
+  **UI를 API 형태(미팅 단위 1구간)에 맞춰 재설계**. `PreMeeting` 타입을
+  `{date, startTime, endTime, workerIds[]}`로 변경, `PreMeetingDialog`는 상단에
+  미팅 시간 1개(`HourMinuteSelect`)만 두고 근무자는 참석 여부 체크(시간 입력 제거).
+  `toPreMeeting`/`setPreMeeting`의 "가장 이른~늦은" 합치기 로직 제거(더 이상 필요
+  없음). 근무자별 시간이라는 개념 자체가 화면에서 없어져 "사용자가 잃는 것" 문제가
+  해소됨. 브라우저 검증(StecM1 `/admin/security-cases/9`, 실백엔드 저장→표시→삭제
+  왕복).
+- **연동 커밋**: (이번 커밋).
 
 ### PUT PatchGuardPlanDoc / PatchConsentDoc / PatchDestroyDoc — 첨부 업로드
 

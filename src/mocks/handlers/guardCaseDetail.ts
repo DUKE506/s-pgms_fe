@@ -341,11 +341,9 @@ export const guardCaseDetailTestHandlers = [
       body.hasMeeting && body.meetingStart
         ? {
             date: body.meetingStart.slice(0, 10),
-            assignments: (body.guardSeqs ?? []).map((seq) => ({
-              workerId: String(seq),
-              startTime: hhmm(body.meetingStart),
-              endTime: hhmm(body.meetingEnd),
-            })),
+            startTime: hhmm(body.meetingStart),
+            endTime: hhmm(body.meetingEnd),
+            workerIds: (body.guardSeqs ?? []).map((seq) => String(seq)),
           }
         : null
     setPreMeeting(record.id, preMeeting)

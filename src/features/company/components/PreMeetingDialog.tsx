@@ -1,23 +1,17 @@
 import { useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { CheckCircle2, Circle } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import DateField from '@/shared/components/DateField'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { setPreMeeting } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import HourMinuteSelect from './HourMinuteSelect'
 import type { Worker } from '../api/workers'
-import type { PreMeeting, PreMeetingAssignment, SecurityCase } from '../../police/types/securityCase'
+import type { PreMeeting, SecurityCase } from '../../police/types/securityCase'
 
 interface PreMeetingDialogProps {
   securityCase: SecurityCase
@@ -26,16 +20,25 @@ interface PreMeetingDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-// 근무 스케줄과 달리 그룹 개념이 없어 근무자 행을 플랫하게 추가/삭제한다
-// (2026-08-24 결정). 등록 여부는 별도 플래그가 아니라 레코드 존재 자체로
-// 표현하므로, 이 모달은 순수하게 날짜+근무자별 시간을 CRUD하는 역할만 한다.
+// 사전미팅은 근무자별이 아니라 미팅 전체 1구간 + 참석 근무자 목록이다 — 백엔드
+// API(SaveCaseMeeting)가 애초에 이 형태로만 받는다는 걸 반영해 UI도 맞췄다
+// (2026-09-11 운영팀 결정, 이전엔 UI만 근무자별 시간이었고 저장 시 뭉쳐 보내고
+// 있었음 — issues #11 해소). 상단에서 미팅 날짜·시간을 정하고, 참석자는 체크로
+// 선택만 한다(AssignManagerDialog의 토글 리스트 패턴 재사용).
 function PreMeetingDialog({ securityCase, workers, open, onOpenChange }: PreMeetingDialogProps) {
   const existing = securityCase.workSchedule?.preMeeting ?? null
 
-  const [date, setDate] = useState(existing?.date ?? securityCase.startDate)
-  const [assignments, setAssignments] = useState<PreMeetingAssignment[]>(
-    existing?.assignments ?? [{ workerId: workers[0]?.id ?? '', startTime: '09:00', endTime: '10:00' }],
+  // 참석 근무자 후보는 전체 근무자가 아니라 경호계획서 정보에 등록된(경호풀) 근무자만
+  // (2026-09-11 사용자 지적 — 그룹 근무자 배정과 같은 범위여야 함).
+  const registeredWorkerIds = new Set(
+    (securityCase.baseInfo?.defaultWorkers ?? []).map((w) => w.workerId),
   )
+  const eligibleWorkers = workers.filter((w) => registeredWorkerIds.has(w.id))
+
+  const [date, setDate] = useState(existing?.date ?? securityCase.startDate)
+  const [startTime, setStartTime] = useState(existing?.startTime ?? '09:00')
+  const [endTime, setEndTime] = useState(existing?.endTime ?? '10:00')
+  const [workerIds, setWorkerIds] = useState<string[]>(existing?.workerIds ?? [])
   const queryClient = useQueryClient()
   const showToast = useToastStore((state) => state.show)
 
@@ -43,27 +46,13 @@ function PreMeetingDialog({ securityCase, workers, open, onOpenChange }: PreMeet
     onOpenChange(false)
   }
 
-  function updateAssignment(index: number, patch: Partial<PreMeetingAssignment>) {
-    setAssignments((prev) => prev.map((a, i) => (i === index ? { ...a, ...patch } : a)))
-  }
-
-  function addAssignment() {
-    const picked = new Set(assignments.map((a) => a.workerId))
-    const next = workers.find((w) => !picked.has(w.id))
-    if (!next) {
-      showToast('추가할 수 있는 근무자가 없습니다', 'error')
-      return
-    }
-    setAssignments((prev) => [...prev, { workerId: next.id, startTime: '09:00', endTime: '10:00' }])
-  }
-
-  function removeAssignment(index: number) {
-    setAssignments((prev) => prev.filter((_, i) => i !== index))
+  function toggleWorker(id: string) {
+    setWorkerIds((prev) => (prev.includes(id) ? prev.filter((w) => w !== id) : [...prev, id]))
   }
 
   const mutation = useMutation({
     mutationFn: () => {
-      const payload: PreMeeting = { date, assignments }
+      const payload: PreMeeting = { date, startTime, endTime, workerIds }
       return setPreMeeting(securityCase.id, payload)
     },
     onSuccess: () => {
@@ -88,64 +77,55 @@ function PreMeetingDialog({ securityCase, workers, open, onOpenChange }: PreMeet
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="pre-meeting-date">날짜</Label>
-          <DateField id="pre-meeting-date" placeholder="날짜 선택" value={date} onChange={setDate} />
+          <DateField id="pre-meeting-date" value={date} onChange={setDate} />
         </div>
 
-        <div className="flex flex-col gap-3.5">
-          {assignments.map((assignment, index) => (
-            <div key={index} className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">근무자 {index + 1}</span>
-                {assignments.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeAssignment(index)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label={`근무자 ${index + 1} 삭제`}
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
-              <Select
-                value={assignment.workerId}
-                onValueChange={(value) => updateAssignment(index, { workerId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {workers.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>
-                      {w.name} ({w.employeeId})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="flex flex-wrap items-center gap-2">
-                <HourMinuteSelect
-                  value={assignment.startTime}
-                  onChange={(v) => updateAssignment(index, { startTime: v })}
-                  ariaLabel={`근무자 ${index + 1} 시작시간`}
-                />
-                <span className="text-sm text-muted-foreground">~</span>
-                <HourMinuteSelect
-                  value={assignment.endTime}
-                  onChange={(v) => updateAssignment(index, { endTime: v })}
-                  ariaLabel={`근무자 ${index + 1} 종료시간`}
-                />
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col gap-1.5">
+          <Label>사전미팅 시간</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <HourMinuteSelect
+              value={startTime}
+              onChange={setStartTime}
+              ariaLabel="사전미팅 시작시간"
+            />
+            <span className="text-sm text-muted-foreground">~</span>
+            <HourMinuteSelect value={endTime} onChange={setEndTime} ariaLabel="사전미팅 종료시간" />
+          </div>
+        </div>
 
-          <button
-            type="button"
-            onClick={addAssignment}
-            className="flex w-fit items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-          >
-            <Plus className="size-3.5" />
-            근무자 추가
-          </button>
+        <div className="flex flex-col gap-1.5">
+          <Label>참석 근무자</Label>
+          <div className="flex max-h-56 flex-col gap-2 overflow-y-auto">
+            {eligibleWorkers.length === 0 && (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                경호계획서 정보에 등록된 근무자가 없습니다
+              </p>
+            )}
+            {eligibleWorkers.map((worker) => {
+              const selected = workerIds.includes(worker.id)
+              return (
+                <button
+                  key={worker.id}
+                  type="button"
+                  onClick={() => toggleWorker(worker.id)}
+                  aria-pressed={selected}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-lg border px-3.5 py-2.5 text-left text-sm transition-colors',
+                    selected ? 'border-blue-200 bg-blue-50' : 'border-border hover:bg-muted',
+                  )}
+                >
+                  {selected ? (
+                    <CheckCircle2 className="size-5 shrink-0 text-blue-600" />
+                  ) : (
+                    <Circle className="size-5 shrink-0 text-muted-foreground/40" />
+                  )}
+                  <span className={cn('font-medium text-foreground', !selected && 'font-normal')}>
+                    {worker.name} ({worker.employeeId})
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div className="flex justify-end gap-2.5">

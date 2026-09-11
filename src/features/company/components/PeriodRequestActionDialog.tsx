@@ -1,12 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { approvePeriodRequest, rejectPeriodRequest } from '../api/requests'
+import { approvePeriodRequest } from '../api/requests'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { SecurityCase } from '../../police/types/securityCase'
 
 interface PeriodRequestActionDialogProps {
-  action: 'approve' | 'reject'
   targetCase: SecurityCase | null
   onOpenChange: (open: boolean) => void
 }
@@ -19,36 +18,26 @@ function formatDate(dateLike: string) {
   return `${yyyy}.${mm}.${dd}`
 }
 
-// 연장요청/단축요청 승인·거부 공용 확인 다이얼로그. 거부 사유는 데이터 모델/
-// 요구사항에 없어 별도 입력 없이 단순 확인만 받는다(2026-08-27 결정).
-function PeriodRequestActionDialog({
-  action,
-  targetCase,
-  onOpenChange,
-}: PeriodRequestActionDialogProps) {
+// 연장요청/단축요청 승인 확인 다이얼로그. 거부는 운영팀 결정으로 화면에서 제외됐다
+// (2026-09-11) — 승인 경로만 남는다.
+function PeriodRequestActionDialog({ targetCase, onOpenChange }: PeriodRequestActionDialogProps) {
   const queryClient = useQueryClient()
   const showToast = useToastStore((state) => state.show)
   const request = targetCase?.pendingPeriodRequest
 
   const mutation = useMutation({
-    mutationFn: () =>
-      action === 'approve'
-        ? approvePeriodRequest(targetCase!.id)
-        : rejectPeriodRequest(targetCase!.id),
+    mutationFn: () => approvePeriodRequest(targetCase!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['security-cases-all'] })
       queryClient.invalidateQueries({ queryKey: ['pending-requests'] })
       queryClient.invalidateQueries({ queryKey: ['period-requests'] })
-      showToast(action === 'approve' ? '요청을 승인했습니다' : '요청을 거부했습니다', 'success')
+      showToast('요청을 승인했습니다', 'success')
       onOpenChange(false)
     },
     onError: () => {
-      showToast(action === 'approve' ? '승인에 실패했습니다' : '거부에 실패했습니다', 'error')
+      showToast('승인에 실패했습니다', 'error')
     },
   })
-
-  const title = action === 'approve' ? '요청 승인' : '요청 거부'
-  const confirmLabel = action === 'approve' ? '승인' : '거부'
 
   return (
     <Dialog open={targetCase != null} onOpenChange={onOpenChange}>
@@ -56,15 +45,13 @@ function PeriodRequestActionDialog({
         {targetCase && request && (
           <>
             <DialogHeader>
-              <DialogTitle>{title}</DialogTitle>
+              <DialogTitle>요청 승인</DialogTitle>
               <p className="text-xs text-muted-foreground">
                 {targetCase.receiptNumber} · {targetCase.policeStation}
               </p>
             </DialogHeader>
 
-            <p className="text-sm text-foreground">
-              {request.type} 요청을 {confirmLabel}하시겠습니까?
-            </p>
+            <p className="text-sm text-foreground">{request.type} 요청을 승인하시겠습니까?</p>
 
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="flex items-center justify-between gap-3">
@@ -92,12 +79,11 @@ function PeriodRequestActionDialog({
               </Button>
               <Button
                 type="button"
-                variant={action === 'reject' ? 'destructive' : 'default'}
                 disabled={mutation.isPending}
                 onClick={() => mutation.mutate()}
                 className="px-5"
               >
-                {confirmLabel}
+                승인
               </Button>
             </div>
           </>

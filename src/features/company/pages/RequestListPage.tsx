@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MoreVertical, Search, Trash2, UserPlus } from 'lucide-react'
+import { MoreVertical, Search, UserPlus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,7 +27,6 @@ import {
 import { listPendingRequests } from '../api/requests'
 import { listManagers } from '../api/managers'
 import AssignManagerDialog from '../components/AssignManagerDialog'
-import CancelPendingCaseDialog from '../components/CancelPendingCaseDialog'
 import DispatchRequestViewDialog from '../components/DispatchRequestViewDialog'
 import SecurityCaseTabs from '../components/SecurityCaseTabs'
 import type { SecurityCase } from '../../police/types/securityCase'
@@ -57,7 +56,6 @@ function RequestListPage() {
   const [stationFilter, setStationFilter] = useState(ALL)
   const [search, setSearch] = useState('')
   const [targetCase, setTargetCase] = useState<SecurityCase | null>(null)
-  const [cancelTargetCase, setCancelTargetCase] = useState<SecurityCase | null>(null)
   const [viewCase, setViewCase] = useState<SecurityCase | null>(null)
 
   const requests = requestsQuery.data ?? []
@@ -181,15 +179,6 @@ function RequestListPage() {
                               <UserPlus />
                               배정
                             </DropdownMenuItem>
-                            {/* 접수취소 — POST CancelGuardCase (findings #9, 2026-09-09).
-                                본부관리자 토큰은 서버가 403(접수취소는 시스템·운영만). */}
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() => setCancelTargetCase(r)}
-                            >
-                              <Trash2 />
-                              취소
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -221,16 +210,6 @@ function RequestListPage() {
                           <UserPlus />
                           배정
                         </DropdownMenuItem>
-                        {/* 배치요청 취소 API가 아직 없어 비활성화 (requests.ts
-                            cancelPendingRequest 주석 / issues.md 참고) */}
-                        <DropdownMenuItem
-                          variant="destructive"
-                          disabled
-                          onSelect={() => setCancelTargetCase(r)}
-                        >
-                          <Trash2 />
-                          취소
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -256,10 +235,6 @@ function RequestListPage() {
         targetCase={targetCase}
         managers={managersQuery.data ?? []}
         onOpenChange={(open) => !open && setTargetCase(null)}
-      />
-      <CancelPendingCaseDialog
-        targetCase={cancelTargetCase}
-        onOpenChange={(open) => !open && setCancelTargetCase(null)}
       />
       {viewCase && (
         <DispatchRequestViewDialog

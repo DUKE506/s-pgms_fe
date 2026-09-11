@@ -14,7 +14,6 @@ import ScheduleSection from '../components/ScheduleSection'
 import ScheduleInitDialog from '../components/ScheduleInitDialog'
 import ScheduleGroupDialog from '../components/ScheduleGroupDialog'
 import AttachmentsSection from '../components/AttachmentsSection'
-import CancelAssignedCaseDialog from '../components/CancelAssignedCaseDialog'
 import type { ScheduleGroup } from '../../police/types/securityCase'
 
 interface GroupDialogState {
@@ -37,7 +36,6 @@ function SecurityCaseDetailPage() {
 
   const [editingBaseInfo, setEditingBaseInfo] = useState(false)
   const [scheduleInitOpen, setScheduleInitOpen] = useState(false)
-  const [cancelOpen, setCancelOpen] = useState(false)
   const [groupDialog, setGroupDialog] = useState<GroupDialogState | null>(null)
   // ScheduleGroupDialog는 상시 마운트된 채 open만 토글되므로, 그 내부 useState(특이사항/
   // 근무자 목록)가 매번 새로 초기화되도록 key로 강제 리마운트시킨다. **열 때마다** key를
@@ -80,7 +78,7 @@ function SecurityCaseDetailPage() {
         breadcrumb={
           '경호관리' +
           (managementNumber ? ` / ${managementNumber}` : '') +
-          (editingBaseInfo ? ' / 기본정보 등록' : '')
+          (editingBaseInfo ? ' / 경호계획서 정보 등록' : '')
         }
         fallbackTo="/admin/security-cases"
       />
@@ -90,26 +88,9 @@ function SecurityCaseDetailPage() {
           요약/스케줄/첨부 뷰가 XL에서 전체 폭을 쓴다 */}
       <div className="flex flex-col gap-5">
         {!editingBaseInfo && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3.5">
-              <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
-              <StatusBadge status={securityCase.status} />
-            </div>
-            {/* 경찰 상세(SecurityCaseDetailPage)와 동일하게 데스크톱은 헤더, 모바일은
-                스크롤 맨 아래 전체폭 버튼으로 배치 */}
-            {securityCase.status === '배정' && (
-              <div className="hidden xl:flex">
-                {/* 경호취소 — POST GuardCase/Stec/W/CancelGuardCase (findings #9, 2026-09-09).
-                    현재 배정 상태만 노출(스웨거상 경호중·경호완료도 허용 — 확장은 별도 논의). */}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setCancelOpen(true)}
-                >
-                  경호취소
-                </Button>
-              </div>
-            )}
+          <div className="flex items-center gap-3.5">
+            <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
+            <StatusBadge status={securityCase.status} />
           </div>
         )}
 
@@ -124,15 +105,15 @@ function SecurityCaseDetailPage() {
           <div className="flex flex-col items-center gap-3.5 rounded-xl border border-border bg-card px-6 py-16 text-center">
             <FileText className="size-9 text-muted-foreground/40" />
             <div className="text-[15px] font-bold text-foreground">
-              기본정보가 등록되지 않았습니다
+              경호계획서 정보가 등록되지 않았습니다
             </div>
             <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-              배치요구서를 확인한 후 기본정보를 등록하면 경호계획서·근무 스케줄·파기확인서
+              배치요구서를 확인한 후 경호계획서 정보를 등록하면 근무 스케줄·파기확인서
               섹션이 나타납니다.
             </p>
             <Button type="button" onClick={() => setEditingBaseInfo(true)} className="mt-1.5">
               <Plus className="size-3.5" />
-              기본정보 등록
+              경호계획서 정보 등록
             </Button>
           </div>
         ) : (
@@ -150,7 +131,7 @@ function SecurityCaseDetailPage() {
                   등록된 근무 스케줄이 없습니다
                 </div>
                 <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-                  배치기간과 근무시간을 입력하면 기본정보에 지정된 기본 근무자가 해당 기간에
+                  배치기간과 근무시간을 입력하면 경호계획서 정보에 지정된 기본 근무자가 해당 기간에
                   자동으로 배정됩니다.
                 </p>
                 <Button type="button" onClick={() => setScheduleInitOpen(true)} className="mt-1.5">
@@ -173,28 +154,10 @@ function SecurityCaseDetailPage() {
         )}
       </div>
 
-      {!editingBaseInfo && securityCase.status === '배정' && (
-        <div className="flex flex-col gap-2.5 xl:hidden">
-          <Button
-            type="button"
-            variant="destructive"
-            className="w-full"
-            onClick={() => setCancelOpen(true)}
-          >
-            경호취소
-          </Button>
-        </div>
-      )}
-
       <ScheduleInitDialog
         securityCase={securityCase}
         open={scheduleInitOpen}
         onOpenChange={setScheduleInitOpen}
-      />
-      <CancelAssignedCaseDialog
-        securityCase={securityCase}
-        open={cancelOpen}
-        onOpenChange={setCancelOpen}
       />
       <ScheduleGroupDialog
         key={groupDialogKey}

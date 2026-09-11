@@ -71,7 +71,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     const record = findCase('26-02-강남경찰서')
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     fireEvent.click(firstButton('접수취소'))
 
     const dialog = await screen.findByRole('dialog')
@@ -86,7 +86,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     const record = findCase('26-01-강남경찰서')
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     fireEvent.click(firstButton('경호취소'))
 
     const dialog = await screen.findByRole('dialog')
@@ -105,7 +105,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     const record = findCase('26-03-강남경찰서')
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     fireEvent.click(firstButton('연장/단축'))
 
     const dialog = await screen.findByRole('dialog')
@@ -120,7 +120,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     const record = findCase('26-04-강남경찰서')
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     const closeButton = firstButton('종결')
     expect(closeButton).not.toBeDisabled()
     fireEvent.click(closeButton)
@@ -149,7 +149,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     securityCases.push(record)
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     fireEvent.click(firstButton('종결'))
 
     const dialog = await screen.findByRole('dialog')
@@ -174,7 +174,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
 
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     expect(firstButton('종결')).toBeDisabled()
   })
 
@@ -193,7 +193,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     securityCases.push(record)
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     // 우측 패널 고유 값: 근무자 이름·연락처(GetDeployGuardSchedule 응답 인라인)
     expect(await screen.findByText('최민준')).toBeInTheDocument()
     expect(screen.getByText('010-1234-5678')).toBeInTheDocument()
@@ -204,7 +204,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     const record = findCase('26-01-강남경찰서')
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     expect(screen.queryByRole('button', { name: '경호취소' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument()
   })
@@ -214,7 +214,7 @@ describe('PoliceSecurityCaseDetailPage', () => {
     const record = findCase('26-01-강남경찰서')
     renderAt(record.id)
 
-    await screen.findByText('기본정보')
+    await screen.findByText('경호정보')
     expect(screen.queryByRole('button', { name: '경호취소' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '수정' })).not.toBeInTheDocument()
   })

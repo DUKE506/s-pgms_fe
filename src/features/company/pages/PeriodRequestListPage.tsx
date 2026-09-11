@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, MoreVertical, Search, X } from 'lucide-react'
+import { Check, MoreVertical, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
@@ -51,9 +51,9 @@ interface PeriodRequestListPageProps {
 }
 
 // [본사] 연장요청/단축요청 승인 화면. 배치요청 목록(RequestListPage, s6b)과 동일한
-// 형태(필터+테이블/카드+드롭다운 액션)를 그대로 따르되, 액션만 배정/취소 대신
-// 승인/거부로 바뀐다 — 원본 목업이 없는 화면이라 기존 화면 형태를 재사용하기로
-// 사용자와 합의(2026-08-27).
+// 형태(필터+테이블/카드+드롭다운 액션)를 그대로 따르되, 액션만 배정 대신 승인으로
+// 바뀐다 — 원본 목업이 없는 화면이라 기존 화면 형태를 재사용하기로 사용자와 합의
+// (2026-08-27). 거부는 운영팀 결정으로 제외(2026-09-11).
 function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
   const requestsQuery = useQuery({
     queryKey: ['period-requests', type],
@@ -186,14 +186,6 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
                               <Check />
                               승인
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              variant="destructive"
-                              disabled
-                              title="거부 기능은 현재 지원되지 않습니다"
-                            >
-                              <X />
-                              거부
-                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -223,14 +215,6 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
                         <Check />
                         승인
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        disabled
-                        title="거부 기능은 현재 지원되지 않습니다"
-                      >
-                        <X />
-                        거부
-                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -251,7 +235,6 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
       )}
 
       <PeriodRequestActionDialog
-        action="approve"
         targetCase={approveTarget}
         onOpenChange={(open) => !open && setApproveTarget(null)}
       />

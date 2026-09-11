@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import SecurityCaseDetailPage from './SecurityCaseDetailPage'
@@ -18,12 +18,6 @@ function renderPage(caseId: string) {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   )
-}
-
-// 경호취소 버튼은 데스크톱 헤더/모바일 하단 두 곳에 동시에 렌더링되므로(반응형 토글, 둘 다
-// jsdom엔 잡힘) 첫 번째(데스크톱 헤더)만 골라 쓴다.
-function firstButton(name: string) {
-  return screen.getAllByRole('button', { name })[0]
 }
 
 function loginAsAdmin() {
@@ -56,37 +50,14 @@ describe('SecurityCaseDetailPage', () => {
     useAuthStore.setState({ user: null, accessToken: null, refreshToken: null })
   })
 
-  it('배정 상태에서 경호취소하면 사유가 저장되고 상태가 취소로 바뀐다 (findings #9)', async () => {
+  it('경호계획서 정보 등록 → 스케줄 생성 → 그룹 수정까지 전체 흐름이 동작한다', async () => {
     loginAsAdmin()
     const caseId = assignedCaseId()
     renderPage(caseId)
+    await screen.findByText('경호계획서 정보가 등록되지 않았습니다')
 
-    expect(await screen.findByText('기본정보가 등록되지 않았습니다')).toBeInTheDocument()
-    const cancelBtn = firstButton('경호취소')
-    expect(cancelBtn).not.toBeDisabled()
-    fireEvent.click(cancelBtn)
-
-    const dialog = await screen.findByRole('dialog')
-    fireEvent.change(within(dialog).getByLabelText('취소 사유'), {
-      target: { value: '대상자 요청으로 취소' },
-    })
-    fireEvent.click(within(dialog).getByRole('button', { name: '경호취소' }))
-
-    await waitFor(() => {
-      const record = securityCases.find((c) => c.id === caseId)!
-      expect(record.status).toBe('취소')
-      expect(record.cancelReason).toBe('대상자 요청으로 취소')
-    })
-  })
-
-  it('기본정보 등록 → 스케줄 생성 → 그룹 수정까지 전체 흐름이 동작한다', async () => {
-    loginAsAdmin()
-    const caseId = assignedCaseId()
-    renderPage(caseId)
-    await screen.findByText('기본정보가 등록되지 않았습니다')
-
-    // 1) 기본정보 등록: 근무자 2명 추가, 첫 번째만 대표근무자로 지정
-    fireEvent.click(screen.getByRole('button', { name: /기본정보 등록/ }))
+    // 1) 경호계획서 정보 등록: 근무자 2명 추가, 첫 번째만 대표근무자로 지정
+    fireEvent.click(screen.getByRole('button', { name: /경호계획서 정보 등록/ }))
     await screen.findByText('1. 경호대상자')
 
     fireEvent.click(screen.getByRole('button', { name: '근무자 추가' }))
@@ -156,7 +127,7 @@ describe('SecurityCaseDetailPage', () => {
     loginAs('hqmanager1')
     renderPage('case-seed-6')
 
-    expect(await screen.findByText('기본정보가 등록되지 않았습니다')).toBeInTheDocument()
+    expect(await screen.findByText('경호계획서 정보가 등록되지 않았습니다')).toBeInTheDocument()
   })
 
   it('담당자가 아닌 본부관리자는 상세 조회가 거부된다', async () => {

@@ -145,21 +145,6 @@ export async function assignManager(caseId: string, managerId: string): Promise<
   }
 }
 
-// 배치요청 취소(미배정 반려) — POST GuardCase/Stec/W/CancelGuardCase { deployReqSeq }
-// (2026-09-09 신설, findings #9). 배정 전이라 서버가 접수취소로 처리 — 배치요구서 행을
-// 통째로 삭제하며 reason은 받지 않는다(REQ-008). 접수취소는 시스템·운영관리자만 가능
-// (본부관리자 토큰은 403). caseId는 GetDeployRequestList 행의 id = deploySeq.
-export async function cancelPendingRequest(caseId: string): Promise<void> {
-  const res = await apiFetch('/v1/GuardCase/Stec/W/CancelGuardCase', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deployReqSeq: Number(caseId) }),
-  })
-  if (!res.ok) {
-    throw new Error('배치요청 취소에 실패했습니다')
-  }
-}
-
 // GET /api/v1/GuardCase/Stec/W/GetExtendRequestList · GetShortenRequestList 의 항목
 // 형태 (실측: docs/backend-integration/responses/GuardCase-Stec-GetExtend-GetShortenRequestList.md).
 // GetDeployRequestList와 거의 같은 구조 — caseSeq가 채워져 있고(배정된 건),
@@ -236,12 +221,4 @@ export async function approvePeriodRequest(caseId: string): Promise<void> {
   if (!res.ok) {
     throw new Error('승인에 실패했습니다')
   }
-}
-
-// ⚠️ 연장/단축 "거부"에 대응하는 백엔드 EP가 없다(issues.md #2 — 승인만 있고 거부
-// 경로 자체가 없음). PeriodRequestListPage에서 거부 메뉴를 비활성화하므로 이 함수는
-// 호출되지 않는다 — 방어적으로 throw. EP가 생기면 여기에 연결한다.
-export async function rejectPeriodRequest(_caseId: string): Promise<void> {
-  void _caseId
-  throw new Error('연장/단축 거부 기능은 현재 사용할 수 없습니다')
 }

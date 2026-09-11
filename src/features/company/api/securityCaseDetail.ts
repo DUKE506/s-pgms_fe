@@ -241,13 +241,9 @@ function toPreMeeting(meeting: CaseMeetingData | null): PreMeeting | null {
   if (!meeting) return null
   return {
     date: meeting.meetingDate,
-    // 백엔드는 미팅 전체 1구간만 준다 — 참석 근무자 전원을 같은 시각으로 표시
-    // (근무자별 개별 시간은 저장 시 유실, issues #11 / exclusions).
-    assignments: meeting.guardInfo.map((g) => ({
-      workerId: String(g.guardSeq),
-      startTime: hhmm(meeting.meetingStartDt),
-      endTime: hhmm(meeting.meetingEndDt),
-    })),
+    startTime: hhmm(meeting.meetingStartDt),
+    endTime: hhmm(meeting.meetingEndDt),
+    workerIds: meeting.guardInfo.map((g) => String(g.guardSeq)),
   }
 }
 
@@ -550,7 +546,7 @@ export async function upsertScheduleGroup(
       const envelope = (await res.json()) as { message?: unknown }
       const serverMessage = typeof envelope.message === 'string' ? envelope.message : ''
       if (serverMessage.includes('경호풀')) {
-        message = '기본정보에 등록되지 않은 근무자입니다. 먼저 기본정보에서 근무자를 추가해 주세요.'
+        message = '경호계획서 정보에 등록되지 않은 근무자입니다. 먼저 경호계획서 정보에서 근무자를 추가해 주세요.'
       } else if (serverMessage) {
         message = serverMessage
       }
@@ -573,32 +569,12 @@ export async function deleteScheduleGroup(id: string, groupSeq: string): Promise
   }
 }
 
-// 경호취소 — POST GuardCase/Stec/W/CancelGuardCase { deployReqSeq, reason }.
-// 경찰용(Deploy/Police/W/CancelGuardCase)과 동작이 같고, 서버가 배정 여부로 접수취소/
-// 경호취소를 갈라 처리한다(2026-09-09 신설, findings #9). 배정 이후라 reason이
-// CANCEL_REASON에 남으므로 필수. 키는 caseSeq가 아니라 deployReqSeq(접수 단계엔 경호건이
-// 없어서) — 본사 상세는 SecurityCase.deploySeq로 갖고 있다. 본부관리자는 자기 배정 건만
-// (아니면 403 "담당하지 않는 경호건입니다"). 종결·경호취소 상태면 409.
-export async function cancelAssignedCase(
-  deployReqSeq: number | string,
-  reason: string,
-): Promise<void> {
-  const res = await apiFetch('/v1/GuardCase/Stec/W/CancelGuardCase', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ deployReqSeq: Number(deployReqSeq), reason }),
-  })
-  if (!res.ok) {
-    throw new Error('경호취소에 실패했습니다')
-  }
-}
-
 // 사전미팅 저장/수정/삭제 — PUT SaveCaseMeeting.
-// preMeeting이 null이면 삭제(hasMeeting:false). 아니면 근무자별 시간을 하나로 합쳐
-// (가장 이른 시작 ~ 가장 늦은 종료) 미팅 전체 1구간 + guardSeqs로 보낸다(issues #11).
+// preMeeting이 null이거나 참석 근무자가 없으면 삭제(hasMeeting:false). 아니면
+// 미팅 전체 1구간(startTime~endTime) + guardSeqs로 보낸다.
 export async function setPreMeeting(id: string, preMeeting: PreMeeting | null): Promise<void> {
   let body: Record<string, unknown>
-  if (!preMeeting || preMeeting.assignments.length === 0) {
+  if (!preMeeting || preMeeting.workerIds.length === 0) {
     body = {
       caseSeq: toSeq(id),
       hasMeeting: false,
@@ -607,14 +583,12 @@ export async function setPreMeeting(id: string, preMeeting: PreMeeting | null): 
       guardSeqs: [],
     }
   } else {
-    const starts = preMeeting.assignments.map((a) => a.startTime).sort()
-    const ends = preMeeting.assignments.map((a) => a.endTime).sort()
     body = {
       caseSeq: toSeq(id),
       hasMeeting: true,
-      meetingStart: `${preMeeting.date}T${starts[0]}:00`,
-      meetingEnd: `${preMeeting.date}T${ends[ends.length - 1]}:00`,
-      guardSeqs: preMeeting.assignments.map((a) => Number(a.workerId)),
+      meetingStart: `${preMeeting.date}T${preMeeting.startTime}:00`,
+      meetingEnd: `${preMeeting.date}T${preMeeting.endTime}:00`,
+      guardSeqs: preMeeting.workerIds.map((workerId) => Number(workerId)),
     }
   }
   await sendJson(

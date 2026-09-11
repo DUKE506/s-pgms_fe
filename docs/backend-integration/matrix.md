@@ -271,7 +271,7 @@
 | 목록 조회 | `listPendingRequests` | `GET GuardCase/Stec/W/GetDeployRequestList` | ✅ 파라미터 없이 전량 반환, 스코프 필터 없음(운영/시스템관리자 전국 미배정 건 전부). 본부관리자 403. 응답 `{deploySeq,caseSeq(null),mgmtNo,groupName,parentGroupName,createDt,periodFrom,periodTo,requestedEndDate}` — `mgmtNo`는 접미사 없는 `"26-09-동래경찰서"`라 그대로 사용. 응답 샘플: `GuardCase-Stec-GetDeployRequestList.md` |
 | 담당자 선택 목록 | `listManagers` | `GET User/Stec/W/GetStecUserList` | ✅ 전용 EP 없음 — 클라이언트에서 `codeName==='본부관리자' && useYn`로 필터. `assignedCount` 필드 없어 배지 생략. **본부(`branch`)는 제외 확정**(2026-09-09, findings #1). matrix 11번과 같은 응답. 응답 샘플: `User-Stec-GetStecUserList.md` |
 | 본부 배정 | `assignManager` | `POST GuardCase/Stec/W/AddGuardCase` | ✅ DTO `{deploySeq,userSeq}`, 성공 `{data:true}`(seq 안 줌). **여기서 GuardCase가 처음 생성됨** — 배정 즉시 `statusName:"배정"` + `mgmtNo`에 `ST####`. deploySeq 81 실배정(caseSeq 46)해 검증·유지(8·9 입력 데이터). 응답 샘플: `GuardCase-Stec-AddGuardCase.md` |
-| 취소 | `cancelPendingRequest` | `POST GuardCase/Stec/W/CancelGuardCase {deployReqSeq}` | ✅ 연동(**2026-09-09**, findings #9 🟢). 배정 전이라 서버가 접수취소로 처리(배치요구서 hard delete, reason 없음, 시스템·운영만 — 본부관리자 403). ⋮ "취소" `disabled` 제거. 실왕복 미검(되돌릴 수 없음, CARRYOVER B) |
+| 취소 | ~~`cancelPendingRequest`~~ | `POST GuardCase/Stec/W/CancelGuardCase {deployReqSeq}` | ✅ 연동(2026-09-09, findings #9 🟢) 했으나 **2026-09-11 운영팀 결정으로 UI에서 제거**(⋮ "취소" 메뉴·다이얼로그·함수 삭제). API 자체는 살아있음 — 재도입 시 그대로 재사용 가능 |
 | (인프라) refresh single-flight | — | `POST Login/W/RefreshToken` | `client.ts` 수정 — 동시 401 시 각자 refresh 호출 → 실백엔드 1회용 RefreshToken이 회전돼 두 번째부터 401 → 강제 로그아웃되던 문제. 진행 중 refresh를 공유하도록 single-flight화(아직 mock인 화면에 실백엔드 계정으로 들어갈 때 재현됨) |
 
 #### 경호목록 (`/admin/security-cases`)
@@ -295,7 +295,7 @@
 | 조회(첨부 메타) | `getSecurityCase` | `GET GuardCase/Stec/W/GetCaseDoc?caseSeq=` | ✅ 읽기만. `{caseInfoDto,guardAgreementDtos[],guardDeployDocDto}` → `attachments`. 필드↔문서 대응은 업로드된 데이터 없어 추정(후속에서 확정) |
 | 경호계획 등록 | `registerBaseInfo(...,{isNew:true,period})` | `PUT AddGuardCaseInfo` | ⚠️ **코드 완성·미검증(△)** — 배치기간 조회 경로 없음(blockers, issues #10) → **배정 건에서 등록 버튼 비활성 + 안내문**. 스케줄 생성 후 재호출 시 409(실측). caseSeq 46은 curl로 등록 |
 | 경호계획 부분수정 | `registerBaseInfo(...,{isNew:false})` | `PATCH PatchCaseInfo` | ✅ 연동·브라우저 검증. `startDt/endDt` 없음(기간 잠금). `isNew`로 등록/수정 분기 |
-| 경호취소 | `cancelAssignedCase` | `POST GuardCase/Stec/W/CancelGuardCase {deployReqSeq, reason}` | ✅ 연동(**2026-09-09**, findings #9 🟢). `SecurityCase.deploySeq`(GetCaseDoc) 사용 — 키가 caseSeq 아님. "경호취소" 버튼 활성(배정 상태). 본부관리자는 자기 배정건만(403 "담당하지 않는 경호건입니다"). 실왕복 미검 |
+| 경호취소 | ~~`cancelAssignedCase`~~ | `POST GuardCase/Stec/W/CancelGuardCase {deployReqSeq, reason}` | ✅ 연동(2026-09-09, findings #9 🟢) 했으나 **2026-09-11 운영팀 결정으로 UI에서 제거**("경호취소" 버튼·다이얼로그·함수 삭제, 배정 상태). API는 살아있음 — 재도입 시 재사용 가능 |
 | 스케줄 자동생성 | `createSchedule` | `POST AutoAddSchedule` | ✅ 연동·curl 검증. `{caseSeq,startDate,endDate,startTime:"HH:MM:SS",endTime}`. 대표(isRepresentative) 근무자만 자동 배정(실측 — matrix 최초 우려 해소) |
 | 근무조 저장 | `upsertScheduleGroup(...,order)` | `PUT PatchScheduleGroup` | ✅ 연동·curl 검증. `groupSeq` 있으면 수정/없으면 추가. `order`(신규 인자)는 1+ & 일자 내 유일 필수(중복 시 409). 근무자 중복시각 배정도 409, 경호풀 밖 근무자 400. `memo` 저장되나 조회엔 없음(issues #12) |
 | 근무조 삭제 | `deleteScheduleGroup` | `DELETE DeleteScheduleGroup?groupSeq=&caseSeq=` | ✅ 연동·브라우저 검증. 그룹1(첫 조)은 삭제 불가(일자별 최소 1개 유지) — 모달에서 버튼 숨김 |
@@ -400,7 +400,8 @@
 ## 전체 요약 — ⚠️ mock과 실제 API가 어긋나는 지점
 
 **mock에만 있고 실제 API엔 없음** (issues.md로 옮겨 관리):
-1. 연장/단축 거부 (`rejectPeriodRequest`) — issues.md #2
+1. ~~연장/단축 거부 (`rejectPeriodRequest`)~~ — issues.md #2 **해소(2026-09-11)**: 거부 EP를
+   기다리지 않고 본사 화면에서 거부 기능 자체를 제거(운영팀 결정), 요청 대상에서 제외
 2. ~~게스트 아이디 미리보기 (`previewNextGuestAccount`)~~ — issues.md #3 **해소(2026-09-08)**:
    프론트 UX 변경(발급 후 목록 재조회)으로 흡수, 함수 제거
 

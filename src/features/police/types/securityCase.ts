@@ -99,18 +99,18 @@ export interface ScheduleDay {
   groups: ScheduleGroup[]
 }
 
-export interface PreMeetingAssignment {
-  workerId: string
-  startTime: string
-  endTime: string
-}
-
 // 등록 여부를 별도 플래그로 안 두고 레코드 존재 자체로 표현한다 — 등록 안 됐으면
 // null (2026-08-24 결정: 시스템이 "근무시간 내/외" 여부를 판단하지 않고, 등록은
 // 순수하게 사용자가 필요할 때만 하는 CRUD로 둔다).
+//
+// 시간은 미팅 전체 1구간(근무자별 개별 시간 아님) — 백엔드 API(SaveCaseMeeting)가
+// 애초에 이 형태로만 받는다는 걸 반영해 UI도 맞췄다(2026-09-11 운영팀 결정,
+// 이전엔 UI만 근무자별이었고 저장 시 뭉쳐 보내고 있었음 — issues #11 해소).
 export interface PreMeeting {
   date: string
-  assignments: PreMeetingAssignment[]
+  startTime: string
+  endTime: string
+  workerIds: string[]
 }
 
 export interface WorkSchedule {

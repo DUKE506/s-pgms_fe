@@ -195,7 +195,7 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
         </p>
         <div className="flex flex-col gap-2.5">
           {roster.length === 0 && (
-            <p className="text-xs text-muted-foreground">기본정보에 등록된 근무자가 없습니다</p>
+            <p className="text-xs text-muted-foreground">경호계획서 정보에 등록된 근무자가 없습니다</p>
           )}
           {roster.map((w) => {
             const worker = workers.find((x) => x.id === w.workerId)

@@ -1,6 +1,6 @@
 import type { MeasurePeriod, SecurityCase } from '@/features/police/types/securityCase'
 
-// 경호건 "기본정보" 조회 카드 — [경찰서] 경호 상세, [본사] 경호 상세, [본사] 이력 상세가
+// 경호건 "경호정보" 조회 카드 — [경찰서] 경호 상세, [본사] 경호 상세, [본사] 이력 상세가
 // 공유한다(2026-09-04 통일). 예전엔 피전용 `BaseInfoReadCard`와 본사용
 // `BaseInfoSummaryCard`가 따로 있어 필드 목록·라벨·포맷이 조금씩 달랐다.
 //
@@ -75,7 +75,7 @@ function CaseBaseInfoCard({ securityCase, variant, onEdit }: CaseBaseInfoCardPro
     <div className="rounded-xl border border-border bg-card p-5.5">
       <div className="mb-4 flex items-center justify-between">
         <div className="text-sm font-bold text-foreground">
-          기본정보
+          경호정보
           {isCompany && (
             <span className="font-normal text-muted-foreground"> (본부관리자 작성)</span>
           )}
