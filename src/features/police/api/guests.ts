@@ -16,6 +16,9 @@ export interface GuestAccount {
   name: string // 표시용(loginId와 동일하게 채움 — 기존 컴포넌트가 name을 아이디로 렌더)
   accessCodes: string[] // 조회권이 부여된 경호건의 경호코드(guardCode) — "조회가능 경호건" 열
   issuedAt: string // createDt
+  // 비고 — 어느 부서에서/어떤 협조 목적으로 쓰는 계정인지 표시하는 자유 텍스트
+  // (2026-09-14 신규, findings.md 신규 항목). 백엔드 maxLength 1000, nullable.
+  memo: string | null
 }
 
 // GET GetGuestUserList 행 (실측: docs/backend-integration/responses/User-Police-Guest.md).
@@ -29,6 +32,7 @@ interface GuestUserRow {
   useYn: boolean
   createDt: string
   accessList: { caseSeq: number; guardCode: string }[] | null
+  memo: string | null
 }
 
 export async function listGuestAccounts(): Promise<GuestAccount[]> {
@@ -49,6 +53,7 @@ export async function listGuestAccounts(): Promise<GuestAccount[]> {
       name: r.loginId,
       accessCodes: (r.accessList ?? []).map((a) => a.guardCode).filter(Boolean),
       issuedAt: r.createDt,
+      memo: r.memo,
     }))
 }
 
@@ -98,29 +103,37 @@ export async function getGuestCaseAccess(userSeq: number): Promise<GuestCaseCand
   }))
 }
 
+// memo(비고)는 빈 문자열이면 null로 정규화해 보낸다 — 백엔드가 nullable string으로
+// 받는다(maxLength 1000).
+function normalizeMemo(memo: string | undefined): string | null {
+  const trimmed = memo?.trim()
+  return trimmed ? trimmed : null
+}
+
 // 발급 — 아이디는 서버가 자동 생성(loginId), 초기 비밀번호는 아이디와 동일.
 // 응답은 {data:true}뿐이라 발급 후 목록 재조회로 새 계정을 확인한다.
-export async function issueGuestAccount(caseSeqs: number[]): Promise<void> {
+export async function issueGuestAccount(caseSeqs: number[], memo?: string): Promise<void> {
   const res = await apiFetch(`${GUEST_BASE}/AddGuestUser`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: GUEST_DISPLAY_NAME, caseSeqs }),
+    body: JSON.stringify({ name: GUEST_DISPLAY_NAME, caseSeqs, memo: normalizeMemo(memo) }),
   })
   if (!res.ok) {
     throw new Error('게스트 계정 발급에 실패했습니다')
   }
 }
 
-// 조회권 수정 — accessList의 isAccess=true인 항목이 수정 후 최종 상태(false·누락은
-// 회수). 후보 전체를 명시적 true/false로 되돌린다.
-export async function updateGuestAccountAccess(
+// 조회권 + 비고 수정 — accessList의 isAccess=true인 항목이 수정 후 최종 상태(false·
+// 누락은 회수). 후보 전체를 명시적 true/false로 되돌린다.
+export async function updateGuestAccount(
   userSeq: number,
   accessList: { caseSeq: number; guardCode: string; isAccess: boolean }[],
+  memo?: string,
 ): Promise<void> {
   const res = await apiFetch(`${GUEST_BASE}/UpdateGuestCaseInfo`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userSeq, accessList }),
+    body: JSON.stringify({ userSeq, accessList, memo: normalizeMemo(memo) }),
   })
   if (!res.ok) {
     throw new Error('게스트 계정 수정에 실패했습니다')

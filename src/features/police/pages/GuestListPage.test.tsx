@@ -74,6 +74,34 @@ describe('GuestListPage', () => {
     expect(withinTable().getByText('ST101')).toBeInTheDocument()
   })
 
+  it('발급 시 비고를 입력하면 목록에 표시되고, 수정으로 값을 바꿀 수 있다', async () => {
+    loginAsStation()
+    renderPage()
+    await screen.findAllByText('GangnamGuest1')
+
+    fireEvent.click(screen.getByRole('button', { name: /게스트 계정 발급/ }))
+    const issueDialog = await screen.findByRole('dialog')
+    await within(issueDialog).findByText('26-01-강남경찰서 · ST101')
+    fireEvent.change(within(issueDialog).getByLabelText('비고'), {
+      target: { value: '강력팀 협조' },
+    })
+    fireEvent.click(within(issueDialog).getByRole('button', { name: '발급하기' }))
+
+    // 방금 만든 계정의 이름(번호)은 이 파일 안 다른 테스트 실행 순서에 따라
+    // 달라질 수 있어(같은 경찰서 시퀀스 공유) 이름 대신 비고 텍스트로 행을 찾는다.
+    await waitFor(() => expect(withinTable().getByText('강력팀 협조')).toBeInTheDocument())
+    const row = withinTable().getByText('강력팀 협조').closest('tr')!
+    fireEvent.pointerDown(within(row).getByRole('button', { name: '더보기' }))
+    fireEvent.click(await screen.findByRole('menuitem', { name: '수정' }))
+    const editDialog = await screen.findByRole('dialog')
+    const memoInput = await within(editDialog).findByLabelText('비고')
+    expect(memoInput).toHaveValue('강력팀 협조')
+    fireEvent.change(memoInput, { target: { value: '강력팀 협조 종료' } })
+    fireEvent.click(within(editDialog).getByRole('button', { name: '저장' }))
+
+    await waitFor(() => expect(withinTable().getByText('강력팀 협조 종료')).toBeInTheDocument())
+  })
+
   it('삭제하면 목록에서 사라진다', async () => {
     loginAsStation()
     renderPage()

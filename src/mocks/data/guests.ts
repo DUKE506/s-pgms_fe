@@ -15,6 +15,8 @@ interface GuestRecord {
   issuedAt: string
   password?: string
   mustChangePassword?: boolean
+  // 비고 — 어느 부서/협조 목적으로 쓰는지 (2026-09-14 신규).
+  memo?: string | null
 }
 
 const GUEST_USER_SEQ_BASE = 9000
@@ -107,7 +109,11 @@ function nextGuestUserSeq(): number {
   return guestAccounts.reduce((acc, g) => Math.max(acc, g.userSeq), GUEST_USER_SEQ_BASE) + 1
 }
 
-export function createGuestAccount(policeStation: string, caseIds: string[]): GuestRecord {
+export function createGuestAccount(
+  policeStation: string,
+  caseIds: string[],
+  memo?: string | null,
+): GuestRecord {
   const name = nextGuestName(policeStation)
   const record: GuestRecord = {
     id: name.toLowerCase(),
@@ -119,6 +125,7 @@ export function createGuestAccount(policeStation: string, caseIds: string[]): Gu
     password: name,
     // 최초 로그인 강제 변경 플로우(후속 항목) — 발급 시점엔 항상 true.
     mustChangePassword: true,
+    memo: memo ?? null,
   }
   guestAccounts.push(record)
   savePersisted(STORAGE_KEY, guestAccounts)
@@ -136,10 +143,15 @@ export function changeGuestAccountPassword(id: string, newPassword: string): Gue
   return record
 }
 
-export function updateGuestAccountCases(id: string, caseIds: string[]): GuestRecord | null {
+export function updateGuestAccount(
+  id: string,
+  caseIds: string[],
+  memo?: string | null,
+): GuestRecord | null {
   const record = guestAccounts.find((g) => g.id === id)
   if (!record) return null
   record.caseIds = caseIds
+  record.memo = memo ?? null
   savePersisted(STORAGE_KEY, guestAccounts)
   return record
 }

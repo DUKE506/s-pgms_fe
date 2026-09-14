@@ -3,13 +3,14 @@ import { CheckCircle2, Circle } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import {
   getGuestCaseAccess,
   issueGuestAccount,
   listGuestCaseCandidates,
-  updateGuestAccountAccess,
+  updateGuestAccount,
   type GuestAccount,
   type GuestCaseCandidate,
 } from '../api/guests'
@@ -55,6 +56,7 @@ function GuestCaseSelectionForm({
   })
 
   const [selectedSeqs, setSelectedSeqs] = useState<Set<number> | null>(null)
+  const [memo, setMemo] = useState(target.mode === 'edit' ? (target.guest.memo ?? '') : '')
 
   const candidates = candidatesQuery.data ?? []
   const accessRows = accessQuery.data ?? []
@@ -77,9 +79,9 @@ function GuestCaseSelectionForm({
           guardCode: r.guardCode,
           isAccess: selected.has(r.caseSeq),
         }))
-        return updateGuestAccountAccess(target.guest.userSeq, accessList)
+        return updateGuestAccount(target.guest.userSeq, accessList, memo)
       }
-      return issueGuestAccount([...selected])
+      return issueGuestAccount([...selected], memo)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['guests'] })
@@ -121,6 +123,20 @@ function GuestCaseSelectionForm({
             초기비밀번호는 아이디와 동일합니다
           </p>
         )}
+      </div>
+
+      <div>
+        <label htmlFor="guest-memo" className="mb-1.5 block text-sm font-semibold text-foreground">
+          비고
+        </label>
+        <Textarea
+          id="guest-memo"
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          maxLength={1000}
+          rows={2}
+          placeholder="사용 부서·협조 목적 등을 적어두면 나중에 알아보기 쉽습니다"
+        />
       </div>
 
       <div>

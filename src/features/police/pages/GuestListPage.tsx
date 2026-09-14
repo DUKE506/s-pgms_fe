@@ -116,6 +116,7 @@ function GuestListPage() {
                 <TableRow>
                   <TableHead>아이디</TableHead>
                   <TableHead>조회가능 경호건</TableHead>
+                  <TableHead>비고</TableHead>
                   <TableHead>발급일</TableHead>
                   <TableHead />
                 </TableRow>
@@ -125,6 +126,9 @@ function GuestListPage() {
                   <TableRow key={g.id}>
                     <TableCell>{g.name}</TableCell>
                     <TableCell>{visibleCases(g)}</TableCell>
+                    <TableCell className="max-w-[220px] truncate" title={g.memo ?? undefined}>
+                      {g.memo || '-'}
+                    </TableCell>
                     <TableCell>{formatDate(g.issuedAt)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end">{menuFor(g)}</div>
@@ -146,6 +150,7 @@ function GuestListPage() {
                   {menuFor(g)}
                 </div>
                 <div className="text-xs text-muted-foreground">{visibleCases(g)}</div>
+                {g.memo && <div className="text-xs text-muted-foreground">비고 {g.memo}</div>}
                 <div className="text-xs text-muted-foreground">발급일 {formatDate(g.issuedAt)}</div>
               </div>
             ))}

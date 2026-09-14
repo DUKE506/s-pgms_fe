@@ -183,10 +183,11 @@
 | 목록 조회 | `listGuestAccounts` | `GET User/Police/W/GetGuestUserList?groupSeq=` | ✅ `groupSeq` 필수(세션 값). `data` 평면 배열. `useYn=false`(중지) 행 숨김(exclusions). 행: `loginId`→아이디, `accessList[].guardCode`→"조회가능 경호건", `createDt`→발급일 |
 | 발급 후보 조회 | `listGuestCaseCandidates`(신규) | `GET GetGuestCaseList` | ✅ 서버가 소속·종결/취소 필터. `mgmtNo`에 경호코드 미포함 → `+guardCode` 재조합 |
 | 아이디 미리보기 | ~~`previewNextGuestAccount`~~ 제거 | — | ✅ issues #3 해소 — 프론트 UX 변경(발급 후 목록 재조회). EP 요청 안 함 |
-| 발급 | `issueGuestAccount` | `POST AddGuestUser` | ✅ `{name:"게스트"(고정), caseSeqs:int[]}`. 응답 `{data:true}`(아이디 미반환) |
+| 발급 | `issueGuestAccount` | `POST AddGuestUser` | ✅ `{name:"게스트"(고정), caseSeqs:int[], memo?}`. 응답 `{data:true}`(아이디 미반환) |
 | 수정 후보 조회 | `getGuestCaseAccess`(신규) | `GET GetGuestCaseDetail?userSeq=` | ✅ `{caseSeq,guardCode,isAccess}` — 라벨(mgmtNo) 없어 발급 후보와 머지. 타 경찰서 403 |
-| 조회권 수정 | `updateGuestAccountAccess` | `PATCH UpdateGuestCaseInfo` | ✅ `{userSeq, accessList:[{caseSeq,guardCode,isAccess}]}`. 후보 전체를 명시적 true/false로 |
+| 조회권 수정 | `updateGuestAccount` | `PATCH UpdateGuestCaseInfo` | ✅ `{userSeq, accessList:[{caseSeq,guardCode,isAccess}], memo?}`. 후보 전체를 명시적 true/false로 |
 | 삭제 | `deleteGuestAccount` | `POST DeleteGuestUser` | ✅ `{userSeq}`. 복구 불가. 타 경찰서 403 |
+| 비고(memo) | `listGuestAccounts`/`issueGuestAccount`/`updateGuestAccount` | `GetGuestUserList.memo` / `AddGuestUser.memo` / `UpdateGuestCaseInfo.memo` | ✅ **신규(2026-09-14, 사용자 요청)** — 어느 부서/협조 목적으로 쓰는 계정인지 표시하는 자유 텍스트(nullable, maxLength 1000). 백엔드가 이미 세 엔드포인트 모두에 필드를 추가해둔 상태(라이브 스웨거로 확인 — 로컬 `docs/api-swagger.json` 사본은 이 필드가 없는 낡은 버전이라 참고 시 주의). 목록에 "비고" 컬럼, 발급/수정 다이얼로그에 `Textarea` 추가. 빈 문자열은 `null`로 정규화해 전송 |
 
 #### 이력 조회 (`/history`, `/history/:id`)
 

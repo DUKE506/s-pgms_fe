@@ -5,7 +5,7 @@ import {
   deleteGuestAccount,
   guestAccounts,
   pruneTerminalCaseAssignments,
-  updateGuestAccountCases,
+  updateGuestAccount,
 } from '../data/guests'
 import { securityCases } from '../data/securityCases'
 
@@ -70,6 +70,7 @@ export const guestTestHandlers = [
         userName: g.name,
         useYn: true,
         createDt: g.issuedAt,
+        memo: g.memo ?? null,
         accessList: g.caseIds
           .map((cid) => securityCases.find((c) => c.id === cid))
           .filter((c): c is (typeof securityCases)[number] => Boolean(c))
@@ -112,13 +113,17 @@ export const guestTestHandlers = [
   http.post('/api/v1/User/Police/W/AddGuestUser', async ({ request }) => {
     const account = stationFromBearer(request)
     if (!account) return unauthorized()
-    const body = (await request.json()) as { name?: string; caseSeqs?: number[] }
+    const body = (await request.json()) as {
+      name?: string
+      caseSeqs?: number[]
+      memo?: string | null
+    }
     const caseIds = (body.caseSeqs ?? [])
       .map((seq) => caseIdFromSeq(seq))
       .filter((id): id is string => Boolean(id))
     // 아이디(loginId)는 서버가 자동 생성 — 더블도 기존 규칙(StationGuestN)을 유지하고
     // 넘어온 name(표시명)은 실 API처럼 받되 loginId에는 쓰지 않는다.
-    createGuestAccount(account.name, caseIds)
+    createGuestAccount(account.name, caseIds, body.memo)
     return ok(true)
   }),
 
@@ -128,6 +133,7 @@ export const guestTestHandlers = [
     const body = (await request.json()) as {
       userSeq: number
       accessList?: { caseSeq: number; isAccess: boolean }[]
+      memo?: string | null
     }
     const guest = guestAccounts.find((g) => g.userSeq === body.userSeq)
     if (!guest || guest.policeStation !== account.name) return forbidden()
@@ -135,7 +141,7 @@ export const guestTestHandlers = [
       .filter((a) => a.isAccess)
       .map((a) => caseIdFromSeq(a.caseSeq))
       .filter((id): id is string => Boolean(id))
-    updateGuestAccountCases(guest.id, caseIds)
+    updateGuestAccount(guest.id, caseIds, body.memo)
     return ok(true)
   }),
 

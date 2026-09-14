@@ -53,6 +53,41 @@
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
 
+- 2026-09-14: **[경찰서] 게스트 계정 관리 — 비고(memo) 필드 신규**(matrix #16, 사용자
+  요청). loop-backend iteration 아님 — 화면 단위 신규 필드 추가 패스. 게스트 계정의
+  용도(어느 부서에서/타 경찰서 협조로 쓰는지)를 남기는 자유 텍스트. 착수 전 라이브
+  스웨거를 다시 받아 확인 — 로컬 `docs/api-swagger.json` 사본은 낡아서 없었지만,
+  백엔드가 이미 `AddGuestUser`·`UpdateGuestCaseInfo`(둘 다 request) +
+  `GetGuestUserList`(response)에 `memo`(nullable string, maxLength 1000)를 추가해둔
+  상태였음(사용자 확인: "게스트 계정 등록할 때 memo 컬럼을 추가해놨다") — 백엔드 요청
+  없이 프론트만 반영.
+
+  구현: `GuestAccount`/`GuestUserRow`에 `memo` 추가, `issueGuestAccount`/
+  `updateGuestAccount`(구 `updateGuestAccountAccess`에서 개명 — 조회권 외에 비고도
+  다루게 돼서)에 `memo?` 파라미터 추가(빈 문자열은 `null`로 정규화해 전송).
+  `IssueGuestAccountDialog`(발급/수정 공용 폼)에 "비고" `Textarea` 추가 — 수정모드는
+  `target.guest.memo` prefill, 발급모드는 빈 값 시작. `GuestListPage`에 "비고" 컬럼
+  (데스크톱 테이블 4번째 열, `max-w-[220px] truncate` + `title`로 긴 텍스트 대응) +
+  모바일 카드 한 줄 추가(값 있을 때만). 테스트 더블(`mocks/data/guests.ts`,
+  `mocks/handlers/guests.ts`)도 동일 필드/함수명 반영.
+
+  테스트 작성 중 겪은 문제(앱 버그 아님, 기록용): 신규 테스트가 "다음 생성될 계정
+  이름은 GangnamGuest7"이라고 하드코딩했다가, 파일 안 앞선 테스트가 이미 GangnamGuest7을
+  만들어놔서(같은 경찰서 시퀀스 공유) GangnamGuest8이 생성돼 실패 — 이름 대신 방금
+  입력한 비고 텍스트로 행을 찾도록 수정해 실행 순서에 안전하게 함.
+
+  검증: `npm run test` 145/145(신규 1건) · lint(기존 warning 2) · build 통과. 실백엔드
+  (`SPoliceM5`)로 발급 시 비고 입력→목록 표시→수정으로 비고 변경→재조회 값 유지까지
+  브라우저(Playwright 드라이버) 실왕복 확인, 콘솔 에러 0. 검증 중 만든 테스트 계정은
+  정리(UI 삭제가 드라이버에서 걸려 curl로 직접 `DeleteGuestUser` 호출 — 기존 vitest
+  삭제 테스트는 145/145에 포함돼 정상 통과라 앱 버그는 아니고 드라이버 타이밍 이슈로
+  추정).
+
+  **문서**: `matrix.md` 게스트 계정 관리 섹션에 memo 행 추가, 함수명 변경
+  (`updateGuestAccountAccess`→`updateGuestAccount`) 반영. `docs/api-swagger.json`
+  로컬 사본은 포맷이 라이브와 크게 달라(줄바꿈 스타일) 전체 교체 시 diff 6000줄+
+  노이즈라 이번엔 보류 — 다음에 스웨거 동기화가 필요하면 별도로 처리.
+
 - 2026-09-14: **회신 반영 — `GetGuardCaseList` 담당자 `userSeq` 조인**(findings #1 완전
   종결, CARRYOVER A절). 사용자가 실백엔드 응답을 확인해달라고 요청 → curl 프로브로
   `userSeq`가 더는 `null`이 아니라 실값(`104` 등)으로 채워지는 것 확인, 코드가 아직 이름
