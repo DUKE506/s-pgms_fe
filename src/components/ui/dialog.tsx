@@ -56,15 +56,23 @@ function DialogContent({
   return (
     <DialogPortal>
       <DialogOverlay />
+      {/* 바깥 Content는 위치/최대높이만 담당 — 내용이 뷰포트보다 커지면
+          (모바일 키보드로 가용 높이가 줄어드는 경우 포함) 예전엔 스크롤할
+          방법 없이 화면 밖으로 넘쳤음(2026-09-14 발견). 실제 스크롤은 안쪽
+          div 하나로 분리해서 닫기 버튼은 스크롤과 무관하게 항상 우상단에
+          고정되게 한다. */}
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 flex max-h-[85dvh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl bg-popover text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
       >
-        {children}
+        {/* min-h-0: flex item 기본값(min-height:auto)이 내용 크기만큼 밀어내
+            부모의 max-h를 무시하고 커지는 걸 막아야 overflow-y-auto가 실제로
+            작동한다. */}
+        <div className="grid min-h-0 gap-4 overflow-y-auto p-4">{children}</div>
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button
