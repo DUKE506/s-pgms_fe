@@ -205,6 +205,7 @@ export const guardCaseTestHandlers = [
         mgmtNo: `${c.receiptNumber} ${c.securityCode}`,
         groupName: c.policeStation,
         userName: nameOfAssignee(c.assigneeId),
+        userSeq: c.assigneeId ? userSeqOf(c.assigneeId) : null,
         statusName: c.status,
         guardCaseStatus: GUARD_CASE_STATUS_CODE[c.status] ?? null,
         startDate: c.startDate,

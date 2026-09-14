@@ -20,11 +20,11 @@ function ManagerAssignedCasesDialog({
   cases,
   onOpenChange,
 }: ManagerAssignedCasesDialogProps) {
-  // GetGuardCaseList에 담당자 id가 없어 담당자명으로 매칭한다(동명이인 취약,
-  // exclusions.md / issues.md #1). 응답 자체가 진행중(배정·경호중·경호완료) 건만
-  // 담고 있어 종결/취소는 이미 빠져 있다 — 목록 화면 배정건수 기준과 동일.
+  // GetGuardCaseList가 담당자 userSeq를 이제 채워줘서(2026-09-14 회신, findings #1
+  // 🟢) id로 매칭한다. 응답 자체가 진행중(배정·경호중·경호완료) 건만 담고 있어
+  // 종결/취소는 이미 빠져 있다 — 목록 화면 배정건수 기준과 동일.
   const assignedCases = target
-    ? cases.filter((c) => c.assigneeName === target.name)
+    ? cases.filter((c) => c.assigneeId === String(target.userSeq))
     : []
 
   return (

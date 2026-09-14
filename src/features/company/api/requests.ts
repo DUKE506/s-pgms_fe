@@ -111,8 +111,11 @@ interface GuardCaseRow {
   caseSeq: number
   mgmtNo: string
   groupName: string
-  // 배정된 본부관리자 계정명(userName) — 담당자 id는 응답에 없다.
+  // 배정된 본부관리자 계정명(userName) — 표시 전용.
   userName: string
+  // 담당자 id. 2026-09-14까지 항상 null이었으나 백엔드 회신으로 값이 채워짐(findings #1
+  // userSeq 파트 🟢) — 이제 이름이 아니라 이 값으로 조인한다(동명이인 안전).
+  userSeq: number | null
   statusName: string
   // 2026-09-11부터 신규 — 0:배정 1:경호중 2:경호완료 3:종결 4:경호취소
   // (shared/lib/deployStatus.ts::resolveGuardCaseStatus 참고).
@@ -152,6 +155,7 @@ function guardCaseRowToSecurityCase(row: GuardCaseRow): SecurityCase {
     requester: { dept: '', position: '', name: '' },
     createdAt: '',
     assigneeName: row.userName || undefined,
+    assigneeId: row.userSeq != null ? String(row.userSeq) : undefined,
   }
 }
 

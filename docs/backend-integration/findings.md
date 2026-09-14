@@ -37,14 +37,27 @@
 
 ---
 
-## 1. 🟡 본부관리자 계정에 "소속 본부"와 "담당자 개인정보"를 둘 다 저장할 곳이 없음 — **본부 파트 종결(제외), 담당자 개인정보는 운영팀 문의 대기**
+## 1. 🟢 본부관리자 계정에 "소속 본부"와 "담당자 개인정보"를 둘 다 저장할 곳이 없음 — **전체 종결(2026-09-14)**
 
 **본부 파트 종결(2026-09-09, 사용자 확인)**: `USER_INFO.groupSeq/groupName`은 경찰 관계자용
 공유 컬럼이라 본사 계정은 항상 null — 본사에 "소속 본부" 개념을 두지 않기로 결정. 관리자
 계정 관리의 **"본부" 열 제거**(`ManagerAccountListPage` 헤더·셀·모바일), `ManagerAccount.branch`
 ·`Manager.branch` 필드 삭제, 담당자 배정 다이얼로그 2개의 `· {branch}` suffix 제거. → 본부
-소속 구조화(요청 1·3) 요청 취소. **담당자 개인정보(성명·직급·연락처) + `GetGuardCaseList`
-담당자 `userSeq` 조인**은 여전히 미해결 — 운영팀 문의 대기(B-2 나머지).
+소속 구조화(요청 1·3) 요청 취소.
+
+**담당자 개인정보 파트도 종결(2026-09-14, 사용자 결정)**: 성명/직급/연락처용 신규 컬럼
+(`MANAGER_NAME`/`MANAGER_PHONE` 등, 위 요청/제안 2번) 신설 요청 안 함 — 지금 형태(조직
+계정 공유 `NAME`/`PHONE`) 그대로 쓰기로 확정. DB 스키마 변경 요청 취소.
+
+`GetGuardCaseList` 담당자 `userSeq` 조인도 **해결됨(2026-09-14)** — 응답에 실제 값이
+채워져 옴(예: `userSeq:104`). `features/company/api/requests.ts`의 `GuardCaseRow`에
+`userSeq` 필드 추가, `guardCaseRowToSecurityCase`가 `assigneeId: String(row.userSeq)`로
+매핑 → `ManagerAccountListPage`(배정건수)·`ManagerAssignedCasesDialog`(담당경호 목록)
+둘 다 이름 매칭에서 id 매칭으로 전환(동명이인 위험 해소). 테스트 더블(`mocks/handlers/
+guardCase.ts`)도 `userSeq: userSeqOf(c.assigneeId)` 추가해 동형 검증. `npm run test`
+144/144·lint·build 통과, 실백엔드(StecM1)로 HS2본부(userSeq 104) 배정건수 10건과
+담당경호 다이얼로그 10건(caseSeq 29·52~58·61·62)이 정확히 일치하는 것까지 브라우저
+검증, 콘솔 에러 0. **findings #1 전체 종결.**
 
 ---
 
@@ -87,9 +100,10 @@ childGroupName}]}]`). 이건 **경찰 조직(지방청/경찰서) 축**이라 �
 **재확인(2026-09-07, matrix #11 관리자 계정 관리 연동)**: `GET User/Stec/W/GetStecUserList`
 실측에서도 `groupSeq`/`groupName` 전부 `null` — 본부 소속을 구조화해 조회할 방법 여전히
 없음. `UpdateUser` DTO에도 본부(그룹) 필드 없음. → 화면의 "본부" 열은 "-" 고정
-(`exclusions.md`). **B-2 섹션 종료 시 일괄 요청에 포함**할 항목:
-1. `USER_INFO`에 본부(`BASIC_CODE` 8~14) FK 컬럼 신설 + `GetStecUserList`·`UpdateUser`
-   응답/입력에 반영 (위 요청/제안 1·3항 그대로).
+(`exclusions.md`). **B-2 섹션 종료 시 일괄 요청에 포함**할 항목(1번은 2026-09-09 결정으로
+취소, 2번만 유효):
+1. ~~`USER_INFO`에 본부(`BASIC_CODE` 8~14) FK 컬럼 신설 + `GetStecUserList`·`UpdateUser`
+   응답/입력에 반영~~ — **취소(2026-09-09)**, 위 본부 파트 종결 참고.
 2. **`GetGuardCaseList` 행에 담당자 `userSeq` 채워달라** — 필드(`userSeq`, `managerName`)는
    응답 스키마에 이미 있는데 값이 `null`이다. 지금은 담당자명(`userName`) 문자열 매칭으로
    배정건수·담당경호 목록을 계산 중(동명이인 취약, `exclusions.md`). id를 주면 정확한

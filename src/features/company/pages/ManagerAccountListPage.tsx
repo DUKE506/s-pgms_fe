@@ -51,10 +51,10 @@ function ManagerAccountListPage() {
     // 403(본부관리자)·기타 오류 모두 재시도 의미 없음 — 즉시 안내로.
     retry: false,
   })
-  // 배정건수 열 + 담당경호 다이얼로그용. GetGuardCaseList에 담당자 id가 없어
-  // 담당자명(assigneeName === 관리자 userName)으로 매칭한다 — 동명이인 취약
-  // (exclusions.md, issues.md #1). GetGuardCaseList는 진행중(배정·경호중·경호완료)
-  // 건만 주므로 종결/취소 제외는 자동으로 맞는다. 본사 경호목록 화면과 캐시 공유.
+  // 배정건수 열 + 담당경호 다이얼로그용. GetGuardCaseList가 담당자 userSeq를 이제
+  // 채워줘서(2026-09-14 회신, findings #1 🟢) id로 매칭한다. GetGuardCaseList는
+  // 진행중(배정·경호중·경호완료) 건만 주므로 종결/취소 제외는 자동으로 맞는다.
+  // 본사 경호목록 화면과 캐시 공유.
   const casesQuery = useQuery({ queryKey: ['security-cases-all'], queryFn: listSecurityCases })
 
   const [search, setSearch] = useState('')
@@ -68,7 +68,7 @@ function ManagerAccountListPage() {
   const filtered = accounts.filter((a) => !search.trim() || a.name.includes(search.trim()))
 
   function assignedCountOf(account: ManagerAccount): number {
-    return cases.filter((c) => c.assigneeName === account.name).length
+    return cases.filter((c) => c.assigneeId === String(account.userSeq)).length
   }
 
   function menuFor(account: ManagerAccount) {
