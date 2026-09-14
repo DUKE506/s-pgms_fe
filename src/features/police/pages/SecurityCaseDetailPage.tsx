@@ -167,24 +167,30 @@ function SecurityCaseDetailPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <DetailHeader
-        breadcrumb={managementNumber ? `경호목록 / ${managementNumber}` : '경호목록'}
-        fallbackTo="/security-cases"
-      />
+      {/* 모바일 목업(docs/mobile-ui)은 breadcrumb 줄과 제목+뱃지 줄을 gap 12px로
+          묶은 한 블록으로 그린다 — 데스크톱은 기존 레이아웃(main의 gap-4) 그대로
+          두고 싶어서 xl에서만 이 wrapper를 `contents`로 없애 자식 두 개가 main에
+          직접 참여하게 한다. */}
+      <div className="flex flex-col gap-3 xl:contents">
+        <DetailHeader
+          breadcrumb={managementNumber ? `경호목록 / ${managementNumber}` : '경호목록'}
+          fallbackTo="/security-cases"
+        />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3.5">
-          <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
-          <StatusBadge status={securityCase.status} className="shrink-0" />
-        </div>
-
-        {/* 목업(s5)은 이 액션 버튼들을 모바일에서 헤더가 아니라 스크롤 맨 아래
-            전체폭 버튼으로 배치한다(s5m) — 데스크톱만 헤더에 유지 */}
-        {!isReadOnlyViewer && (
-          <div className="hidden flex-wrap items-center gap-2.5 xl:flex">
-            <ActionButtons {...actionProps} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3.5">
+            <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
+            <StatusBadge status={securityCase.status} className="shrink-0" />
           </div>
-        )}
+
+          {/* 목업(s5)은 이 액션 버튼들을 모바일에서 헤더가 아니라 스크롤 맨 아래
+              전체폭 버튼으로 배치한다(s5m) — 데스크톱만 헤더에 유지 */}
+          {!isReadOnlyViewer && (
+            <div className="hidden flex-wrap items-center gap-2.5 xl:flex">
+              <ActionButtons {...actionProps} />
+            </div>
+          )}
+        </div>
       </div>
 
       <StatusStepper status={securityCase.status} />

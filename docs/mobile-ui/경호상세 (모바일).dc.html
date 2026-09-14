@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+  body{margin:0;background:#e2e8f0;font-family:Pretendard;display:flex;align-items:center;justify-content:center;min-height:100vh}
+  a{color:#2563eb}
+  a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="padding:24px">
+  <div style="width:390px;height:844px;background:#eef1f6;border-radius:36px;overflow:hidden;box-shadow:0 20px 50px rgba(15,23,42,.18);display:flex;flex-direction:column;border:8px solid #0f172a">
+    <div style="padding:20px 18px 14px;background:#eef1f6;flex-shrink:0;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <span style="font:500 13px Pretendard;color:#94a3b8">강남경찰서</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span style="font:700 24px Pretendard;color:#0f172a;letter-spacing:-.02em">26-01-강남서 · ST001</span>
+        <span style="background:#15AB59;color:#fff;font:700 11px Pretendard;padding:5px 12px;border-radius:8px;flex-shrink:0">경호중</span>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:6px 16px 16px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none;-ms-overflow-style:none">
+      <div style="background:#fff;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 14px rgba(15,23,42,.05)">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+          <div style="width:22px;height:22px;border-radius:50%;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font:700 10px Pretendard">✓</div>
+          <div style="flex:1;height:2px;background:#0f172a"></div>
+          <div style="width:22px;height:22px;border-radius:50%;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font:700 10px Pretendard">✓</div>
+          <div style="flex:1;height:2px;background:#0f172a"></div>
+          <div style="width:26px;height:26px;border-radius:50%;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font:700 10px Pretendard;box-shadow:0 0 0 3px rgba(15,23,42,.15)">●</div>
+          <div style="flex:1;height:2px;background:#e2e8f0"></div>
+          <div style="width:22px;height:22px;border-radius:50%;background:#e2e8f0;color:#94a3b8;display:flex;align-items:center;justify-content:center;font:700 10px Pretendard">4</div>
+          <div style="flex:1;height:2px;background:#e2e8f0"></div>
+          <div style="width:22px;height:22px;border-radius:50%;background:#e2e8f0;color:#94a3b8;display:flex;align-items:center;justify-content:center;font:700 10px Pretendard">5</div>
+        </div>
+        <div style="text-align:center;font:700 12px Pretendard;color:#0f172a">경호중 (3/5단계)</div>
+      </div>
+      <div style="background:#fff;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 4px 14px rgba(15,23,42,.05)">
+        <div style="font:700 13px Pretendard;color:#1e293b">기본정보</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font:400 13px Pretendard;color:#94a3b8">대상자명</span><span style="color:#1e293b;font:600 14px Pretendard">홍○○</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font:400 13px Pretendard;color:#94a3b8">경호시작</span><span style="color:#1e293b;font:600 14px Pretendard">2026.01.05</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font:400 13px Pretendard;color:#94a3b8">경호종료</span><span style="color:#1e293b;font:600 14px Pretendard">2026.01.19</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font:400 13px Pretendard;color:#94a3b8">배치시간</span><span style="color:#1e293b;font:600 14px Pretendard">매일 09:00 ~ 18:00</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;padding:14px;background:#0f172a;color:#fff;border-radius:12px;font:600 13px Pretendard">연장/단축</div>
+        <div style="text-align:center;padding:14px;background:#f1f5f9;color:#cbd5e1;border-radius:12px;font:600 13px Pretendard">종결</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:446,&quot;height&quot;:900}}"></script>
+</body>
+</html>

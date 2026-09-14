@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router'
 import { ClipboardList, History, LayoutDashboard, UserCog, Users } from 'lucide-react'
 import Sidebar, { type SidebarNavItem } from '@/shared/components/Sidebar'
-import MobileHeader from '@/shared/components/MobileHeader'
-import { useAuthStore } from '@/features/auth/store/authStore'
-import { logout } from '@/features/auth/api/auth'
+import { useLogout } from '@/features/auth/lib/useLogout'
 
 // 관리자 계정 관리(Phase 3.6 항목2)는 본부관리자도 전체 목록을 조회할 수
 // 있어야 한다고 재확정(2026-08-31)돼 역할 구분 없이 전체 본사 계정에
@@ -22,22 +19,17 @@ interface CompanyAppShellProps {
 }
 
 function CompanyAppShell({ children }: CompanyAppShellProps) {
-  const navigate = useNavigate()
-
-  async function handleLogout() {
-    await logout()
-    useAuthStore.getState().logout()
-    // 로그인 화면 통합(2026-09-11)으로 본사도 단일 로그인 경로(/)로 이동.
-    navigate('/')
-  }
+  const handleLogout = useLogout()
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar items={NAV_ITEMS} logoLabel="PGMS" userLabel="본사" onLogout={handleLogout} />
-      <div className="min-w-0 flex-1">
-        <MobileHeader userLabel="본사" onLogout={handleLogout} />
-        {children}
-      </div>
+      <Sidebar
+        items={NAV_ITEMS}
+        logoLabel="Safety Link"
+        onLogout={handleLogout}
+        settingsHref="/admin/settings"
+      />
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   )
 }

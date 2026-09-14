@@ -23,6 +23,8 @@ import CompanyHistoryListPage from '../features/company/pages/HistoryListPage'
 import CompanyHistoryDetailPage from '../features/company/pages/HistoryDetailPage'
 import GuestListPage from '../features/police/pages/GuestListPage'
 import ManagerAccountListPage from '../features/company/pages/ManagerAccountListPage'
+import SettingsPage from '../shared/pages/SettingsPage'
+import DashboardPage from '../features/police/pages/DashboardPage'
 
 const POLICE_DASHBOARD: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_HISTORY: Role[] = ['본청', '지역청', '경찰서']
@@ -36,16 +38,6 @@ const COMPANY_ALL: Role[] = ['시스템관리자', '운영관리자', '본부관
 // 본부관리자는 "본인이 배정받은 경호건"만 조회/처리 가능 — 배치요청 목록/담당자
 // 배정은 그 위 권한(시스템관리자/운영관리자)만 접근 (project-overview.md 계정 권한 체계)
 const COMPANY_ADMIN: Role[] = ['시스템관리자', '운영관리자']
-
-function policeScreen(allow: Role[], label: string, screenIds: string[]): ReactNode {
-  return (
-    <ProtectedRoute allow={allow}>
-      <PoliceAppShell>
-        <ScreenPlaceholder label={label} screenIds={screenIds} />
-      </PoliceAppShell>
-    </ProtectedRoute>
-  )
-}
 
 function companyScreen(allow: Role[], label: string, screenIds: string[]): ReactNode {
   return (
@@ -62,7 +54,16 @@ export const routes: RouteObject[] = [
   // 이미 하나로 취급하고 있어(roadmap Phase 5 백로그 참고) 화면을 나눌 이유가 없었음.
   // 역할별 이동은 LoginPage 내부에서 getDefaultRouteForRole로 그대로 처리.
   { path: '/', element: <LoginPage /> },
-  { path: '/dashboard', element: policeScreen(POLICE_DASHBOARD, '현황', ['1', '2']) },
+  {
+    path: '/dashboard',
+    element: (
+      <ProtectedRoute allow={POLICE_DASHBOARD}>
+        <PoliceAppShell>
+          <DashboardPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
   {
     path: '/history',
     element: (
@@ -129,6 +130,18 @@ export const routes: RouteObject[] = [
       <ProtectedRoute allow={POLICE_STATION_ONLY}>
         <PoliceAppShell>
           <GuestListPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    // 전역 상단 헤더 폐기(2026-09-14)로 없어진 로그아웃 진입점 — 모바일 하단
+    // nav 설정 아이콘에서 진입. 목업에 없는 신규 화면, 역할 무관 전체 허용.
+    path: '/settings',
+    element: (
+      <ProtectedRoute allow={POLICE_DETAIL_VIEWERS}>
+        <PoliceAppShell>
+          <SettingsPage />
         </PoliceAppShell>
       </ProtectedRoute>
     ),
@@ -237,6 +250,18 @@ export const routes: RouteObject[] = [
       <ProtectedRoute allow={COMPANY_ALL}>
         <CompanyAppShell>
           <ManagerAccountListPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    // 전역 상단 헤더 폐기(2026-09-14)로 없어진 로그아웃 진입점 — 경찰 쪽
+    // /settings와 동일한 이유·컴포넌트(SettingsPage 재사용).
+    path: '/admin/settings',
+    element: (
+      <ProtectedRoute allow={COMPANY_ALL}>
+        <CompanyAppShell>
+          <SettingsPage />
         </CompanyAppShell>
       </ProtectedRoute>
     ),

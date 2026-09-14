@@ -83,7 +83,12 @@ describe('PoliceSecurityCaseListPage', () => {
     renderPage()
     await screen.findAllByText('26-02-강남경찰서 · 접수')
 
-    fireEvent.click(screen.getByRole('button', { name: '신규 접수' }))
+    // 모바일 목업 반영(2026-09-14)으로 제목 옆에 같은 이름의 아이콘 버튼이
+    // 하나 더 생겨(xl:hidden) 데스크톱 텍스트 버튼(hidden xl:flex)과 접근성
+    // 이름이 겹친다 — jsdom은 반응형 CSS를 평가하지 않아 둘 다 잡히므로,
+    // 기존 ActionButtons 모바일/데스크톱 중복과 같은 방식으로 첫 번째(제목
+    // 옆 아이콘 버튼)를 고른다.
+    fireEvent.click(screen.getAllByRole('button', { name: '신규 접수' })[0])
 
     expect(await screen.findByText('신규 접수 도착')).toBeInTheDocument()
   })

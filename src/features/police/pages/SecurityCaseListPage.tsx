@@ -109,11 +109,27 @@ function SecurityCaseListPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <div className="flex flex-col gap-1">
-        <p className="text-xs text-muted-foreground">
-          {jurisdiction ? `${jurisdiction} / ${user?.name}` : user?.name}
-        </p>
-        <h1 className="text-xl font-bold text-foreground">경호목록</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-muted-foreground">
+            {jurisdiction ? `${jurisdiction} / ${user?.name}` : user?.name}
+          </p>
+          <h1 className="text-xl font-bold text-foreground">경호목록</h1>
+        </div>
+
+        {/* 모바일 목업(docs/mobile-ui) 패턴 — 신규접수를 제목 옆 "+" 아이콘
+            버튼으로. 데스크톱은 기존처럼 필터줄의 "신규 접수" 텍스트 버튼
+            유지(아래 xl:flex 블록), 게스트는 조회 전용이라 여기서도 숨김. */}
+        {user?.role !== '게스트' && (
+          <button
+            type="button"
+            onClick={() => navigate('/security-cases/new')}
+            aria-label="신규 접수"
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground xl:hidden"
+          >
+            <Plus className="size-4.5" />
+          </button>
+        )}
       </div>
 
       {casesQuery.isSuccess && cases.length > 0 && (
@@ -157,7 +173,7 @@ function SecurityCaseListPage() {
         </Card>
       )}
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
         <div className="flex min-w-0 gap-2 overflow-x-auto">
           <button
             type="button"
@@ -190,7 +206,9 @@ function SecurityCaseListPage() {
           ))}
         </div>
 
-        <div className="flex gap-2.5">
+        {/* 검색+신규접수 텍스트 버튼은 데스크톱 전용 — 모바일 목업(docs/mobile-ui)엔
+            검색 인풋 자체가 없고, 신규접수는 위 제목 옆 "+" 아이콘 버튼이 대신함. */}
+        <div className="hidden gap-2.5 xl:flex">
           <div className="relative flex-1 sm:max-w-64">
             <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
