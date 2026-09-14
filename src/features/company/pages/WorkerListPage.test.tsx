@@ -77,7 +77,10 @@ describe('WorkerListPage', () => {
     renderPage()
     await screen.findAllByText('최민준')
 
-    fireEvent.click(screen.getByRole('button', { name: /근무자 등록/ }))
+    // 모바일 목업 반영(2026-09-14)으로 제목 옆에 같은 이름의 아이콘 버튼이
+    // 하나 더 생겨(xl:hidden) 데스크톱 텍스트 버튼(hidden xl:flex)과 접근성
+    // 이름이 겹친다 — 기존 신규접수 버튼 중복과 같은 방식으로 첫 번째를 고른다.
+    fireEvent.click(screen.getAllByRole('button', { name: /근무자 등록/ })[0])
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
 
     const registerButton = screen.getByRole('button', { name: '등록' })

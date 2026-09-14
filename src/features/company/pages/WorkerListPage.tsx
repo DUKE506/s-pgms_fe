@@ -40,13 +40,26 @@ function WorkerListPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <h1 className="text-xl font-bold text-foreground">근무자 목록</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-foreground">근무자 목록</h1>
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+        {/* 목록형 헤더 규칙(docs/mobile-ui) — 제목 옆 모바일 전용 "+" 아이콘. */}
+        <button
+          type="button"
+          onClick={() => setDialogOpen(true)}
+          aria-label="근무자 등록"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground xl:hidden"
+        >
+          <Plus className="size-4.5" />
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
         <span className="inline-flex h-9 w-fit shrink-0 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground">
           전체 {workers.length}
         </span>
-        <div className="flex gap-2.5">
+        {/* 검색+데스크톱 등록 버튼은 xl 이상 전용. */}
+        <div className="hidden gap-2.5 xl:flex">
           <div className="relative sm:w-64">
             <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input

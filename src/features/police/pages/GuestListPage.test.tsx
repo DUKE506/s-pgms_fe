@@ -63,7 +63,10 @@ describe('GuestListPage', () => {
     renderPage()
     await screen.findAllByText('GangnamGuest1')
 
-    fireEvent.click(screen.getByRole('button', { name: /게스트 계정 발급/ }))
+    // 모바일 목업 반영(2026-09-14)으로 제목 옆에 같은 이름의 아이콘 버튼이
+    // 하나 더 생겨(xl:hidden) 데스크톱 텍스트 버튼(hidden xl:flex)과 접근성
+    // 이름이 겹친다 — 기존 신규접수 버튼 중복과 같은 방식으로 첫 번째를 고른다.
+    fireEvent.click(screen.getAllByRole('button', { name: /게스트 계정 발급/ })[0])
     const dialog = await screen.findByRole('dialog')
 
     // 다이얼로그가 발급 후보(GetGuestCaseList)를 직접 조회하므로 로드를 기다린다.
@@ -79,7 +82,10 @@ describe('GuestListPage', () => {
     renderPage()
     await screen.findAllByText('GangnamGuest1')
 
-    fireEvent.click(screen.getByRole('button', { name: /게스트 계정 발급/ }))
+    // 모바일 목업 반영(2026-09-14)으로 제목 옆에 같은 이름의 아이콘 버튼이
+    // 하나 더 생겨(xl:hidden) 데스크톱 텍스트 버튼(hidden xl:flex)과 접근성
+    // 이름이 겹친다 — 기존 신규접수 버튼 중복과 같은 방식으로 첫 번째를 고른다.
+    fireEvent.click(screen.getAllByRole('button', { name: /게스트 계정 발급/ })[0])
     const issueDialog = await screen.findByRole('dialog')
     await within(issueDialog).findByText('26-01-강남경찰서 · ST101')
     fireEvent.change(within(issueDialog).getByLabelText('비고'), {

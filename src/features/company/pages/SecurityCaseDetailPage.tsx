@@ -81,19 +81,19 @@ function SecurityCaseDetailPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <DetailHeader
-        breadcrumb={
-          '경호관리' +
-          (managementNumber ? ` / ${managementNumber}` : '') +
-          (editingBaseInfo ? ' / 경호계획서 정보 등록' : '')
-        }
-        fallbackTo="/admin/security-cases"
-      />
+      {/* 모바일 목업(docs/mobile-ui)은 breadcrumb 줄과 제목+뱃지 줄을 gap
+          12px로 묶은 한 블록으로 그린다 — 데스크톱은 기존 레이아웃 그대로
+          두려고 xl에서만 이 wrapper를 `contents`로 없앤다(경찰 상세와 동일). */}
+      <div className="flex flex-col gap-3 xl:contents">
+        <DetailHeader
+          breadcrumb={
+            '경호관리' +
+            (managementNumber ? ` / ${managementNumber}` : '') +
+            (editingBaseInfo ? ' / 경호계획서 정보 등록' : '')
+          }
+          fallbackTo="/admin/security-cases"
+        />
 
-      {/* BaseInfoForm(폼)은 목업상 760px로 좁게 디자인돼 있어 자체적으로
-          mx-auto max-w-3xl을 갖고 있음 — 여기선 폭을 제한하지 않아야
-          요약/스케줄/첨부 뷰가 XL에서 전체 폭을 쓴다 */}
-      <div className="flex flex-col gap-5">
         {!editingBaseInfo && (
           <div className="flex flex-wrap items-center gap-3.5">
             <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
@@ -118,7 +118,12 @@ function SecurityCaseDetailPage() {
             )}
           </div>
         )}
+      </div>
 
+      {/* BaseInfoForm(폼)은 목업상 760px로 좁게 디자인돼 있어 자체적으로
+          mx-auto max-w-3xl을 갖고 있음 — 여기선 폭을 제한하지 않아야
+          요약/스케줄/첨부 뷰가 XL에서 전체 폭을 쓴다 */}
+      <div className="flex flex-col gap-5">
         {editingBaseInfo ? (
           <BaseInfoForm
             securityCase={securityCase}

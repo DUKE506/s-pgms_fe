@@ -121,8 +121,9 @@ function ManagerAccountListPage() {
         <h1 className="text-xl font-bold text-foreground">관리자 계정 관리</h1>
       </div>
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-end">
-        <div className="relative sm:w-64">
+      {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색은 데스크톱 전용. */}
+      <div className="hidden xl:flex xl:items-center xl:justify-end">
+        <div className="relative xl:w-64">
           <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="이름 검색"

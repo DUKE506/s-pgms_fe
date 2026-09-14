@@ -233,21 +233,24 @@ function WorkerDetailPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <DetailHeader
-        breadcrumb={worker ? `근무자 / ${worker.name}` : '근무자'}
-        fallbackTo="/admin/workers"
-      />
+      {/* 모바일 목업(docs/mobile-ui) 헤더 패턴 — 경찰 경호상세와 동일 적용 */}
+      <div className="flex flex-col gap-3 xl:contents">
+        <DetailHeader
+          breadcrumb={worker ? `근무자 / ${worker.name}` : '근무자'}
+          fallbackTo="/admin/workers"
+        />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-bold text-foreground">{worker?.name ?? '근무자'}</h1>
-        {worker && (
-          <>
-            <span className="text-muted-foreground">·</span>
-            <span className="text-xs font-medium text-muted-foreground">
-              사번 {worker.employeeId}
-            </span>
-          </>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl font-bold text-foreground">{worker?.name ?? '근무자'}</h1>
+          {worker && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-xs font-medium text-muted-foreground">
+                사번 {worker.employeeId}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col gap-6 xl:flex-row xl:items-start">

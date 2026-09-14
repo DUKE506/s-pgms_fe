@@ -80,7 +80,9 @@ function RequestListPage() {
 
       <SecurityCaseTabs active="배치요청" />
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+      {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색·필터는 데스크톱 전용, 모바일은
+          탭+리스트만. */}
+      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center">
         <Select
           value={jurisdictionFilter}
           onValueChange={(v) => {

@@ -124,7 +124,10 @@ function HistoryListPage() {
         <h1 className="text-xl font-bold text-foreground">이력 조회</h1>
       </div>
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+      {/* 모바일 목업(docs/mobile-ui)엔 상태 칩 정도만 있고 이 화면 같은 다중
+          셀렉트+기간+검색 필터는 없음 — 경호목록과 같은 규칙(검색·필터는
+          데스크톱 전용)을 적용해 xl 이상에서만 노출. */}
+      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center">
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
           <SelectTrigger className="w-full bg-card sm:w-32" aria-label="최종상태 선택">
             <SelectValue />

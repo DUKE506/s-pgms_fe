@@ -74,13 +74,26 @@ function GuestListPage() {
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <div className="flex flex-col gap-1">
-        <p className="text-xs text-muted-foreground">{user?.name}</p>
-        <h1 className="text-xl font-bold text-foreground">게스트 계정 관리</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-muted-foreground">{user?.name}</p>
+          <h1 className="text-xl font-bold text-foreground">게스트 계정 관리</h1>
+        </div>
+
+        {/* 목록형 헤더 규칙(docs/mobile-ui) — 제목 옆 모바일 전용 "+" 아이콘. */}
+        <button
+          type="button"
+          onClick={() => setDialogState({ mode: 'issue' })}
+          aria-label="게스트 계정 발급"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground xl:hidden"
+        >
+          <Plus className="size-4.5" />
+        </button>
       </div>
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-end">
-        <div className="relative sm:w-64">
+      {/* 검색+데스크톱 발급 버튼은 xl 이상 전용. */}
+      <div className="hidden gap-2.5 xl:flex xl:items-center xl:justify-end">
+        <div className="relative xl:w-64">
           <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="아이디 검색"

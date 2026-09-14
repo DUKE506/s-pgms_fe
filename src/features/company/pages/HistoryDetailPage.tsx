@@ -78,14 +78,17 @@ function HistoryDetailPage() {
 
   return (
     <main className="flex flex-col gap-5 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
-      <DetailHeader
-        breadcrumb={managementNumber ? `이력 조회 / ${managementNumber}` : '이력 조회'}
-        fallbackTo="/admin/history"
-      />
+      {/* 모바일 목업(docs/mobile-ui) 헤더 패턴 — 경찰 경호상세와 동일 적용 */}
+      <div className="flex flex-col gap-3 xl:contents">
+        <DetailHeader
+          breadcrumb={managementNumber ? `이력 조회 / ${managementNumber}` : '이력 조회'}
+          fallbackTo="/admin/history"
+        />
 
-      <div className="flex flex-wrap items-center gap-3.5">
-        <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
-        <StatusBadge status={c.status} />
+        <div className="flex flex-wrap items-center gap-3.5">
+          <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
+          <StatusBadge status={c.status} />
+        </div>
       </div>
 
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start">

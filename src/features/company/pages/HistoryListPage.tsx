@@ -85,7 +85,8 @@ function HistoryListPage() {
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
       <h1 className="text-xl font-bold text-foreground">이력 조회</h1>
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+      {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색·필터는 데스크톱 전용. */}
+      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center">
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
           <SelectTrigger className="w-full bg-card sm:w-32" aria-label="최종상태 선택">
             <SelectValue />
