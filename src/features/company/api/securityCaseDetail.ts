@@ -126,8 +126,6 @@ interface GuardCaseDetailData {
   summary5: string | null
   summary5Date: string | null
   destoryDocDownloadYn: boolean
-  // 대표근무자(기본 근무자)만 — 이름뿐, guardSeq 없음.
-  guardUserList: { guardName: string }[]
 
   // 테스트 더블(mocks/handlers/guardCaseDetail.ts)만 채우는 필드 — 실제 응답엔 없다.
   // 배정 이후 상태(baseInfo/schedule/attachments)까지 갖춘 화면 회귀를 vitest에서
@@ -141,6 +139,8 @@ interface CaseGuardRow {
   sabun: string
   deptName: string | null
   isAssigned: boolean
+  // 대표근무자 여부 — 2026-09-14 백엔드가 실값으로 채워주기 시작(findings #12 해소).
+  isRepresentative: boolean
   phone: string | null
 }
 
@@ -247,16 +247,15 @@ function toHeader(id: string, d: GuardCaseDetailData): SecurityCase {
 }
 
 function toBaseInfo(d: GuardCaseDetailData, guards: CaseGuardRow[]): CaseBaseInfo {
-  // 대표근무자 여부는 조회에 플래그가 없다 — guardUserList(대표만, 이름뿐)에
-  // 이름이 있으면 대표로 본다. 동명이인 위험은 감수(exclusions, issues #12).
-  const representativeNames = new Set(d.guardUserList.map((g) => g.guardName))
   return {
     workHours: `${hhmm(d.startTime)} ~ ${hhmm(d.endTime)}`,
     defaultWorkers: guards
       .filter((g) => g.isAssigned)
       .map((g) => ({
         workerId: String(g.guardSeq),
-        isDefault: representativeNames.has(g.name),
+        // 2026-09-14부터 GetCaseGuardList가 실값을 준다(findings #12 해소) — 예전엔
+        // guardUserList(대표만, 이름뿐)에 이름이 있으면 대표로 추정했음(동명이인 취약).
+        isDefault: g.isRepresentative,
       })),
     investigator: d.investigator ?? '',
     victimOfficer: d.responsibleOfficer ?? '',

@@ -612,13 +612,21 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 
 ---
 
-## 12. 🟡 [본사] 경호 상세 — 조회에서 빠지는 저장값들 (대표근무자 플래그 / ~~그룹 메모~~)
+## 12. 🟢 [본사] 경호 상세 — 조회에서 빠지는 저장값들 (~~대표근무자 플래그~~ / ~~그룹 메모~~) → **전부 해결**
+
+**대표근무자 `isRepresentative` 파트 해결(2026-09-14)**: 백엔드가 `GetCaseGuardList` 응답
+항목에 `isRepresentative`를 추가(요청대로 `guardSeq`는 이미 있었음). 프론트 `toBaseInfo`가
+`guardUserList` 이름 매칭 추정 로직을 버리고 `g.isRepresentative` 실값을 바로 쓰도록 전환
+(`features/company/api/securityCaseDetail.ts`) — 동명이인 취약점 해소. 더는 안 쓰는
+`GetGuardCaseDetail.guardUserList`(이름뿐) 의존도 함께 제거. 실측: caseSeq 29·51 둘 다
+`isRepresentative` 실값 확인(`GuardCase-Stec-GetCaseGuardList` 프로브 재실행,
+`local/_probe-recheck-isRep-history.sh`). 테스트 더블(`mocks/handlers/guardCaseDetail.ts`)도
+`defaultWorkers[].isDefault`에서 `isRepresentative` 파생하도록 갱신. **findings #12 전체 종결.**
 
 **그룹 메모(특이사항) 파트 해결(2026-09-10)**: 백엔드가 `GetCaseSchedule` 응답 그룹 항목에
 `memo`를 추가. 프론트 `toWorkSchedule`이 `note: ''` 하드코딩하던 것을 `note: g.memo ?? ''`로
 전환, 경호상세 화면의 근무조 "특이사항"에 저장값이 뜬다. `PatchScheduleGroup.memo` →
-`GetCaseSchedule.memo` 왕복 실측(2026-09-10). **대표근무자 `isRepresentative` 파트는 여전히
-미해결** — 운영팀 문의 대기(B-2 나머지).
+`GetCaseSchedule.memo` 왕복 실측(2026-09-10).
 
 **발견 경위**: 화면9 연동(2026-09-04), 조회 5종 + 쓰기 3종 실측.
 
@@ -1728,20 +1736,39 @@ GetDeployDetail*`(배치요구서 기간 보유)을 부르면 **403**(2026-09-04
 
 ### GET History/Police/W/GetHistoryList · GetHistoryDetail — [경찰서] 이력 조회 (matrix 1번)
 
-#### 상세에 사건유형·5개 조치·배치장소가 없음
+#### 상세에 사건유형·5개 조치·배치장소가 없음 → **사건유형·5개 조치 둘 다 해결(2026-09-14), 배치장소만 의도적 미표시**
 - **왜 제외**: `GetHistoryDetail` 응답에 `caseType`(사건유형), 안전/긴급응급/잠정/긴급임시/
   임시조치와 각 적용기간, 배치장소가 없다. 화면(`police/pages/HistoryDetailPage`)엔 칸이 있음.
   → 사건유형은 `'사건미접수'` 플레이스홀더로, 5개 조치는 "-"로 표시(배치장소는 이 화면이
   원래 안 보여줌). 취소 건은 원래 경호계획이 없던 상태라 무관, 종결 건은 실제 갭.
 - **사용자가 잃는 것**: 종결 이력 상세에서 어떤 조치가 적용됐는지·사건유형을 못 봄
   (현재 실서버에 종결 건 0개라 영향 없음).
-- **연동 커밋 / 해소 예정**: (이번 iteration 커밋) / 종결 데이터 확보 후 재확인, 갭이 남으면
-  issues 신규(본사 `GetGuardCaseDetail`엔 `summary1~5`가 있으므로 경찰용에도 요청 — #13(경찰
-  상세 조치)과 같은 성격) → 그룹 C 종료 시 일괄.
 - **2026-09-09 종결 검증 완료**: 실제 종결 건(caseSeq 51)에서도 사건유형·5개 조치가
   `GetHistoryDetail` 응답에 없음을 재확인 — 갭 실재 확정.
 - **2026-09-11**: 사용자가 백엔드에 "사건유형·5개 조치 필드를 종결 건 응답에서 빠뜨리지
   말아달라"는 선제 요청을 직접 전달하기로 함(회신 대기, CARRYOVER A절 신규 행).
+- **2026-09-14 사건유형 파트 해결**: 응답에 `crimeType`(요청했던 필드명 `caseType`이 아니라
+  기존 다른 EP들과 같은 `crimeType`)이 실값으로 채워짐(`caseSeq=51`→`"stalking"` 실측,
+  `local/_probe-recheck-isRep-history.sh`). `HistoryDetailRow.crimeType` 추가 +
+  `detailRowToSecurityCase`가 `crimeCodeToCaseType`으로 변환(경찰·본사 이력상세 공유 함수라
+  양쪽 다 반영) — `features/police/api/history.ts`. 플레이스홀더 제거.
+  - **5개 조치(summary1~5) 파트도 해결(2026-09-14)** — 처음엔 caseSeq 46·51(둘 다 여러 차례
+    수정·연장·취소를 거친 오래된 테스트 건, `extendCount:2`)로 대조하다 `summary1`만 null인
+    비정상 패턴("기간은 오는데 내용만 없음")을 발견해 "매핑 누락"으로 의심했으나, 사용자가
+    caseSeq 48(ST0004)로 재확인 — `summary1:"맞춤형순찰, 임시숙소(예정)"`처럼 실제 텍스트가
+    정상적으로 옴을 확인. caseSeq 46·51의 null은 반복된 수동 테스트로 데이터 자체가 오염된
+    결과였을 뿐, 엔드포인트 매핑 문제가 아니었던 것으로 결론(사용자 확인, 2026-09-14) —
+    **재요청 불필요**. `HistoryDetailRow`에 `summary1~5`/`summary1~5Date` 추가,
+    `detailRowToSecurityCase`가 `@/shared/lib/caseMeasures`(본사·피전 경호상세와 동일 헬퍼)로
+    `baseInfo`의 5개 조치 필드를 채운다 — `features/police/pages/HistoryDetailPage.tsx`가
+    이미 갖고 있던 Field 5개가 실값을 표시.
+    - **후속(같은 날)**: "본사 이력상세는 이 필드들을 화면에 안 그려서 영향 없음"으로 처음
+      적었으나, 사용자가 실제 화면(`/admin/history/:id`)을 확인해보니 사건유형·5개 조치
+      Field 자체가 처음부터 없었음(2026-09-09 실 API 전환 때 화면을 새로 작성하며 빠진 것으로
+      추정) — `History/Stec/W/GetHistoryDetail`도 같은 `crimeType`/`summary1~5`를 준다는 걸
+      caseSeq 48로 별도 확인 후 `features/company/pages/HistoryDetailPage.tsx`에 경찰 이력
+      상세와 동일한 사건유형 Field + 5개 조치 섹션 신규 추가. 데이터 레이어는 이미 공유 함수로
+      채워져 있어 화면 쪽만 뒤따라 잡음.
 
 #### `status` / `searchKey` 파라미터 대신 클라이언트 필터 유지
 - **왜 제외**: `status`는 정수 코드인데 종결 코드 매핑 미확정(종결 데이터 없음). `searchKey`는

@@ -15,6 +15,26 @@ import { workers } from '../data/workers'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../features/police/types/securityCase'
 import type { SecurityCase } from '../../features/police/types/securityCase'
 import { computeCaseHistorySummary } from '../../features/police/lib/historySummary'
+import { caseTypeToCrimeCode } from '../../shared/lib/crimeType'
+import { joinMeasureItems, formatMeasurePeriod } from '../../shared/lib/caseMeasures'
+
+// 5개 조치 — c.baseInfo(등록돼 있으면)를 summaryN/summaryNDate 문자열로 직렬화.
+// mocks/handlers/history.ts와 동일 헬퍼(경찰/본사 GetHistoryDetail이 같은 shape).
+function summariesOf(c: SecurityCase) {
+  const b = c.baseInfo
+  return {
+    summary1: b ? joinMeasureItems(b.safetyMeasures) : null,
+    summary1Date: b ? formatMeasurePeriod(b.safetyMeasuresPeriod) : null,
+    summary2: b ? joinMeasureItems(b.emergencyMeasures) : null,
+    summary2Date: b ? formatMeasurePeriod(b.emergencyMeasuresPeriod) : null,
+    summary3: b ? joinMeasureItems(b.provisionalMeasures) : null,
+    summary3Date: b ? formatMeasurePeriod(b.provisionalMeasuresPeriod) : null,
+    summary4: b ? joinMeasureItems(b.emergencyTempMeasures) : null,
+    summary4Date: b ? formatMeasurePeriod(b.emergencyTempMeasuresPeriod) : null,
+    summary5: b ? joinMeasureItems(b.temporaryMeasures) : null,
+    summary5Date: b ? formatMeasurePeriod(b.temporaryMeasuresPeriod) : null,
+  }
+}
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — [본사] 배치요청
 // 목록·본부 배정·경호목록·연장단축·관리자 계정 관리는 실제 백엔드(GuardCase/Stec/W/
@@ -449,6 +469,7 @@ export const guardCaseTestHandlers = [
         statusName: canceled ? '경호취소' : c.status,
         groupName: c.policeStation,
         parentGroupName: c.jurisdiction,
+        crimeType: caseTypeToCrimeCode(c.caseType),
         suspectUserName: c.subject.nameInitial,
         startDate: canceled ? null : c.startDate,
         endDate: canceled ? null : c.endDate,
@@ -458,6 +479,7 @@ export const guardCaseTestHandlers = [
             : null,
         investigator: c.policeContact.investigator || null,
         responsibleOfficer: c.policeContact.victimOfficer || null,
+        ...summariesOf(c),
         endDt: (canceled ? c.canceledAt : c.closedAt) ?? null,
         remark: (canceled ? c.cancelReason : c.closureReason) ?? null,
         guards: computeCaseHistorySummary(c.workSchedule).workers.map((w) => ({

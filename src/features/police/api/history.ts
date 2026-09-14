@@ -1,6 +1,8 @@
 import { apiFetch } from '../../auth/api/client'
 import { assertOk, unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
+import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
+import { parseMeasureItems, parseMeasurePeriod } from '@/shared/lib/caseMeasures'
 import { useAuthStore } from '../../auth/store/authStore'
 import type { HistoryGuard, SecurityCase, SecurityCaseStatus } from '../types/securityCase'
 
@@ -51,6 +53,21 @@ export interface HistoryDetailRow {
   totalGuardWorkMinutes: number | null
   investigator: string | null
   responsibleOfficer: string | null
+  // 사건유형 — 2026-09-14 백엔드가 응답에 추가(findings 이력조회 갭 부분 해소).
+  crimeType?: string | null
+  // 5개 조치(안전/긴급응급/잠정/긴급임시/임시조치) + 적용기간. 오래 테스트로 오염된
+  // 건(caseSeq 46·51)은 비어 보였지만 caseSeq 48로 실값 확인(2026-09-14, 사용자 확인)
+  // — exclusions 해제, `@/shared/lib/caseMeasures`로 본사·피전 경호상세와 같은 방식 파싱.
+  summary1: string | null
+  summary1Date: string | null
+  summary2: string | null
+  summary2Date: string | null
+  summary3: string | null
+  summary3Date: string | null
+  summary4: string | null
+  summary4Date: string | null
+  summary5: string | null
+  summary5Date: string | null
   endDt: string | null
   remark: string | null
   guards: HistoryGuard[]
@@ -76,7 +93,9 @@ function isTerminal(status: SecurityCaseStatus) {
 }
 
 // 공통 빈 SecurityCase — 이력 응답이 안 주는 필드는 화면에서 "-"로 표시된다
-// (caseType·5개 조치·배치장소 등, exclusions).
+// (배치장소 등, exclusions — 개인정보라 이력 화면 전체가 의도적으로 미표시).
+// caseType·5개 조치(baseInfo)는 상세(detailRowToSecurityCase)에서 실값으로 덮어쓴다 —
+// 목록(listRowToSecurityCase)엔 여전히 없어 이 기본값 유지.
 function emptySecurityCase(): Omit<SecurityCase, 'id' | 'receiptNumber' | 'status'> {
   return {
     policeStation: '',
@@ -133,6 +152,7 @@ export function detailRowToSecurityCase(row: HistoryDetailRow): SecurityCase {
     policeStation: row.groupName ?? '',
     jurisdiction: row.parentGroupName ?? '',
     status,
+    caseType: crimeCodeToCaseType(row.crimeType),
     subject: {
       // suspectUserName은 이미 마스킹("홍**")돼서 온다 — nameInitial로 취급.
       nameInitial: row.suspectUserName ?? '',
@@ -149,6 +169,28 @@ export function detailRowToSecurityCase(row: HistoryDetailRow): SecurityCase {
       investigator: row.investigator ?? '',
     },
     historyGuards: row.guards ?? [],
+    // 5개 조치만 채운다 — 근무시간·기본근무자·배치장소는 이 화면 소관이 아니라
+    // (배치장소는 개인정보라 이력 화면 전체가 의도적으로 미표시) 빈 값으로 둔다.
+    baseInfo: {
+      workHours: '',
+      defaultWorkers: [],
+      investigator: '',
+      victimOfficer: '',
+      placeResidence: '',
+      placeWorkplace: '',
+      placeEtc1: '',
+      placeEtc2: '',
+      safetyMeasures: parseMeasureItems(row.summary1),
+      emergencyMeasures: parseMeasureItems(row.summary2),
+      provisionalMeasures: parseMeasureItems(row.summary3),
+      emergencyTempMeasures: parseMeasureItems(row.summary4),
+      temporaryMeasures: parseMeasureItems(row.summary5),
+      safetyMeasuresPeriod: parseMeasurePeriod(row.summary1Date),
+      emergencyMeasuresPeriod: parseMeasurePeriod(row.summary2Date),
+      provisionalMeasuresPeriod: parseMeasurePeriod(row.summary3Date),
+      emergencyTempMeasuresPeriod: parseMeasurePeriod(row.summary4Date),
+      temporaryMeasuresPeriod: parseMeasurePeriod(row.summary5Date),
+    },
     ...toStatusExtra(status, row.endDt, row.remark),
   }
 }

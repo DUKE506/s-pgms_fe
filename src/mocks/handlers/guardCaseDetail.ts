@@ -191,22 +191,30 @@ export const guardCaseDetailTestHandlers = [
     })
   }),
 
-  // 경호원 배정 목록(경호풀) — 근무자 마스터 전량 + isAssigned.
+  // 경호원 배정 목록(경호풀) — 근무자 마스터 전량 + isAssigned/isRepresentative.
   http.get('/api/v1/GuardCase/Stec/W/GetCaseGuardList', ({ request }) => {
     const account = stecUserFromBearer(request)
     if (!account) return unauthorized()
     const caseSeq = new URL(request.url).searchParams.get('caseSeq')
     const record = findCase(caseSeq)
-    const assignedIds = new Set((record?.baseInfo?.defaultWorkers ?? []).map((w) => w.workerId))
+    const defaultWorkers = record?.baseInfo?.defaultWorkers ?? []
+    const assignedIds = new Set(defaultWorkers.map((w) => w.workerId))
+    const representativeIds = new Set(
+      defaultWorkers.filter((w) => w.isDefault).map((w) => w.workerId),
+    )
     return envelope(
-      workers.map((w) => ({
-        guardSeq: Number(w.id.replace(/\D/g, '')) || 0,
-        name: w.name,
-        sabun: w.employeeId,
-        deptName: w.department,
-        isAssigned: assignedIds.has(String(Number(w.id.replace(/\D/g, '')) || 0)),
-        phone: w.phone,
-      })),
+      workers.map((w) => {
+        const guardSeq = String(Number(w.id.replace(/\D/g, '')) || 0)
+        return {
+          guardSeq: Number(guardSeq),
+          name: w.name,
+          sabun: w.employeeId,
+          deptName: w.department,
+          isAssigned: assignedIds.has(guardSeq),
+          isRepresentative: representativeIds.has(guardSeq),
+          phone: w.phone,
+        }
+      }),
     )
   }),
 

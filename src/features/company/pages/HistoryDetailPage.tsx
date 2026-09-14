@@ -6,6 +6,7 @@ import AccessBlockedScreen from '@/shared/components/AccessBlockedScreen'
 import { isNotFoundOrForbidden } from '@/shared/api/errors'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getCompanyHistoryDetail } from '../api/history'
+import type { MeasurePeriod } from '../../police/types/securityCase'
 
 function formatDate(dateLike: string) {
   const d = new Date(dateLike)
@@ -17,6 +18,13 @@ function formatDate(dateLike: string) {
 
 function formatHours(hours: number) {
   return Number.isInteger(hours) ? `${hours}시간` : `${hours.toFixed(1)}시간`
+}
+
+function formatMeasure(items: string[], period: MeasurePeriod | null | undefined): string {
+  if (items.length === 0) return ''
+  const joined = items.join(', ')
+  if (!period?.startDate || !period.endDate) return joined
+  return `${joined} (${formatDate(period.startDate)} ~ ${formatDate(period.endDate)})`
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -32,7 +40,9 @@ function Field({ label, value }: { label: string; value: string }) {
 // 목록이 종결·취소 건만 담으므로 이 화면도 두 상태만 도달한다. 레이아웃은 경찰 이력
 // 상세(features/police/pages/HistoryDetailPage)와 통일 — 기본정보 좌측, 종결/취소
 // 정보 우측. 근무자별 투입실적은 응답 guards[]에 이름이 인라인이라 별도 조회 없음.
-// 사건유형·배치장소는 이 응답에 없어 미표시(exclusions).
+// 사건유형·5개 조치는 데이터 레이어(api/history.ts의 detailRowToSecurityCase, 경찰과
+// 공유)엔 2026-09-14부터 있었지만 이 화면엔 Field가 빠져 있던 걸 뒤늦게 추가(경찰
+// 이력상세와 동일 패턴). 배치장소는 여전히 이 응답에 없고 개인정보라 의도적 미표시.
 function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>()
   const caseQuery = useQuery({
@@ -75,6 +85,7 @@ function HistoryDetailPage() {
     workedDays: g.workDays,
     totalHours: g.totalMinutes / 60,
   }))
+  const baseInfo = c.baseInfo
 
   return (
     <main className="flex flex-col gap-5 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
@@ -97,11 +108,37 @@ function HistoryDetailPage() {
             <div className="mb-4 text-sm font-bold text-foreground">경호정보</div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <Field label="대상자명" value={c.subject.nameInitial} />
+              <Field label="사건유형" value={c.caseType} />
               <Field label="경찰서" value={c.policeStation} />
               <Field label="경찰관 정보" value={c.policeContact.victimOfficer} />
               <Field label="경호시작" value={isCanceled ? '' : formatDate(c.startDate)} />
               <Field label="경호종료" value={isCanceled ? '' : formatDate(c.endDate)} />
               <Field label="총경호시간" value={isCanceled ? '' : formatHours(totalHours)} />
+            </div>
+            <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-4 sm:flex-row sm:flex-wrap sm:justify-between">
+              <Field
+                label="안전조치"
+                value={formatMeasure(baseInfo?.safetyMeasures ?? [], baseInfo?.safetyMeasuresPeriod)}
+              />
+              <Field
+                label="긴급응급조치"
+                value={formatMeasure(baseInfo?.emergencyMeasures ?? [], baseInfo?.emergencyMeasuresPeriod)}
+              />
+              <Field
+                label="잠정조치"
+                value={formatMeasure(baseInfo?.provisionalMeasures ?? [], baseInfo?.provisionalMeasuresPeriod)}
+              />
+              <Field
+                label="긴급임시조치"
+                value={formatMeasure(
+                  baseInfo?.emergencyTempMeasures ?? [],
+                  baseInfo?.emergencyTempMeasuresPeriod,
+                )}
+              />
+              <Field
+                label="임시조치"
+                value={formatMeasure(baseInfo?.temporaryMeasures ?? [], baseInfo?.temporaryMeasuresPeriod)}
+              />
             </div>
           </div>
 

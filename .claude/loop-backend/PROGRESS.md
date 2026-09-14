@@ -43,7 +43,7 @@
 | 11 | B | [본사] 운영/시스템관리자 | 관리자 계정 관리 | 완료 | (이번 커밋) | `GetStecUserList`(목록)·`UpdateUser`(정보수정·비번초기화) 실 API 전환. `loginId→id`·`userSeq` 신규. 빈 연락처는 `""` 전송(`null`은 백엔드가 무시 — 실측). 배정건수·담당경호는 `GetGuardCaseList`(실 API) 담당자명 매칭 — mock `listManagerAssignedCases`/`listMockSecurityCases` 제거, `handlers/companyAccounts.ts` 삭제. **본부관리자는 `GetStecUserList` 403** → "운영·시스템관리자만 이용" 안내(B, 사용자 확인). 접근 자체(route/메뉴 제외 vs 백엔드가 본인 행만)는 **#12에서 결정**. "본부" 열 "-"(issues #1). 실백엔드 검증: StecM1 목록·정보수정 왕복·비번초기화(StecM4)·담당경호(HS2본부→caseSeq 51·29), StecM2 403 안내. 응답 샘플 `User-Stec-UpdateUser.md`. **2026-09-09 B-2 회신**: `GetStecUserList` 본부관리자 **200** 실측 → 403 안내 제거(목록 노출, 수정은 `canEdit`=운영·시스템만). **"본부" 열 제거**(groupSeq/groupName 경찰 전용 공유 컬럼, findings #1 본부 파트 🟢) |
 | 12 | B | [본사] 본부관리자 | 스코프 재검증(경호목록/상세/연장단축/관리자계정/근무자) | 완료 | `a570869` (더블만) | **API 레벨 스코프 검증 완료(2026-09-08, StecM2·StecM3)**. B-2 요청서 전달(`docs/backend-integration/requests/2026-09-08-본사-경호관리-B2.md`/`.xlsx`), 부분 반영 완료. **2026-09-11 회귀 재확인**: `GetGuardCaseDetail?caseSeq=51`(StecM3, 남 소유 건) → 403 "담당하지 않는 경호건입니다", 2026-09-08과 동일 — B-2 반영 과정에서 스코프 흔들림 없음 확인(CARRYOVER C절). 지역청 필터 프론트 후속은 여전히 미착수(별도 항목). 아래 로그 참고 |
 | 13 | C | [본사] 운영/시스템관리자 | 이력 조회 | 부분완료(△) | `536cd5e` (+2026-09-08 목록) | 목록 `GET History/Stec/W/GetHistoryList` 실 API 전환(`company/api/history.ts` 신규 분리 — 경찰 이력 #14·#15는 mock 유지). 이중 래핑·행 축소 매핑, `statusName`("경호취소"→'취소'), `totalMin`→`totalGuardMinutes`. **본부관리자 스코프(HIST-003) 실제 적용 확인**(StecM3 배정 0건→이력 0건, StecM2 동래 담당→5건). 실서버에 취소 건 5개 존재 → 브라우저 검증(StecM1 5건/StecM2 5건, 콘솔 에러 0). **상세 보류** — `History/Stec/W/GetHistoryDetail` 404, Police EP 본사 토큰 403(issues #14 신규, blockers) → `/admin/history/:id` "준비 중" 안내. **종결 건 재검증 보류** — 사용자가 오늘 날짜 경호건 생성→종결 후 status 코드 매핑·`totalMin` 실값 재확인. 안 되면 △ 유지. 응답 샘플 `History-Stec-GetHistoryList.md`. **2026-09-09 회신 반영**: 백엔드가 `History/Stec/W/GetHistoryDetail` 신설 → `getCompanyHistoryDetail` 실 API 배선, "준비 중" placeholder·`CompanyHistoryDetailUnavailableError` 제거, `HistoryDetailPage`(company) 실제 상세 렌더(경찰 이력상세 레이아웃, 매퍼 `detailRowToSecurityCase` 공유). 응답 = 경찰용 + `groupName`·`parentGroupName`. 스코프: StecM3(배정 0건)→404. 브라우저 검증(StecM1, `/admin/history/46`). blockers/issues #14 종료. 응답 샘플 `History-Stec-GetHistoryDetail.md`. **2026-09-09 종결 검증**: 사용자가 만든 종결 건(caseSeq 51, totalMin 2160=36시간, remark "경호기간 만료")으로 목록·상세 실백엔드 확인 — 총경호시간·종결코드·근무자 배정 이력 정상. 종결 데이터 대기 소진. (URL 스코프 일괄테스트만 남아 △ 유지) |
-| 14 | C | [경찰서] 피전 | 이력 조회 | 부분완료(△) | `536cd5e` (+2026-09-08) | 목록 `GET History/Police/W/GetHistoryList` + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail` 신규 — 본청·지역청 #15는 mock, `role === '경찰서'` 분기). `groupSeq`(세션) 필수·끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드. `caseType`·5개 조치·배치장소 응답에 없음→축소(exclusions). 브라우저 검증(SPoliceM5 동래: 목록 취소 5건, 상세 대상자 마스킹·근무자 4명 투입실적·취소일/사유), 콘솔 에러 0. **종결 건 재검증 보류**(#13과 동일 — 사용자 종결 데이터 생성 후 종결코드·`totalGuardMinutes` 실값). 응답 샘플 `History-Police-GetHistoryList.md`·`-GetHistoryDetail.md`. **2026-09-09 회신 반영**: 목록 매퍼에 `deploySeq`·`status`(int) 필드 추가, `SecurityCase.id`를 종결·취소면 `caseSeq`/그 외면 `deploySeq`로 분리(#15 라우팅용). `getPoliceStationHistoryDetail`을 3역할 공통으로 통합(role 분기 제거), `detailRowToSecurityCase` export해 본사(#13)와 공유. 경찰서 경로 groupSeq 유지 → **회귀 0**. **2026-09-09 종결 검증**: 종결 건(caseSeq 51) 목록 36시간·종결 배지, 상세 종결 정보 "경호기간 만료"·근무자 배정 이력 정상. ⚠️ 사건유형·5개 조치는 종결 건에서도 갭(`GetHistoryDetail` 응답에 없음 — exclusions 유지, findings 승격 검토). 종결 데이터 대기 소진 |
+| 14 | C | [경찰서] 피전 | 이력 조회 | 완료 | `536cd5e` (+2026-09-08) (+2026-09-14) | 목록 `GET History/Police/W/GetHistoryList` + 상세 `GetHistoryDetail` 실 API 전환(`listPoliceStationHistory`/`getPoliceStationHistoryDetail` 신규 — 본청·지역청 #15는 mock, `role === '경찰서'` 분기). `groupSeq`(세션) 필수·끝난 건만(HIST-001). 상세 `guards[]`(이름 인라인)→신규 `historyGuards` 필드. 브라우저 검증(SPoliceM5 동래: 목록 취소 5건, 상세 대상자 마스킹·근무자 4명 투입실적·취소일/사유), 콘솔 에러 0. 응답 샘플 `History-Police-GetHistoryList.md`·`-GetHistoryDetail.md`. **2026-09-09 회신 반영**: 목록 매퍼에 `deploySeq`·`status`(int) 필드 추가, `SecurityCase.id`를 종결·취소면 `caseSeq`/그 외면 `deploySeq`로 분리(#15 라우팅용). `getPoliceStationHistoryDetail`을 3역할 공통으로 통합(role 분기 제거), `detailRowToSecurityCase` export해 본사(#13)와 공유. 경찰서 경로 groupSeq 유지 → **회귀 0**. **2026-09-09 종결 검증**: 종결 건(caseSeq 51) 목록 36시간·종결 배지, 상세 종결 정보 "경호기간 만료"·근무자 배정 이력 정상. **2026-09-14 사건유형·5개 조치 해소**: `crimeType`·`summary1~5` 응답에 실값 확인(caseSeq 48로 확정, 46·51은 반복 테스트로 오염된 데이터였을 뿐) → `HistoryDetailRow` 확장 + `detailRowToSecurityCase`가 `baseInfo`로 매핑, 상세 화면의 5개 조치 Field가 실값 표시. exclusions 해제(배치장소만 개인정보로 의도적 미표시 유지). **△ 해소, 완료 전환.** |
 | 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 부분완료(△) | `d236ec6`·`536cd5e` | **프로브 결과 전환 불가 → 본청/지역청 이력은 mock 유지.** `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq` 경찰서(leaf) 단위 — 부모 노드(본청 22·지방청 24) → 0건, 캐스케이드 없음. `GetHistoryList`는 종결·취소만(status/includeActive/all/isEnd 무시), 진행중은 `GetDeployList?groupSeq=<leaf>`(본청/지역청 토큰도 200). 관할 전체 = `Login/W/GetGroupTree`(3역할 공통 200, 역할 서브트리)로 leaf 뽑아 팬아웃 가능하나 **임시방편이라 미채택(사용자 결정)**. 진행중 상세 `GetDeployDetail?deployReqSeq=`는 본청/지역청 토큰에 200(deployReqSeq 90) — 목록 전환 시 코드 변경 최소. `GetHistoryDetail`도 본청/지역청 200(스코프 미검, `guardWorkLoc`/`guardHomeLoc` 포함 — #14 exclusions와 배치, 논의항목). **그룹 C 섹션 종료 → 백엔드 일괄 요청서 전달**(`docs/backend-integration/requests/2026-09-08-이력-C.md`, issues #14·#15). 종결 건 재검증(#13·#14 공통)·본부관리자 이력 스코프 꼬리는 회신·데이터 후. **2026-09-09 회신 반영 → 실 API 전환 완료**: 스웨거 개정으로 `GetHistoryList`가 `groupSeq` **없이** 부르면 역할 캐스케이드(본청=전국·지역청=관할 이하·전 구간). `listSecurityCaseHistory`/`getSecurityCaseHistoryDetail` mock → 실 API. 접수·진행중 행은 `deploySeq`로 경호상세(`/security-cases/:id`), 종결·취소는 `caseSeq`로 이력상세(`/history/:id`). mock `/security-cases/history*` 제거. 브라우저 검증(SPoliceM1 전국 9건·진행중→`/security-cases/90`·취소→`/history/46` / SPoliceM3 관할 7건). ⚠️ Police `GetHistoryDetail`은 스웨거와 달리 진행중도 200이나 화면 미도달(제외). **2026-09-09 종결 검증**: 지역청(SPoliceM3) 종결 건 `status:3`→'종결' 매핑·목록·상세 정상. △ 유지 이유 = URL 직접접근 스코프 일괄 테스트(CARRYOVER C)만 (종결 데이터 대기는 소진) |
 | 16 | D | [경찰서] 피전 | 게스트 계정 관리 | 완료 | `1a6b4e7` | `User/Police/W/` 6종 실 API 전환(`GetGuestUserList` `groupSeq` 필수·평면 배열 / `GetGuestCaseList` 발급 후보 / `GetGuestCaseDetail` 수정 후보 `isAccess` / `AddGuestUser` `{name:"게스트"(고정),caseSeqs}` 응답 `{data:true}` / `UpdateGuestCaseInfo` / `DeleteGuestUser`). **아이디 미리보기 제거**(issues #3 → 🟢, 프론트 UX 변경 — 발급 후 목록 재조회, `previewNextGuestAccount`/`previewNextGuestId` 삭제). 발급 후보 조회를 `listGuestScopeSecurityCases`(mock `/security-cases`) 대신 전용 EP 2개로 분리. `handlers/guests.ts`(`guestTestHandlers`)를 실 6종 shape로 재작성 + `testOnlyHandlers`로 이동(브라우저는 실백엔드 프록시). `mocks/data/guests.ts`에 `userSeq` 필드 추가(로그인 계정 소스는 존치 — #17용). 중지 계정(`useYn`)은 화면 설계에 없어 숨김(exclusions, #17 종료 시 전달). 실백엔드 `SPoliceM5`(동래) 발급→조회권 수정(회수)→삭제 왕복 브라우저+curl 실측, `SPoliceM3` 403. 응답 샘플 `User-Police-Guest.md` |
 | 17 | D | [경찰서] 게스트 | 경호목록 + 상세(조회전용) | 완료 | `56e04e3` (테스트) + 문서 | **코드 신규 없음** — 피전 경호목록(`SecurityCaseListPage`)/상세(`SecurityCaseDetailPage`)를 role로만 갈라 재사용(이미 구현: `isReadOnlyViewer` 본청/지역청/게스트, 신규접수 버튼 `role !== '게스트'`). 프로브로 게스트 토큰 스코프 검증: `GetDeployList`가 게스트 토큰이면 **`?groupSeq=` 무시하고 `GUEST_CASE_ACCESS` 스코프만 적용**(groupSeq 32/22/999 다 동일 = 조회권 건만). `GetDeployDetail?deployReqSeq=` 조회권 건 200(피전과 동일 shape). 게스트 토큰 403: `CancelGuardCase`·`GuardCase/Stec/GetGuardCaseList`·`User/Police/GetGuestUserList`. 메뉴는 이미 `경호목록` 단일(`PoliceAppShell`). 브라우저(`SPoliceGuest3` 동래): 목록 1건→행클릭→상세(`/security-cases/90`) 기본정보/배치장소/조치5/문서함 렌더·액션버튼 0개, 콘솔 에러 0. `SecurityCaseDetailPage.test.tsx`에 게스트 읽기전용 테스트 1건 추가(122). **그룹 D 섹션 종료 → 요청서 `requests/2026-09-08-게스트-D.md`**(useYn 중지 / 게스트 상세 스코프 확인 2개 논의). 응답 샘플 `Deploy-Police-GetDeployList.md` "#17 관찰". **2026-09-14 사용자 재검증**: SPoliceGuest4(조회권=ST0017/deploySeq 100만)가 조회권 없는 ST0010(deploySeq 92)에 URL 직접 접근 → 다른 조회권 없는 건과 동일하게 **차단 확인**(CARRYOVER B #17 소진, C절 패턴과 일치) |
@@ -52,6 +52,72 @@
 ## 최근 iteration 로그
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
+
+- 2026-09-14: **회신 반영 — 대표근무자 `isRepresentative` + 이력조회 사건유형**(사용자가
+  "백엔드가 반영했다더라" 하며 재확인 요청). CARRYOVER A절 대기 2건 프로브 재실행
+  (`local/_probe-recheck-isRep-history.sh`) → 둘 다 실값 확인.
+
+  **① 대표근무자(findings #12)**: `GuardCase/Stec/W/GetCaseGuardList` 응답에
+  `isRepresentative`가 실값으로 채워짐(caseSeq 29·51 둘 다 확인). `features/company/api/
+  securityCaseDetail.ts::toBaseInfo`가 `GetGuardCaseDetail.guardUserList`(대표만, 이름뿐)와
+  이름 매칭으로 대표를 추정하던 로직을 버리고 `g.isRepresentative`를 직접 쓰도록 전환 —
+  이제 안 쓰는 `guardUserList` 필드도 인터페이스에서 제거. **findings #12 전체 종결.**
+
+  **② 이력조회 사건유형(경찰서 이력, matrix #1)**: `History/Police/W/GetHistoryDetail`
+  응답에 `crimeType`(요청 문서엔 `caseType`이라 적었지만 실제 키는 기존 다른 EP와 같은
+  `crimeType`)이 실값으로 채워짐(caseSeq 51 → `"stalking"`). `features/police/api/
+  history.ts`의 `HistoryDetailRow`에 필드 추가, `detailRowToSecurityCase`가
+  `crimeCodeToCaseType`으로 변환(경찰·본사 이력상세 공유 함수라 양쪽 다 자동 반영) —
+  `'사건미접수'` 플레이스홀더 제거.
+
+  **③ 5개 조치(summary1~5) — 1차 확인은 "매핑 누락" 오판, caseSeq 48로 정정**. 처음엔
+  사용자가 "혹시 그 건에 실제로 값이 없거나 지워진 것 아니냐"는 가설을 제시해 대조군으로
+  검증: caseSeq 46은 2026-09-04에 `summary1:"맞춤형 순찰, CCTV"`/`summary3:"1호"`로 실제
+  등록해둔 건인데, `GetHistoryDetail`이 `summary1Date`/`summary3Date`(기간)는 정상 반환하는데
+  `summary1`/`summary3`(내용)만 유독 `null`이라 "매핑 누락"으로 잠정 결론 → **사용자가
+  caseSeq 48(ST0004)로 반박** — 이 건은 `summary1:"맞춤형순찰, 임시숙소(예정)"`처럼 실제
+  텍스트가 정상 반환됨(`local/_probe-recheck-caseSeq48.sh`). caseSeq 46·51은 `extendCount:2`
+  (여러 차례 연장·재수정)를 거친 오래된 테스트 건이라 반복된 수동 테스트로 데이터 자체가
+  오염됐을 뿐(예: `GetGuardCaseDetail` 쪽 `summary1`이 `"1100"`/`"000000"` 같은 의미불명
+  값으로 덮어써져 있음) — **엔드포인트 매핑 문제가 아니었다**고 확정, 재요청 불필요.
+
+  구현: `HistoryDetailRow`에 `summary1~5`/`summary1~5Date` 추가, `detailRowToSecurityCase`가
+  `@/shared/lib/caseMeasures`(본사·피전 경호상세와 동일 헬퍼)로 `SecurityCase.baseInfo`의
+  5개 조치 필드를 채움(다른 `baseInfo` 필드—근무시간·기본근무자·배치장소—는 이 화면 소관이
+  아니라 빈 값). `features/police/pages/HistoryDetailPage.tsx`가 이미 갖고 있던 안전조치~
+  임시조치 Field 5개가 이제 실값 표시(별도 화면 변경 불필요, 주석만 갱신). 본사 이력상세는
+  이 필드들을 화면에 안 그려서 영향 없음(그대로 범위 밖).
+
+  테스트 더블도 실 API와 동일 형태로 갱신: `mocks/handlers/guardCaseDetail.ts`(`GetCaseGuardList`에
+  `isRepresentative` 파생), `mocks/handlers/history.ts`·`mocks/handlers/guardCase.ts`(양쪽
+  `GetHistoryDetail`에 `crimeType` + `summary1~5`/`summary1~5Date` 추가 — `summariesOf(c)`
+  헬퍼 신규, `c.baseInfo`를 `joinMeasureItems`/`formatMeasurePeriod`로 직렬화해 `toBaseInfo`
+  역방향과 왕복 가능하게).
+
+  검증: `npm run test` 147/147(테스트 더블이 이번엔 실제 파싱 경로를 태워 회귀 검증됨 —
+  ①의 `isRepresentative`만 여전히 `detail.mock` 우회 경로라 오프라인 미검증) · lint(기존
+  warning 2) · build(`tsc -b` 포함) 통과. 실백엔드는 curl 프로브로 검증(이 세션은 네트워크
+  제약으로 브라우저 로그인 불가) — caseSeq 29·46·48·51 조합으로 3건 전부 실측 확인.
+
+  **후속(같은 날, 사용자 지적)**: "본사 이력상세 카드엔 조치항목이 안 보인다"는 재확인 요청
+  → 화면을 다시 보니 데이터 레이어(`detailRowToSecurityCase`, 위에서 이미 채움)는 맞았는데
+  **`features/company/pages/HistoryDetailPage.tsx`에 애초에 사건유형·5개 조치 Field 자체가
+  없었음**(2026-09-09 실 API 전환 때 화면을 새로 작성하며 경찰 쪽엔 있던 Field들이 누락된
+  것으로 추정 — 그동안 문서엔 "화면이 원래 안 보여줌"으로 잘못 기록돼 있었음). `History/Stec/
+  W/GetHistoryDetail?caseSeq=48`로 크로스체크해 `crimeType`/`summary1~5`가 Police EP와 동일하게
+  옴을 확인 후, 경찰 이력상세와 같은 패턴(사건유형 Field + 조치 5개 섹션, `formatMeasure`
+  로컬 헬퍼)을 본사 페이지에도 추가. 회사 쪽 "경호정보" 그리드는 필드가 6→7개로 늘어
+  `sm:grid-cols-3`에서 마지막 줄 1개만 남지만(대상자명/사건유형/경찰서/경찰관정보/경호시작/
+  경호종료/총경호시간), 다른 화면에서도 흔한 배치라 그대로 둠.
+
+  검증: `npm run test` 147/147(기존 `HistoryDetailPage.test.tsx` 3건 그대로 통과 — 새 Field는
+  검증 대상 텍스트와 안 겹침) · lint · build 통과. 실백엔드는 curl로 `History/Stec/
+  GetHistoryDetail?caseSeq=48` 응답 재확인(`local/_probe-recheck-stec-history48.sh`).
+
+  **문서**: `findings.md` #12 🟡→🟢(전체 종결), 경찰서 이력조회 갭 섹션(사건유형·5개 조치
+  둘 다 해결로 갱신, caseSeq 48 정정 근거 + 본사 화면 누락분 후속 기록), `CARRYOVER.md`
+  A절(이력조회 필드 요청 전체 해결)·B절(#14 전부 소진)·D절(완료 행 갱신).
+  **다음**: 다른 작업.
 
 - 2026-09-14: **[경찰서] 게스트 계정 관리 — 비고(memo) 필드 신규**(matrix #16, 사용자
   요청). loop-backend iteration 아님 — 화면 단위 신규 필드 추가 패스. 게스트 계정의

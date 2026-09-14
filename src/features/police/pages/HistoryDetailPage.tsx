@@ -40,9 +40,10 @@ function Field({ label, value }: { label: string; value: string }) {
 // 재사용하되 우측 카드만 "종결 정보" 대신 "취소 정보"로 바꾼다(2026-08-27 결정).
 // 3역할(경찰서·본청·지역청) 모두 실 API(History/Police/W/GetHistoryDetail)를 쓴다 —
 // 응답의 guards[]에 근무자 이름·근무일수·근무분이 인라인이라 근무자 명단을 따로
-// 조회하지 않는다. 사건유형·5개 조치·배치장소는 이 응답에 없어 "-"로 표시된다
-// (exclusions — 배치장소는 이 화면이 원래 미표시, 2026-08-27). 진행중·접수 건은
-// 이력 목록에서 경호상세(/security-cases/:id)로 라우팅되므로 여기 도달하지 않는다.
+// 조회하지 않는다. 사건유형·5개 조치는 2026-09-14부터 응답에 실값(api/history.ts의
+// detailRowToSecurityCase가 매핑) — 배치장소는 여전히 이 응답에 없고, 이 화면이 원래
+// 미표시(exclusions, 2026-08-27, 개인정보). 진행중·접수 건은 이력 목록에서
+// 경호상세(/security-cases/:id)로 라우팅되므로 여기 도달하지 않는다.
 function HistoryDetailPage() {
   const { id } = useParams<{ id: string }>()
   const caseQuery = useQuery({
