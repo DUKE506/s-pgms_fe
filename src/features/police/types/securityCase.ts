@@ -204,6 +204,11 @@ export interface SecurityCase {
     requestedEndDate: string
     requestedAt: string
   }
+  // 경찰서 경호목록(Deploy/Police/W/GetDeployList)이 "오늘 ~ endDt" 기준으로 서버에서
+  // 계산해 내려주는 배치 종료까지 남은 일수(이미 지났으면 0으로 클램프). 경호중 건이
+  // 임박했을 때 목록 하이라이트에 쓴다(사용자 요청, 2026-09-11) — 다른 목록/상세
+  // 응답엔 없는 필드라 optional.
+  remainDays?: number
 }
 
 export type SecurityCaseCreateInput = Omit<

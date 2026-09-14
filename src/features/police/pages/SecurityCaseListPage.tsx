@@ -18,7 +18,7 @@ import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '../../auth/store/authStore'
 import { listSecurityCases } from '../api/securityCases'
-import type { SecurityCaseStatus } from '../types/securityCase'
+import type { SecurityCase, SecurityCaseStatus } from '../types/securityCase'
 
 const ALL = '전체'
 const CHIP_BASE =
@@ -61,6 +61,23 @@ function formatDate(dateLike: string) {
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
   return `${yyyy}.${mm}.${dd}`
+}
+
+// 배치 종료 임박 하이라이트(사용자 요청, 2026-09-11) — GetDeployList가 remainDays를
+// 이미 내려주는데 화면이 안 쓰고 버리고 있었음. 경호중 건만 대상(접수/배정은 아직
+// 배치 시작 전, 경호완료는 이미 끝나 "임박" 자체가 의미 없음 — 사용자 확인).
+const URGENT_REMAIN_DAYS = 2
+
+function isUrgent(c: SecurityCase): boolean {
+  return c.status === '경호중' && c.remainDays != null && c.remainDays <= URGENT_REMAIN_DAYS
+}
+
+function RemainDaysBadge({ remainDays }: { remainDays: number }) {
+  return (
+    <span className="inline-flex h-5 shrink-0 items-center rounded-md border border-destructive/30 bg-destructive/10 px-1.5 text-[11px] font-semibold text-destructive">
+      <span className="text-trim">{remainDays <= 0 ? 'D-DAY' : `D-${remainDays}`}</span>
+    </span>
+  )
 }
 
 function SecurityCaseListPage() {
@@ -220,56 +237,76 @@ function SecurityCaseListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCases.map((c) => (
-                  <TableRow
-                    key={c.id}
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/security-cases/${c.id}`)}
-                  >
-                    <TableCell>{formatManagementNumber(c.receiptNumber, c.securityCode)}</TableCell>
-                    <TableCell>{c.subject.nameInitial}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={c.status} />
-                    </TableCell>
-                    <TableCell>{formatDate(c.startDate)}</TableCell>
-                    <TableCell>{formatDate(c.endDate)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <ChevronRight className="size-4 text-muted-foreground" />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredCases.map((c) => {
+                  const urgent = isUrgent(c)
+                  return (
+                    <TableRow
+                      key={c.id}
+                      className={cn(
+                        'cursor-pointer',
+                        urgent && 'bg-destructive/10 hover:bg-destructive/20',
+                      )}
+                      onClick={() => navigate(`/security-cases/${c.id}`)}
+                    >
+                      <TableCell>
+                        <span className="inline-flex items-center gap-1.5">
+                          {formatManagementNumber(c.receiptNumber, c.securityCode)}
+                          {urgent && <RemainDaysBadge remainDays={c.remainDays!} />}
+                        </span>
+                      </TableCell>
+                      <TableCell>{c.subject.nameInitial}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={c.status} />
+                      </TableCell>
+                      <TableCell>{formatDate(c.startDate)}</TableCell>
+                      <TableCell>{formatDate(c.endDate)}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <ChevronRight className="size-4 text-muted-foreground" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </div>
 
           <div className="flex flex-col gap-2.5 xl:hidden">
-            {filteredCases.map((c) => (
-              <div
-                key={c.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate(`/security-cases/${c.id}`)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') navigate(`/security-cases/${c.id}`)
-                }}
-                className="flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-foreground">
-                    {formatManagementNumber(c.receiptNumber, c.securityCode)}
-                  </span>
-                  <StatusBadge status={c.status} />
+            {filteredCases.map((c) => {
+              const urgent = isUrgent(c)
+              return (
+                <div
+                  key={c.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/security-cases/${c.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') navigate(`/security-cases/${c.id}`)
+                  }}
+                  className={cn(
+                    'flex cursor-pointer flex-col gap-3 rounded-xl border p-4 text-left',
+                    urgent ? 'border-destructive/30 bg-destructive/10' : 'border-border bg-card',
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-sm font-bold text-foreground">
+                      {formatManagementNumber(c.receiptNumber, c.securityCode)}
+                      {urgent && <RemainDaysBadge remainDays={c.remainDays!} />}
+                    </span>
+                    <StatusBadge status={c.status} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-foreground/80">
+                      {c.subject.nameInitial}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(c.startDate)} ~ {formatDate(c.endDate)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-foreground/80">{c.subject.nameInitial}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatDate(c.startDate)} ~ {formatDate(c.endDate)}
-                  </span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}

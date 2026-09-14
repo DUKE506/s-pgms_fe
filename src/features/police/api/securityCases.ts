@@ -102,6 +102,7 @@ function toSecurityCase(row: DeployListRow): SecurityCase {
     caseSummary: '',
     startDate: row.startDt,
     endDate: row.endDt,
+    remainDays: row.remainDays,
     location: { residence: '', workplace: '', etc1: '', etc2: '' },
     additionalNotes: '',
     policeContact: { victimOfficer: '', investigator: '' },

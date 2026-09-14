@@ -88,6 +88,45 @@ describe('PoliceSecurityCaseListPage', () => {
     expect(await screen.findByText('신규 접수 도착')).toBeInTheDocument()
   })
 
+  it('배치 종료가 임박한(remainDays≤2) 경호중 건은 행/카드가 강조되고 D-day 배지가 뜬다', async () => {
+    loginAsStation()
+    // case-seed-7(경호중, ST102)의 종료일을 내일로 당겨 remainDays=1을 재현.
+    const record = securityCases.find((c) => c.id === 'case-seed-7')!
+    const originalEndDate = record.endDate
+    const tomorrow = new Date()
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+    record.endDate = tomorrow.toISOString().slice(0, 10)
+    try {
+      renderPage()
+      await screen.findAllByText('26-03-강남경찰서 · ST102')
+      const row = withinTable().getByText('26-03-강남경찰서 · ST102').closest('tr')!
+      expect(within(row).getByText('D-1')).toBeInTheDocument()
+      expect(row.className).toContain('bg-destructive/10')
+    } finally {
+      record.endDate = originalEndDate
+    }
+  })
+
+  it('경호중이 아니면 remainDays가 낮아도 강조하지 않는다', async () => {
+    loginAsStation()
+    // case-seed-8(경호완료, ST103)의 종료일을 내일로 당겨도 — 이미 끝난 배치라
+    // "임박"이 의미 없어 하이라이트 대상에서 제외된다(사용자 확인).
+    const record = securityCases.find((c) => c.id === 'case-seed-8')!
+    const originalEndDate = record.endDate
+    const tomorrow = new Date()
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
+    record.endDate = tomorrow.toISOString().slice(0, 10)
+    try {
+      renderPage()
+      await screen.findAllByText('26-04-강남경찰서 · ST103')
+      const row = withinTable().getByText('26-04-강남경찰서 · ST103').closest('tr')!
+      expect(within(row).queryByText('D-1')).not.toBeInTheDocument()
+      expect(row.className).not.toContain('bg-destructive/10')
+    } finally {
+      record.endDate = originalEndDate
+    }
+  })
+
   it('연장/단축 신청 대기 중인 경호중 건도 목록에서 사라지지 않는다', async () => {
     loginAsStation()
     // 경호중 건에 단축 신청 → 실백엔드는 GetDeployList.statusName을 "단축"으로 준다

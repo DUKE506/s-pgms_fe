@@ -76,8 +76,14 @@ HTTP 403
   그대로 표시한다. 배정 후 형태(`· ST###` 여부 등)는 미확인.
 - **필드 대응**: `deploySeq`(→ 상세 이동용 id, `GetDeployDetail`의 `deployReqSeq`),
   `caseSeq`(경호건 seq, 배정 후 채워짐 — GuardCase 계열 API용), `suspectUserName`(→
-  대상자), `startDt`/`endDt`(→ 경호시작/종료), `extendCount`/`remainDays`(현재 화면
-  미사용).
+  대상자), `startDt`/`endDt`(→ 경호시작/종료), `extendCount`(미사용).
+  **`remainDays`는 2026-09-11부터 사용** — 서버가 "오늘~endDt" 기준으로 계산해
+  음수 없이 0으로 클램프해 내려준다(상태 무관 모든 행에 포함, 실측: 이미 끝난
+  경호완료 건도 0). 경호중 상태이면서 `remainDays ≤ 2`인 행을 화면에서 빨간 배경
+  하이라이트 + 관리번호 옆 빨간 테두리 "D-{n}" 배지로 표시(`SecurityCaseListPage.tsx::
+  isUrgent`, 사용자 피드백으로 배지 위치를 경호종료일 옆→관리번호 옆으로 이동). 접수/배정/
+  경호완료는 하이라이트 대상에서 제외(사용자 결정 — 아직 시작 전이거나 이미 끝난
+  배치라 "임박" 자체가 의미 없음).
 - 응답 항목에 `jurisdiction`/`policeStation` 없음 — 화면 상단 "관할 / 이름" 표기는
   `GetMyProfile`의 `groupName`으로 대체.
 

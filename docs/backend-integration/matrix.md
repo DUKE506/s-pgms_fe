@@ -142,7 +142,7 @@
 
 | API 기능 | mock 함수 | 실제 엔드포인트 | 비고 |
 |---|---|---|---|
-| 목록 조회 | `listSecurityCases` | `GET Deploy/Police/W/GetDeployList` | ✅ 연동 완료(2026-09-01). `groupSeq`(필수)는 로그인 시 `GetMyProfile`로 받아 세션에 저장한 값 사용, 권한 밖 `groupSeq`는 서버가 403으로 막음(analysis.md 4-6 스코프 우려 해소). status/페이지네이션 파라미터 없음 — 화면이 전량 로드 후 클라이언트 필터라 무관. `mgmtNo`는 서버 조합 완성형("… 접수" / "… ST###")이라 마지막 공백에서 잘라 `formatManagementNumber`로 재조합. **배정 이후 상태 문자열은 데이터 없어 미검증 → 그룹 B(#9 본사 경호 상세) 이후 재검증**(exclusions.md). 응답 샘플: `docs/backend-integration/responses/Deploy-Police-GetDeployList.md` |
+| 목록 조회 | `listSecurityCases` | `GET Deploy/Police/W/GetDeployList` | ✅ 연동 완료(2026-09-01). `groupSeq`(필수)는 로그인 시 `GetMyProfile`로 받아 세션에 저장한 값 사용, 권한 밖 `groupSeq`는 서버가 403으로 막음(analysis.md 4-6 스코프 우려 해소). status/페이지네이션 파라미터 없음 — 화면이 전량 로드 후 클라이언트 필터라 무관. `mgmtNo`는 서버 조합 완성형("… 접수" / "… ST###")이라 마지막 공백에서 잘라 `formatManagementNumber`로 재조합. **배정 이후 상태 문자열은 데이터 없어 미검증 → 그룹 B(#9 본사 경호 상세) 이후 재검증**(exclusions.md). **2026-09-11**: `remainDays`(당시 미사용 필드)를 경호중 임박 하이라이트("D-{n}" 배지 + 빨간 배경, remainDays≤2)에 사용하도록 추가 연동. 응답 샘플: `docs/backend-integration/responses/Deploy-Police-GetDeployList.md` |
 
 #### 접수/배치요구서 작성 (`/security-cases/new`)
 

@@ -38,6 +38,16 @@ function deploySeqOf(c: SecurityCase) {
   return Number(c.id.replace(/\D/g, '')) || 0
 }
 
+// 실백엔드는 remainDays를 "오늘 ~ endDt" 기준으로 서버에서 계산해 음수 없이 0으로
+// 클램프해 내려준다(이미 끝난 건도 0, 실측 확인). 더블도 endDate로 같은 방식 재현 —
+// UTC 자정 기준(securityCases.ts의 nextDate와 동일 패턴, 로컬 타임존으로 하루 밀리는
+// 과거 버그 재발 방지).
+function remainDaysOf(endDate: string): number {
+  const end = new Date(`${endDate}T00:00:00.000Z`).getTime()
+  const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`).getTime()
+  return Math.max(Math.round((end - today) / 86_400_000), 0)
+}
+
 // 실제 백엔드의 deployReqSeq(정수) 또는 vitest가 그대로 넘기는 mock 문자열 id
 // (예: 'case-seed-1') 둘 다로 레코드를 찾는다.
 function findBySeq(seq: unknown): SecurityCase | undefined {
@@ -194,7 +204,7 @@ export const deployTestHandlers = [
         startDt: c.startDate,
         endDt: c.endDate,
         extendCount: 0,
-        remainDays: 0,
+        remainDays: remainDaysOf(c.endDate),
       }))
       .filter((r) => !keyword || r.mgmtNo.includes(keyword))
 

@@ -53,6 +53,49 @@
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
 
+- 2026-09-11: **사용자 요청 3건 처리** (연장/단축 안내·로그인 통합·remainDays
+  하이라이트). loop-backend iteration 아님 — 화면 단위 수정 패스, 커밋 3개.
+  - **① [본사] 경호상세 연장/단축 요청 대기 안내**(`f4e994c`) — 상세 상태뱃지 옆에
+    안내 문구. `GetGuardCaseDetail`/`GetGuardCaseList`의 statusName은 신청 중이어도
+    "경호중" 그대로임을 실측 확인(피전 `GetDeployDetail`과 다름) — 대신
+    `GetExtendRequestList`/`GetShortenRequestList`에 caseSeq가 있는지로 판정
+    (`findPendingPeriodRequestType`, 경호중 건만 조회, 실패해도 조용히 무시).
+    디자인은 사전미팅 삭제 버튼과 같은 destructive 배색(연한 빨강 테두리·배경)을
+    텍스트로(`buttonVariants` 재사용, 사용자 디자인 피드백). 실백엔드(StecM1,
+    ST0009에 실제 연장 요청)로 확인. roadmap Phase 3.5 백로그 항목 완료 처리
+    (프로필 화면 백로그는 사용자 결정으로 폐기, 같이 반영).
+  - **② 경찰/본사 로그인 화면 통합**(`10c6c43`) — 실백엔드가 로그인을 하나로
+    취급(`Login` 응답 `code=100+codeSeq`)한다는 게 확인돼 있던 걸 실행. `Police/
+    CompanyLoginPage` → `LoginPage` 통합, `/admin` 로그인 라우트 제거(북마크는
+    `/`로 리다이렉트만 유지), `ProtectedRoute` 미인증 리다이렉트 단순화,
+    `CompanyAppShell` 로그아웃도 `/`로. 본사 내부 화면 경로(`/admin/dashboard`
+    등)는 변경 없음 — 로그인 라우트만 없앤 것. run-s-pgms 스킬(driver.mjs 셀렉터·
+    SKILL.md)도 갱신.
+  - **③ [경찰서] 경호목록 — 배치 종료 임박(remainDays) 하이라이트** —
+    `Deploy/Police/W/GetDeployList`가 이미 내려주던 `remainDays`(응답 문서에
+    "현재 화면 미사용"으로 기록돼 있던 필드)를 처음 사용. `SecurityCase.remainDays`
+    타입 추가 + 매핑, 경호중 상태이면서 `remainDays ≤ 2`인 행만 빨간 배경
+    하이라이트 + "D-{n}"/"D-DAY" 배지(사용자 결정 — 접수/배정은 아직 시작 전,
+    경호완료는 이미 끝나 "임박"이 의미 없어 제외). 배지는 처음엔 경호종료일
+    옆이었으나 사용자 피드백으로 **관리번호 옆으로 위치 변경**(눈에 더 잘
+    띔) + 빨간 테두리 추가(연한 빨강 배경만으로는 약해 보인다는 후속 피드백).
+    테스트 더블(`deploy.ts`)도 `remainDaysOf(endDate)`로 실제 계산하도록
+    보정(기존엔 전부 0 고정).
+  - 검증: `npm run test` 144/144(+2, isUrgent 상태 스코프 양성/음성 케이스) ·
+    lint · build 통과. **실백엔드로 긍정 케이스 실측 완료** — 처음 확인 시점엔
+    동래경찰서 데이터에 경호중+remainDays≤2 조합이 없어 단위테스트로만
+    검증했으나, 이후 재확인 때 다른 건(ST0017, 사용자가 별도로 단축 요청을
+    승인해 종료일이 당겨짐)이 조건에 자연스럽게 들어와 실백엔드에서 데스크톱+
+    모바일 둘 다 하이라이트·배지 렌더 확인. 하루 뒤(2026-09-14) 재확인 때는
+    ST0017의 종료일이 지나 서버가 자동으로 경호완료 처리해 하이라이트가 정상
+    해제되고, 대신 ST0009가 새 D-2 사례가 됨 — 상태 전이에 맞춰 하이라이트가
+    따라가는 것도 실측 확인. 부정 케이스(경호완료, remainDays 0)도 하이라이트
+    안 뜨는 것 확인, 콘솔 에러 0. (참고: Playwright `page.route()`로 응답을
+    조작해 긍정 케이스를 보려던 첫 시도는 MSW Service Worker가 fetch를 먼저
+    가로채 route()가 못 잡는 것으로 확인돼 포기 — 실데이터로 대체됨)
+  - **문서**: `Deploy-Police-GetDeployList.md`(remainDays 미사용→사용 갱신),
+    matrix.md 목록 조회 행에 remainDays 연동 추가 기록.
+
 - 2026-09-11: **URL 직접 접근 스코프 일괄 테스트 (CARRYOVER C절) — 전부 소진**. 새 화면
   개발 아님 — 미검증 항목 프로브 패스. 사용자 지적으로 6번째 항목(본부관리자 경호상세
   회귀 재확인) 추가.
