@@ -212,10 +212,15 @@ function SecurityCaseForm({
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-5 p-4 pb-24 sm:p-8 sm:pb-24 xl:pb-8">
-      <div>
+      {/* 상세형 헤더 규칙(docs/mobile-ui)과 같은 gap-3(breadcrumb↔제목 묶음) —
+          이 화면은 기존에도 mt-1 마진으로 이미 붙어있었지만, 다른 상세형
+          화면들과 간격 값을 통일한다. */}
+      <div className="flex flex-col gap-3">
         <DetailHeader breadcrumb={breadcrumb} fallbackTo={backTo} />
-        <h1 className="mt-1 text-xl font-bold text-foreground">{title}</h1>
-        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-bold text-foreground">{title}</h1>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
