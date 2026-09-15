@@ -17,6 +17,7 @@ B-2·C·D 통합 전달본: `requests/2026-09-08-미회신-B2-C-D.xlsx`(시트 3
 | `requests/2026-09-08-게스트-D.md` | 섹션 D (#16~#17) | `useYn` = **종결**(백엔드 소프트삭제 전용, 경찰서 삭제 대비 — 프론트 무관, `useYn=false` 숨김 유지). `GetDeployDetail` 게스트 스코프 서버 보장 확인 → 아래 C절로 이관 |
 | ~~사건유형 `crimeType` enum (2026-09-09 전달)~~ | `GetDeployDetail`·`GetDeployDetailUpdate`·`GetGuardCaseDetail`·`GuardCase/Stec/W/GetDeployDetail` | **✅ 종료(2026-09-11)** — 사용자 확인 + 라이브 프로브 추가 샘플(`stalking`/`threat`)로 enum 코드 일관 반환 재확인. `crimeCodeToCaseType`의 레거시 한글 폴백은 **유지**(방어적 코드라 제거 실익 없음, 사용자 판단) — 추가 작업 없음 |
 | ~~[신규] 이력조회 종결 건 응답 필드 유지 요청~~ (2026-09-11) | `History/*/GetHistoryDetail` | **✅ 전부 해결(2026-09-14)** — 사건유형(`crimeType`)·5개 조치(summary1~5) 둘 다 실값 확인. 5개 조치는 처음 caseSeq 46·51(오염된 오래된 테스트 건)로는 "내용만 null"이라 매핑 누락으로 의심했으나, caseSeq 48(ST0004)로 재확인하니 실제 텍스트가 정상 반환 — 반복 테스트로 인한 데이터 오염이었을 뿐 엔드포인트 문제 아님(사용자 확인). 재요청 불필요, 코드 반영 완료 |
+| [신규] 홈 대시보드 집계 API (2026-09-15, 사용자가 loop-backend 세션 밖에서 직접 요청) | `DashBoard/Police/W/GetDashBoardCount`·`GetDashBoardGroupCount`로 추정(findings.md #2022) — 정확한 EP는 회신 시 확인 | **화면(`DashboardPage.tsx`)에 지금 떠 있는 요소 전부**를 커버하는 집계 API 요청 — 상태별 현황 4종(접수/배정/경호중/경호완료), 지역별 건수 순위, 이번달 신규 접수+평균 경호기간, 연령·성별 비율, 접수 월별 추이(최근 6개월), 안전조치 항목별 적용률(4종). 지금은 전부 `DashboardPage.tsx` 상단 정적 더미 상수(`SUMMARY`/`REGION_RANKING`/`AGE_GROUPS`/`GENDER_SPLIT`/`MONTHLY_TREND`/`SAFETY_MEASURES`). 회신 오면 이 상수들을 쿼리 결과로 교체 — loop-backend 그룹 목록에 없던 화면이라(Phase4가 원래 보류 중이었음) 새 섹션으로 추가해 진행. 조직 트리 스코프 선택(조회범위 pill/사이드바) 연동 여부도 회신 시 같이 확인 필요(지금은 트리 노드에 박아둔 더미값끼리만 전환됨, 실제 서버 재조회 아님) |
 
 ## B. 데이터·상태 대기 재검증
 
