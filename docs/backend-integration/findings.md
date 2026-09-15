@@ -956,7 +956,7 @@ blob 받아 `a.download` 저장 — 파기확인서 다운로드와 같은 패�
 해소됨. 브라우저 검증(`SPoliceM5 /security-cases/100`, 김가드 항목 다운로드 버튼과
 함께 렌더, 콘솔 에러 0).
 
-## 19. 🔴 `GetDeployList`·`GetDeployDetail` 응답에 숫자 `status`(경호상태 코드)가 없음 — `statusName`이 신청 대기와 뒤섞임
+## 19. 🟢 `GetDeployList`·`GetDeployDetail` 응답에 숫자 `status`(경호상태 코드)가 없음 — `statusName`이 신청 대기와 뒤섞임 → **해결(2026-09-15, 4개 엔드포인트 전부 확인·반영 완료)**
 
 **발견 경위**: 사용자 재검증(2026-09-10) — 피전이 경호중 건에서 연장/단축을 신청하면
 경호목록에서 그 건이 사라진다.
@@ -994,6 +994,23 @@ GetDeployList`·`GetDeployDetail`·`GetDeployDetailUpdate` 3곳 다 라이브로
 `shared/lib/deployStatus.ts::resolveGuardCaseStatus(code, statusName)` 신설 →
 `guardCaseRowToSecurityCase`가 코드 우선, 코드 없으면 statusName 폴백으로 전환(사용자
 결정, 이번 커밋). 피전 쪽 본래 요청은 그대로 미해결.
+
+**2026-09-15 전체 해결**: 사용자가 백엔드에 직접 나머지 3곳(`Deploy/Police/W/
+GetDeployList`·`GetDeployDetail`·`GuardCase/Stec/W/GetGuardCaseDetail`)을 요청, 라이브
+프로브(`local/_probe-status-code-4ep.sh`)로 4곳(선택 요청분이었던 `GetDeployDetailUpdate`
+포함) 전부 `guardCaseStatus` 확인 — `GetGuardCaseList`와 동일 코드 체계(0:배정 1:경호중
+2:경호완료 3:종결 4:경호취소). 단, 연장/단축 "신청 대기" 상태는 이 코드에 없어(0~4뿐)
+`statusName`의 "연장"/"단축" 문자열 감지는 계속 필요.
+
+구현: `shared/lib/deployStatus.ts`를 `resolveDeployStatus(statusName, code?)` 하나로
+통합(기존 `resolveGuardCaseStatus`는 흡수·제거) — "연장"/"단축" 감지가 최우선, 아니면
+코드가 있으면 코드 소스, 없으면 statusName 그대로 폴백. 호출부 5곳(`features/company/
+api/requests.ts`·`securityCaseDetail.ts`, `features/police/api/securityCases.ts`·
+`securityCaseDetail.ts`의 `toSecurityCase`/`toSecurityCaseFromEdit`) 전부 `guardCaseStatus`
+필드를 함께 넘기도록 갱신. 테스트 더블(`mocks/handlers/deploy.ts`·`guardCaseDetail.ts`·
+`guardCase.ts`)도 실 API와 같은 코드를 흉내내도록 `guardCaseStatus` 추가(역방향 맵
+`GUARD_CASE_STATUS_CODE`를 `deployStatus.ts`에서 공유). `deployStatus.test.ts` 신규(코드
+우선순위·연장/단축 정규화·역방향 맵 일관성 검증).
 
 <!-- 다음 이슈는 위와 같은 형식으로 아래에 추가 -->
 

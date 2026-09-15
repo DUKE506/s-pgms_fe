@@ -53,6 +53,30 @@
 
 (진행하면서 아래에 짧게 기록 — 날짜, 무엇을 했는지, 막힌 점)
 
+- 2026-09-15: **경호상태 숫자 코드(`guardCaseStatus`) 4개 엔드포인트 전부 확인·반영**
+  (findings #19 종결). 사용자가 백엔드에 직접 나머지 3곳(피전 `GetDeployList`·
+  `GetDeployDetail`, 본사 `GetGuardCaseDetail`)을 요청 — 라이브 프로브
+  (`local/_probe-status-code-4ep.sh`)로 이 3곳 + 선택 요청분이었던 `GetDeployDetailUpdate`
+  까지 4곳 모두 `guardCaseStatus`가 옴을 확인(`GetGuardCaseList`와 동일 코드 체계).
+
+  `shared/lib/deployStatus.ts`를 `resolveDeployStatus(statusName, code?)` 하나로 통합 —
+  기존 `resolveGuardCaseStatus`(본사 경호목록 전용)를 흡수·제거. 우선순위: "연장"/"단축"
+  문자열 감지(신청 대기 — 코드엔 없는 상태라 계속 필요) → 코드 있으면 코드 소스 →
+  없으면 statusName 폴백. 호출부 5곳(본사 경호목록·경호상세, 피전 경호목록·경호상세·
+  배치요구서 수정 prefill) 전부 `guardCaseStatus` 필드를 넘기도록 갱신.
+
+  테스트 더블(`mocks/handlers/deploy.ts`·`guardCaseDetail.ts`·`guardCase.ts`)도 실 API와
+  같은 코드를 흉내내도록 `guardCaseStatus` 추가 — 역방향 맵 `GUARD_CASE_STATUS_CODE`를
+  `deployStatus.ts`에서 공유(기존 `guardCase.ts`의 로컬 중복 맵 제거). `deployStatus.test.ts`
+  신규 4건(코드 우선순위·연장/단축 정규화·statusName 폴백·역방향 맵 일관성).
+
+  검증: `npm run test` 154/154(신규 4건) · lint(기존 warning 2) · build 통과. 실백엔드는
+  `local/_probe-status-code-4ep.sh`로 4개 엔드포인트 원시 응답 확인(피전 SPoliceM5,
+  본사 StecM1).
+
+  **문서**: `findings.md` #19 🔴→🟢(전체 종결).
+  **다음**: 다른 작업.
+
 - 2026-09-15: **[본사] 경호계획 조치 5개(`summary1~5`) 인코딩을 콤마 조인 → 비트
   인코딩으로 전환**(findings #11 종결). 사용자가 백엔드와 직접 확인한 내용 반영 — 이
   필드는 구조화 요청(항목 배열 + from/to)의 답이 아니라, **원래부터 섹션 옵션 순서
