@@ -575,7 +575,7 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 
 ---
 
-## 11. 🟡 [본사] 경호계획 — 5개 조치 섹션 ↔ `summary1~5` (단일 문자열 2개)
+## 11. 🟢 [본사] 경호계획 — 5개 조치 섹션 ↔ `summary1~5` (단일 문자열 2개) → **해결(2026-09-15, 구조화 아닌 비트 인코딩으로 확정)**
 
 **발견 경위**: 화면9 연동(2026-09-04), `AddGuardCaseInfoDto` 스키마 확인.
 
@@ -600,15 +600,29 @@ curl로 기간을 직접 넣어 등록·스케줄 생성을 실측(DTO 스펙 �
 **임시 처리(D-형)**: 위 손실 매핑으로 연동 진행(`exclusions.md` [본사] 경호 상세).
 
 **전달**: 2026-09-04 섹션 B-1(#6~#9) 요청서(`docs/backend-integration-requests/2026-09-04-본사-경호관리-B1.md`)로 정리.
-**백엔드에 전달 완료(2026-09-04, 사용자가 #13과 함께 별도로 요청)** — `summaryN` 항목
-구조화 + `summaryNDate` → from/to 2필드. 답변 대기(🟡 유지). 실측 근거:
-`GetGuardCaseDetail?caseSeq=46` 응답에 `summary1:"맞춤형 순찰, CCTV"` /
-`summary1Date:"2026-09-10 ~ 2026-09-20"`처럼 프론트 손실 매핑이 그대로 저장돼 있는 것 확인.
+백엔드에 구조화 요청(항목 배열·from/to 2필드)을 전달했으나, **실제로는 구조화가 아니라
+섹션 옵션 순서대로 비트 위치 문자열("1001")로 저장하는 게 기존부터의 방식**이었음이
+2026-09-15 백엔드 확인으로 드러남 — 위 요청은 자연히 철회, 그 대신 이 인코딩에 맞춰
+프론트를 전환.
 
-**영향받는 화면/코드**: `features/company/components/BaseInfoForm.tsx`(7~11번 섹션),
-`features/company/api/securityCaseDetail.ts`(`toBaseInfo`/`toCaseInfoBody`,
-`parseMeasure*`/`joinMeasure*`/`formatMeasurePeriod`),
-`features/company/components/BaseInfoSummaryCard.tsx`.
+**해결 경위(2026-09-15)**: `GetGuardCaseDetail?caseSeq=46`에서 과거(2026-09-04) 우리가
+직접 콤마 텍스트로 써넣은 `"맞춤형 순찰, CCTV"`가, 이후 재조회 시점엔 `"1100"`으로
+바뀌어 있던 것이 단서(우리 앱 경로가 아닌 다른 경로 — 백엔드 쪽 테스트로 추정 — 로
+덮어써진 것). 안전조치(4개: 맞춤형순찰/임시숙소/스마트워치/CCTV) 비트 순서를 백엔드에서
+확인받아 실제로 등록 테스트 → 조회 시 정확히 한글로 복원됨을 확인, 이어서 나머지 4개
+섹션(긴급응급조치/잠정조치/긴급임시조치/임시조치)도 등록·수정 양쪽 다 실측 확인 완료
+(전 섹션 = 지금 프론트 옵션 배열 순서가 곧 비트 순서로 확정). 조회는 서버가 이미
+사람이 읽을 수 있는 값으로 변환해서 주는 것으로 확인 — 읽기 쪽(`parseMeasureItems`)은
+그대로 유지, 등록·수정 인코더만 `joinMeasureItemsAsBits`로 교체.
+
+**부수 발견**: 안전조치 옵션 중 `"맞춤형 순찰"`(프론트, 띄어쓰기 있음)이 서버 공식
+표기 `"맞춤형순찰"`(띄어쓰기 없음)과 달라 수정 폼의 칩 선택 매칭이 안 되던 버그를
+함께 발견·수정(`SAFETY_MEASURE_OPTIONS` 라벨 교정).
+
+**영향받는 화면/코드**: `shared/lib/caseMeasures.ts`(옵션 배열 5개 export,
+`joinMeasureItemsAsBits` 신설), `features/company/components/BaseInfoForm.tsx`(로컬
+옵션 배열 제거, 공유 배열 import), `features/company/api/securityCaseDetail.ts`
+(`toCaseInfoBody`가 등록·수정 둘 다 비트 인코딩 사용).
 
 ---
 

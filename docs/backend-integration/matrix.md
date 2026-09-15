@@ -93,7 +93,9 @@
    `PatchDestroyDoc`, multipart) + 파기확인서 다운로드 연동·검증 완료.
    **미검증/블록**: 경호계획 등록(`AddGuardCaseInfo`) = 배치기간 조회 경로 없음
    (blockers, issues #10, 버튼 비활성) / 경호취소 = 본사 API 없음(issues #9, 버튼 비활성).
-   손실 매핑: 조치 섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11).
+   손실 매핑: 조치 섹션↔`summary1~5`, 사전미팅 근무자별 시간(issues #11). **2026-09-15
+   해소**: 조치 섹션은 구조화가 아니라 옵션 순서 기준 비트 인코딩이 원래 방식이었음이
+   드러나 등록·수정 둘 다 전환 완료(findings #11 종결, `shared/lib/caseMeasures.ts`).
    → **섹션 B-1(#6~#9) 종료 → issues/exclusions 백엔드 일괄 요청**
    (`docs/backend-integration/requests/2026-09-04-본사-경호관리-B1.md`). 이후 **4번·2번의
    배정 이후 상태 표시를 재검증**(caseSeq 46에 경호계획+스케줄+미팅+첨부 데이터 생성됨)
