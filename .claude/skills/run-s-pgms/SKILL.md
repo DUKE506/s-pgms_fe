@@ -100,10 +100,12 @@ npm run test   # vitest run — MSW 기반 unit/integration 테스트
   이후)만 다루고, 로그인 화면은 기능 위주로 만들어졌다 — 비주얼 스펙과
   비교하지 말고 `src/features/auth/pages/LoginPage.tsx` 자체를 기준으로 볼 것.
 - **로그인 성공 후 이동 경로는 role마다 다르다.** `getDefaultRouteForRole()`
-  (`src/features/auth/lib/defaultRoute.ts`)이 유일한 매핑 소스: 본청/지역청
-  → `/dashboard`, 경찰서/게스트 → `/security-cases`, 본사 3개 role →
-  `/admin/dashboard`. 어떤 계정을 쓰느냐에 따라 `wait`으로
-  기다려야 할 화면 라벨이 달라진다.
+  (`src/features/auth/lib/defaultRoute.ts`)이 유일한 매핑 소스: 본청/지역청/
+  경찰서 → `/dashboard`(2026-09-15부터 경찰서도 현황이 기본 랜딩, 이전엔
+  `/security-cases`), 게스트 → `/security-cases`, 본사 3개 role →
+  `/admin/security-cases`(대시보드 메뉴 제외로 경호관리가 기본 랜딩, 이전엔
+  `/admin/dashboard`). 어떤 계정을 쓰느냐에 따라 `wait`으로 기다려야 할 화면
+  라벨이 달라진다.
 
 ## 트러블슈팅
 

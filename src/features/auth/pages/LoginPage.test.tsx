@@ -43,22 +43,22 @@ describe('LoginPage', () => {
     expect(useAuthStore.getState().accessToken).toBeTruthy()
   })
 
-  it('logs in a 경찰서 account and navigates to /security-cases (not /dashboard)', async () => {
+  it('logs in a 경찰서 account and navigates to /dashboard (2026-09-15부터 현황이 기본 랜딩)', async () => {
     const account = policeAccounts.find((a) => a.role === '경찰서')!
-    renderAtRoot({ '/security-cases': '경호목록 도착' })
+    renderAtRoot({ '/dashboard': '대시보드 도착' })
 
     login(account.id, account.password)
 
-    await waitFor(() => expect(screen.getByText('경호목록 도착')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('대시보드 도착')).toBeInTheDocument())
   })
 
-  it('logs in a company account and navigates to /admin/dashboard', async () => {
+  it('logs in a company account and navigates to /admin/security-cases (대시보드 메뉴 제외로 경호관리가 기본 랜딩)', async () => {
     const account = companyAccounts[0]
-    renderAtRoot({ '/admin/dashboard': '본사 대시보드 도착' })
+    renderAtRoot({ '/admin/security-cases': '경호관리 도착' })
 
     login(account.id, account.password)
 
-    await waitFor(() => expect(screen.getByText('본사 대시보드 도착')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('경호관리 도착')).toBeInTheDocument())
     expect(useAuthStore.getState().user?.id).toBe(account.id)
   })
 
@@ -119,7 +119,7 @@ describe('LoginPage', () => {
   it('비밀번호 초기화 직후 계정은 강제 비밀번호 변경 후 재로그인해야 한다', async () => {
     const account = companyAccounts.find((a) => a.id === 'hqmanager4')!
     resetCompanyAccountPassword(account.id)
-    renderAtRoot({ '/admin/dashboard': '본사 대시보드 도착' })
+    renderAtRoot({ '/admin/security-cases': '경호관리 도착' })
 
     login(account.id, account.id)
 
@@ -136,6 +136,6 @@ describe('LoginPage', () => {
     expect(useAuthStore.getState().accessToken).toBeNull()
 
     login(account.id, 'newpass1')
-    await waitFor(() => expect(screen.getByText('본사 대시보드 도착')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('경호관리 도착')).toBeInTheDocument())
   })
 })

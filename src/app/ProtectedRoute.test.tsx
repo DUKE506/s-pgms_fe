@@ -51,8 +51,11 @@ describe('ProtectedRoute', () => {
   })
 
   it("redirects a user without the required role to their default route, with a toast", async () => {
+    // 2026-09-15부터 경찰서 기본 랜딩도 /dashboard라 그 role로는 이 시나리오(허용
+    // 안 된 라우트 → 자기 기본 라우트로 리다이렉트)를 재현할 수 없어짐 — 기본
+    // 랜딩이 여전히 /security-cases인 게스트로 대체.
     useAuthStore.getState().setSession({
-      user: { id: 'gangnam', name: '강남경찰서', role: '경찰서' },
+      user: { id: 'gangnamguest1', name: '강남경찰서 게스트', role: '게스트' },
       accessToken: 'a',
       refreshToken: 'r',
     })
