@@ -71,7 +71,8 @@ const SUMMARY = {
   avgDurationDays: 14.5,
 }
 
-// 데스크톱은 top5+그 외, 모바일 카드는 이 중 top3만 사용(목업 그대로).
+// top5+그 외. 모바일 카드도 원래 목업은 top3만이었으나 데스크톱과 동일하게
+// 6개 전부 보여주도록 확장(2026-09-15 사용자 요청).
 const REGION_RANKING = [
   { name: '서울지방청', count: 41 },
   { name: '경기남부청', count: 37 },
@@ -188,7 +189,7 @@ function DashboardPage() {
           <Card>
             <CardContent className="flex flex-col gap-3">
               <CardTitle>지역별 건수 순위</CardTitle>
-              <RankedBarChart data={REGION_RANKING.slice(0, 3)} height={110} />
+              <RankedBarChart data={REGION_RANKING} height={200} yAxisWidth={74} marginRight={20} />
             </CardContent>
           </Card>
 
@@ -230,7 +231,7 @@ function DashboardPage() {
               <CardTitle>
                 접수 월별 추이 <span className="text-[11px] font-normal text-muted-foreground">· 최근 6개월</span>
               </CardTitle>
-              <MonthlyTrendChart data={MONTHLY_TREND} height={110} />
+              <MonthlyTrendChart data={MONTHLY_TREND} height={170} />
             </CardContent>
           </Card>
 
@@ -359,24 +360,43 @@ function DashboardPage() {
 
           <div className="-mt-[43px] flex shrink-0 flex-col gap-[14px] px-[32px] pb-[32px]">
             <div className="flex gap-[14px]">
-              {VISIBLE_STATUSES.map((status) => (
-                <Card key={status} className="flex-1">
-                  <CardContent className="flex flex-col gap-[11px]">
-                    <span className="inline-flex items-center gap-[5px] text-[13px] font-medium text-muted-foreground">
-                      <span className={cn('size-[9px] rounded-full', STATUS_DOT_COLOR[status])} />
-                      {status}
-                    </span>
-                    <span className="text-[27px] font-bold text-foreground">
-                      {SUMMARY.byStatus[status]}
-                      <span className="ml-1 text-[13px] font-medium text-muted-foreground">건</span>
-                    </span>
-                  </CardContent>
-                </Card>
-              ))}
+              {VISIBLE_STATUSES.map((status) => {
+                const Icon = STATUS_ICON[status]
+                return (
+                  <Card key={status} className="flex-1">
+                    <CardContent className="flex flex-col gap-[11px]">
+                      <span className="inline-flex items-center gap-[5px] text-[13px] font-medium text-muted-foreground">
+                        <Icon className="size-[13px]" />
+                        <span className={cn('size-[9px] rounded-full', STATUS_DOT_COLOR[status])} />
+                        {status}
+                      </span>
+                      <span className="text-[27px] font-bold text-foreground">
+                        {SUMMARY.byStatus[status]}
+                        <span className="ml-1 text-[13px] font-medium text-muted-foreground">건</span>
+                      </span>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+
+            {/* 평균경호기간을 위 상태별 카드 행에서 분리하고 신규접수와 묶어
+                얇고 긴 카드 2개로 재배치(2026-09-15 사용자 요청) — 세로 스택
+                대신 라벨/값을 한 줄에 나란히 둬 카드 높이를 줄임. */}
+            <div className="flex gap-[14px]">
               <Card className="flex-1">
-                <CardContent className="flex flex-col gap-[11px]">
+                <CardContent className="flex items-center justify-between">
+                  <span className="text-[13px] font-medium text-muted-foreground">이번달 신규 접수</span>
+                  <span className="text-[22px] font-bold text-foreground">
+                    {SUMMARY.newThisMonth}
+                    <span className="ml-1 text-[13px] font-medium text-muted-foreground">건</span>
+                  </span>
+                </CardContent>
+              </Card>
+              <Card className="flex-1">
+                <CardContent className="flex items-center justify-between">
                   <span className="text-[13px] font-medium text-muted-foreground">평균 경호기간</span>
-                  <span className="text-[27px] font-bold text-foreground">
+                  <span className="text-[22px] font-bold text-foreground">
                     {SUMMARY.avgDurationDays}
                     <span className="ml-1 text-[13px] font-medium text-muted-foreground">일</span>
                   </span>
