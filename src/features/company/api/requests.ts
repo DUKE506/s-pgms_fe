@@ -3,7 +3,7 @@ import { unwrapEnvelope } from '@/shared/api/envelope'
 import { splitMgmtNo } from '@/shared/lib/managementNumber'
 import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
 import { genderCodeToLabel } from '@/shared/lib/subject'
-import { resolveGuardCaseStatus } from '@/shared/lib/deployStatus'
+import { resolveDeployStatus } from '@/shared/lib/deployStatus'
 import { fetchDeployRequestDetail, type DeployRequestDetailData } from './securityCaseDetail'
 import type { SecurityCase } from '../../police/types/securityCase'
 
@@ -118,7 +118,7 @@ interface GuardCaseRow {
   userSeq: number | null
   statusName: string
   // 2026-09-11부터 신규 — 0:배정 1:경호중 2:경호완료 3:종결 4:경호취소
-  // (shared/lib/deployStatus.ts::resolveGuardCaseStatus 참고).
+  // (shared/lib/deployStatus.ts::resolveDeployStatus 참고).
   guardCaseStatus?: number | null
   // 배정 직후엔 null(경호계획 등록 전), 경호중 이후 ISO datetime.
   startDate: string | null
@@ -143,7 +143,7 @@ function guardCaseRowToSecurityCase(row: GuardCaseRow): SecurityCase {
     securityCode,
     policeStation: row.groupName,
     jurisdiction: '',
-    status: resolveGuardCaseStatus(row.guardCaseStatus, row.statusName),
+    status: resolveDeployStatus(row.statusName, row.guardCaseStatus).status,
     caseType: '사건미접수',
     subject: { nameInitial: '', gender: '', birthDate: '', occupation: '', residence: '' },
     caseSummary: '',

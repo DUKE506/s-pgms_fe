@@ -12,6 +12,7 @@ import {
   upsertScheduleGroup,
 } from '../data/securityCases'
 import { workers } from '../data/workers'
+import { GUARD_CASE_STATUS_CODE } from '@/shared/lib/deployStatus'
 import type {
   CaseBaseInfo,
   MeasurePeriod,
@@ -157,6 +158,8 @@ export const guardCaseDetailTestHandlers = [
       // 연장/단축 신청 대기면 실백엔드는 statusName을 "연장"/"단축"으로 준다(findings
       // #19와 같은 문제, 피전 deploy.ts 핸들러와 동일 패턴 — 2026-09-11).
       statusName: record.pendingPeriodRequest ? record.pendingPeriodRequest.type : record.status,
+      // 2026-09-15부터 신규 — GetHistoryList/GetGuardCaseList와 같은 코드 체계.
+      guardCaseStatus: GUARD_CASE_STATUS_CODE[record.status] ?? null,
       suspectUserName: record.subject.nameInitial,
       startDate: plan ? record.startDate : null,
       endDate: plan ? record.endDate : null,

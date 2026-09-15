@@ -13,6 +13,7 @@ import {
 } from '../data/securityCases'
 import { workers } from '../data/workers'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../features/police/types/securityCase'
+import { GUARD_CASE_STATUS_CODE } from '@/shared/lib/deployStatus'
 import type { SecurityCase } from '../../features/police/types/securityCase'
 import { computeCaseHistorySummary } from '../../features/police/lib/historySummary'
 import { caseTypeToCrimeCode } from '../../shared/lib/crimeType'
@@ -82,15 +83,6 @@ function nameOfAssignee(assigneeId: string | undefined) {
 
 function codeSeqOf(role: string) {
   return role === '시스템관리자' ? 1 : role === '운영관리자' ? 2 : 3
-}
-
-// GetGuardCaseList의 guardCaseStatus 흉내(2026-09-11 실측 — resolveGuardCaseStatus 참고).
-const GUARD_CASE_STATUS_CODE: Record<string, number> = {
-  배정: 0,
-  경호중: 1,
-  경호완료: 2,
-  종결: 3,
-  취소: 4,
 }
 
 // GET GetExtendRequestList / GetShortenRequestList 공용. pendingPeriodRequest.type이

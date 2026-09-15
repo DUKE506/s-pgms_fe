@@ -12,6 +12,7 @@ import {
 import { workers } from '../data/workers'
 import type { ClosureReason, SecurityCase } from '../../features/police/types/securityCase'
 import { caseTypeToCrimeCode, crimeCodeToCaseType } from '../../shared/lib/crimeType'
+import { GUARD_CASE_STATUS_CODE } from '@/shared/lib/deployStatus'
 
 // ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — 경찰서 경호목록은
 // 이미 실제 백엔드(GET /api/v1/Deploy/Police/W/GetDeployList)로 연동 완료됐다
@@ -104,6 +105,8 @@ function toDeployDetail(c: SecurityCase) {
     mgmtNo: mgmtNo(c.receiptNumber, c.securityCode),
     // 연장/단축 신청 대기면 실백엔드는 statusName을 "연장"/"단축"으로 준다(findings #19).
     statusName: c.pendingPeriodRequest ? c.pendingPeriodRequest.type : c.status,
+    // 2026-09-15부터 신규 — GetHistoryList/GetGuardCaseList와 같은 코드 체계.
+    guardCaseStatus: GUARD_CASE_STATUS_CODE[c.status] ?? null,
     suspectUserName: c.subject.nameInitial,
     // 근무일자·근무시간은 경호계획 등록 후에만(2026-09-07 백엔드가 startDt/endDt →
     // startDate/endDate/startTime/endTime로 변경, 본사 GetGuardCaseDetail과 동일 구조).
@@ -155,6 +158,8 @@ function toDeployDetailUpdate(c: SecurityCase) {
   return {
     deployReqSeq: deploySeqOf(c),
     deployStatus: c.status,
+    // 2026-09-15부터 신규(선택 요청분) — GetDeployDetail과 같은 코드 체계.
+    guardCaseStatus: GUARD_CASE_STATUS_CODE[c.status] ?? null,
     crimeType: caseTypeToCrimeCode(c.caseType),
     suspectUserName: c.subject.nameInitial,
     suspectGender: c.subject.gender === '여' ? 1 : 0,
@@ -201,6 +206,8 @@ export const deployTestHandlers = [
         // 실백엔드는 연장/단축 신청이 걸린 경호중 건의 statusName을 "연장"/"단축"으로 준다
         // (findings #19) — 더블도 그대로 흉내낸다.
         statusName: c.pendingPeriodRequest ? c.pendingPeriodRequest.type : c.status,
+        // 2026-09-15부터 신규 — GetHistoryList/GetGuardCaseList와 같은 코드 체계.
+        guardCaseStatus: GUARD_CASE_STATUS_CODE[c.status] ?? null,
         startDt: c.startDate,
         endDt: c.endDate,
         extendCount: 0,

@@ -106,6 +106,9 @@ interface GuardCaseDetailData {
   caseSeq: number
   mgmtNo: string
   statusName: string
+  // 2026-09-15부터 신규 — 0:배정 1:경호중 2:경호완료 3:종결 4:경호취소
+  // (shared/lib/deployStatus.ts::resolveDeployStatus 참고, findings #19 종결).
+  guardCaseStatus?: number | null
   suspectUserName: string | null
   // 경호계획 등록 후에만 채워진다(미등록이면 전부 null). 등록 판정에 쓴다.
   startDate: string | null
@@ -208,7 +211,7 @@ function toHeader(id: string, d: GuardCaseDetailData): SecurityCase {
   // 같은 문제, findings #19) — 경호중으로 정규화하고 신청 대기 여부는 별도로 뽑아
   // 상세 배지 옆 안내문구에 쓴다(사용자 요청, 2026-09-11). 요청일/희망종료일은 이
   // 응답에 없어(연장/단축 요청 목록 화면 소관) requestedEndDate/requestedAt은 빈 값.
-  const { status, pendingRequestType } = resolveDeployStatus(d.statusName)
+  const { status, pendingRequestType } = resolveDeployStatus(d.statusName, d.guardCaseStatus)
   return {
     id,
     receiptNumber: split.receiptNumber,

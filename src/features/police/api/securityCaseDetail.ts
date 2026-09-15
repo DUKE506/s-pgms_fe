@@ -73,6 +73,9 @@ interface DeployDetailData {
   deployReqSeq: number
   mgmtNo: string
   statusName: string
+  // 2026-09-15부터 신규 — 0:배정 1:경호중 2:경호완료 3:종결 4:경호취소
+  // (shared/lib/deployStatus.ts::resolveDeployStatus 참고, findings #19 종결).
+  guardCaseStatus?: number | null
   suspectUserName: string | null
   // startDate/endDate/startTime/endTime = 경호계획의 근무일자·근무시간(미등록이면 전부 null).
   // 경호기간(일자)은 periodFrom/periodTo로 항상 온다.
@@ -163,7 +166,7 @@ function toSecurityCase(id: string, d: DeployDetailData): SecurityCase {
   const split = splitMgmtNo(d.mgmtNo)
   const groupName = useAuthStore.getState().user?.groupName ?? ''
   // 연장/단축 신청 대기 건은 statusName이 "연장"/"단축" — 경호중으로 정규화(findings #19).
-  const { status, pendingRequestType } = resolveDeployStatus(d.statusName)
+  const { status, pendingRequestType } = resolveDeployStatus(d.statusName, d.guardCaseStatus)
 
   return {
     id,
@@ -355,6 +358,8 @@ export async function getDeployGuardSchedule(
 interface DeployDetailUpdateData {
   deployReqSeq: number
   deployStatus: string
+  // 2026-09-15부터 신규(선택 요청분) — GetDeployDetail과 같은 체계(resolveDeployStatus).
+  guardCaseStatus?: number | null
   crimeType: string | null
   suspectUserName: string | null
   suspectGender: number | null
@@ -390,7 +395,7 @@ function toSecurityCaseFromEdit(id: string, d: DeployDetailUpdateData): Security
     policeStation: useAuthStore.getState().user?.groupName ?? '',
     jurisdiction: '',
     // deployStatus도 연장·단축 신청이 걸리면 "연장"/"단축"으로 온다(스웨거 GetDeployDetailUpdate).
-    status: resolveDeployStatus(d.deployStatus).status,
+    status: resolveDeployStatus(d.deployStatus, d.guardCaseStatus).status,
     caseType: crimeCodeToCaseType(d.crimeType),
     subject: {
       nameInitial: d.suspectUserName ?? '',

@@ -64,6 +64,9 @@ interface DeployListRow {
   mgmtNo: string
   suspectUserName: string
   statusName: string
+  // 2026-09-15부터 신규 — 0:배정 1:경호중 2:경호완료 3:종결 4:경호취소
+  // (shared/lib/deployStatus.ts::resolveDeployStatus 참고, findings #19 종결).
+  guardCaseStatus?: number | null
   startDt: string
   endDt: string
   extendCount: number
@@ -79,7 +82,7 @@ function toSecurityCase(row: DeployListRow): SecurityCase {
   const { receiptNumber, securityCode } = splitMgmtNo(row.mgmtNo)
   // 연장/단축 신청 대기 건은 statusName이 "연장"/"단축"으로 온다 — 경호중으로 정규화하지
   // 않으면 VISIBLE_STATUSES 필터에 걸려 목록에서 사라진다(findings #19).
-  const { status, pendingRequestType } = resolveDeployStatus(row.statusName)
+  const { status, pendingRequestType } = resolveDeployStatus(row.statusName, row.guardCaseStatus)
   return {
     id: String(row.deploySeq),
     receiptNumber,
