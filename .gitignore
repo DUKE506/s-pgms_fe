@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# mkcert 로컬 HTTPS 테스트 인증서 (PC별 IP로 발급되어 공유 의미 없음)
+.certs/
+
 # Claude Code (personal/local-only overrides)
 .claude/settings.local.json
 .claude/skills/run-s-pgms/shots/

@@ -165,3 +165,26 @@ src/
 - 상태 저장: in-memory 배열을 요청마다 mutate하는 간단한 store (DB 아님, 새로고침/HMR 시 리셋)
 - 통합: `main.tsx`는 `import.meta.env.DEV`일 때만 worker 시작, Vitest는 `setupTests.ts`에서 `server.listen()/resetHandlers()/close()` 훅 연동
 - 실제 API 전환 대비: `features/*/api/`의 fetch 함수 안에서만 엔드포인트를 참조 — 전환 시 그 함수만 교체
+
+## PWA
+
+- 목적: 네이티브 앱 대신 웹 기술로 "설치 가능한 앱처럼 보이는" 모바일 UX 확보가 핵심 — 경찰 사용자 대부분이 모바일로 접속할 것으로 예상되나 네이티브 앱은 개발 기간 문제로 배제. 오프라인 지원·푸시 알림이 목적은 아님(2026-09-15 결정)
+- 앱 이름: `Safety Link`
+- 브랜드 컬러: `theme_color`/`background_color` 모두 `#0f172a` — 기존 디자인 시스템(`src/index.css`)의 `--primary`와 동일 값 재사용
+- 아이콘: `public/safety-link-icon/`에 준비됨(`icon-192/512.png`, maskable 버전 포함). iOS `apple-touch-icon`은 일반 아이콘(모서리가 이미 둥글게 처리되어 있고 바깥이 투명)이 아니라 **투명 영역 없는 maskable 버전을 소스로 사용**해야 함 — iOS가 투명 영역을 검게 렌더링할 수 있음
+- 캐싱 정책: DB에 민감 개인정보가 크게 없음(이름도 마스킹 저장)이라 API 응답 캐싱에 대한 사내 정책 이슈는 없다고 확인됨(2026-09-15) — 다만 정적 자산(JS/CSS/이미지) 위주 캐싱으로 시작하고 필요 시 확장
+- 배포 환경: IDC 센터 배포 예정(아직 미작업, HTTPS 인증서도 그때 함께 준비). 그 전 단계로 로컬 네트워크(사내 와이파이 + PC LAN IP)에서 실기기 설치 테스트를 먼저 진행
+- 버전 관리: PWA 작업 시작 전 시점에 `pre-pwa` 태그 생성(원격에도 push됨, 2026-09-15) — `git diff pre-pwa..HEAD`로 PWA 관련 변경만 비교 가능
+
+### 로컬 네트워크 HTTPS 테스트 셋업
+
+- 문제: 서비스워커는 HTTPS(또는 `localhost`) 필수인데, 휴대폰이 PC의 LAN IP로 접속하는 건 `localhost` 예외 대상이 아니라 별도 인증서가 필요함
+- 해결: `mkcert`로 로컬 CA를 만들고 PC의 LAN IP를 SAN에 포함한 인증서를 발급, 테스트 기기에 그 루트 인증서를 신뢰 등록
+- 인증서 파일 위치: `.certs/`(`.gitignore` 대상 — PC/IP마다 로컬 생성이라 커밋 안 함) — `cert.pem`/`key.pem`
+- `vite.config.ts`: `.certs/cert.pem`, `.certs/key.pem`이 존재하면 `server.https`/`preview.https`에 자동으로 연결됨. 파일이 없으면 조용히 일반 HTTP로 동작해 기존 dev 워크플로우엔 영향 없음
+- 재현 방법(다른 PC나 IP가 바뀌었을 때):
+  1. `mkcert -install` — 로컬 CA를 이 PC의 시스템 신뢰 저장소에 등록(최초 1회)
+  2. `mkcert <PC의 LAN IP> localhost 127.0.0.1 ::1` 실행 후 생성된 두 파일을 각각 `.certs/cert.pem`, `.certs/key.pem`으로 이름 변경해 배치
+  3. `mkcert -CAROOT`로 확인되는 `rootCA.pem`(공개 인증서 — `rootCA-key.pem`은 개인키라 절대 공유 금지)을 테스트 기기(Android/iOS)에 전달해 "CA 인증서"로 설치
+  4. Android는 시스템 브라우저(Chrome)만 사용자 설치 CA를 기본 신뢰함 — 카카오톡/네이버 등 자체 웹뷰를 내장한 앱은 기본적으로 신뢰하지 않는 게 정상 동작(PWA 설치 테스트는 어차피 Chrome으로 하므로 무관)
+- 검증 결과(2026-09-15): PC 로컬(`localhost`)·사내망 IP(`123.2.156.229`) 모두 Chrome에서 인증서 경고 없이 HTTPS 접속 확인됨
