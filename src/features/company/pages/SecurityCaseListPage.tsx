@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { ChevronRight, Search } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Search, Shield, UserCheck } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -20,11 +21,35 @@ import {
 } from '@/components/ui/table'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
+import { cn } from '@/lib/utils'
 import { listSecurityCases } from '../api/requests'
 import SecurityCaseTabs from '../components/SecurityCaseTabs'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
+import type { SecurityCaseStatus } from '../../police/types/securityCase'
 
 const ALL = '전체'
+
+// ACTIVE_SECURITY_CASE_STATUSES는 SecurityCaseStatus[]로 선언돼 있어(as const
+// 아님) [number]로는 리터럴이 좁혀지지 않는다 — 요약카드 매핑용으로 이 화면이
+// 실제로 다루는 3개만 별도 리터럴 타입/배열로 좁힘.
+type ActiveStatus = '배정' | '경호중' | '경호완료'
+const SUMMARY_STATUSES: readonly ActiveStatus[] = ['배정', '경호중', '경호완료']
+
+// KPI 카드용 아이콘/색상 — 대시보드가 없는 본사의 기본 랜딩 화면이라 가벼운
+// 상태별 요약만 가져온다(2026-09-15, 다크 히어로는 대시보드 전용이라 이 화면
+// 성격엔 과함, 세그먼트 바도 불필요해 보인다는 사용자 피드백으로 개별 카드로
+// 분리). 본사 목록은 배정/경호중/경호완료 3개만 다루므로 그 3개만 매핑.
+const STATUS_ICON: Record<ActiveStatus, typeof UserCheck> = {
+  배정: UserCheck,
+  경호중: Shield,
+  경호완료: CheckCircle2,
+}
+
+const STATUS_ICON_COLOR: Record<ActiveStatus, string> = {
+  배정: 'text-status-assigned',
+  경호중: 'text-status-active',
+  경호완료: 'text-status-completed',
+}
 
 // 배정 직후 건은 경호기간이 아직 비어 있다(경호계획 등록 전) — 그때는 "-"로 표시한다.
 function formatDate(dateLike: string) {
@@ -50,6 +75,10 @@ function SecurityCaseListPage() {
   const cases = (casesQuery.data ?? []).filter((c) =>
     ACTIVE_SECURITY_CASE_STATUSES.includes(c.status),
   )
+
+  function countByStatus(status: SecurityCaseStatus) {
+    return cases.filter((c) => c.status === status).length
+  }
 
   const jurisdictions = [ALL, ...Array.from(new Set(cases.map((c) => c.jurisdiction)))]
   const stationsInScope =
@@ -78,6 +107,41 @@ function SecurityCaseListPage() {
       <h1 className="text-xl font-bold text-foreground">경호관리</h1>
 
       <SecurityCaseTabs active="경호목록" />
+
+      {/* KPI 카드(전체+상태별 3개, 개별 카드로 분리) — 세그먼트 바 버전 대신
+          채택(2026-09-15, 사용자 피드백: 바가 불필요해 보임). 본사는 대시보드가
+          없어 이 화면이 로그인 후 기본 랜딩이라 가벼운 현황 파악용으로
+          추가(데스크톱 전용). */}
+      {casesQuery.isSuccess && cases.length > 0 && (
+        <div className="hidden gap-3.5 xl:flex">
+          <Card className="flex-1">
+            <CardContent className="flex flex-col gap-2.5">
+              <span className="text-sm font-medium text-muted-foreground">전체</span>
+              <span className="text-3xl font-bold text-foreground">
+                {cases.length}
+                <span className="ml-1 text-sm font-medium text-muted-foreground">건</span>
+              </span>
+            </CardContent>
+          </Card>
+          {SUMMARY_STATUSES.map((status) => {
+            const Icon = STATUS_ICON[status]
+            return (
+              <Card key={status} className="flex-1">
+                <CardContent className="flex flex-col gap-2.5">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                    <Icon className={cn('size-4', STATUS_ICON_COLOR[status])} />
+                    {status}
+                  </span>
+                  <span className="text-3xl font-bold text-foreground">
+                    {countByStatus(status)}
+                    <span className="ml-1 text-sm font-medium text-muted-foreground">건</span>
+                  </span>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색·필터는 데스크톱 전용, 모바일은
           탭+리스트만. */}
