@@ -25,10 +25,11 @@ interface DateFieldProps {
   'aria-label'?: string
 }
 
-// Input/DateField 공통 시각 스타일(테두리·h-9·포커스링·모바일 16px 규칙). text/calendar
-// 두 variant가 같은 모양이 되도록 한 곳에서 관리한다.
+// Input/DateField 공통 시각 스타일(테두리·h-9·포커스링·text-field 13px). text/calendar
+// 두 variant가 같은 모양이 되도록 한 곳에서 관리한다. 모바일 iOS 자동확대 방지용
+// 16px 예외는 뷰포트 user-scalable=no로 대체돼 제거함(2026-09-15).
 const FIELD_CLASS =
-  'flex h-9 w-full min-w-0 items-center gap-2 rounded-lg border border-input bg-transparent px-3 py-2 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-field dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40'
+  'flex h-9 w-full min-w-0 items-center gap-2 rounded-lg border border-input bg-transparent px-3 py-2 text-field transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40'
 
 // react-day-picker는 로컬 타임존 기준 Date를 주고받는다. yyyy-MM-dd 문자열 ↔ Date
 // 변환을 UTC(toISOString)로 하면 KST처럼 UTC+ 타임존에서 로컬 자정 Date가 전날로
