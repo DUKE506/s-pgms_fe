@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  SAFETY_MEASURE_OPTIONS,
   formatMeasurePeriod,
   hhmm,
   joinMeasureItems,
+  joinMeasureItemsAsBits,
   parseMeasureItems,
   parseMeasurePeriod,
 } from './caseMeasures'
@@ -45,6 +47,24 @@ describe('caseMeasures', () => {
       '2026-09-10 ~ 2026-09-20',
     )
     expect(formatMeasurePeriod(null)).toBe('')
+  })
+
+  describe('joinMeasureItemsAsBits', () => {
+    it('선택 항목을 옵션 순서 기준 비트 위치 문자열로 인코딩한다', () => {
+      expect(joinMeasureItemsAsBits(['맞춤형순찰', 'CCTV'], SAFETY_MEASURE_OPTIONS)).toBe(
+        '1001',
+      )
+    })
+
+    it('선택 항목이 없으면 옵션 개수만큼 0으로 채운다', () => {
+      expect(joinMeasureItemsAsBits([], SAFETY_MEASURE_OPTIONS)).toBe('0000')
+    })
+
+    it('전부 선택하면 전부 1', () => {
+      expect(joinMeasureItemsAsBits(SAFETY_MEASURE_OPTIONS, SAFETY_MEASURE_OPTIONS)).toBe(
+        '1111',
+      )
+    })
   })
 
   describe('hhmm', () => {

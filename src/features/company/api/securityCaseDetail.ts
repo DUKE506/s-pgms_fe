@@ -5,9 +5,14 @@ import { genderCodeToLabel } from '@/shared/lib/subject'
 import { crimeCodeToCaseType } from '@/shared/lib/crimeType'
 import { resolveDeployStatus } from '@/shared/lib/deployStatus'
 import {
+  EMERGENCY_MEASURE_OPTIONS,
+  EMERGENCY_TEMP_MEASURE_OPTIONS,
+  PROVISIONAL_MEASURE_OPTIONS,
+  SAFETY_MEASURE_OPTIONS,
+  TEMPORARY_MEASURE_OPTIONS,
   formatMeasurePeriod,
   hhmm,
-  joinMeasureItems,
+  joinMeasureItemsAsBits,
   parseMeasureItems,
   parseMeasurePeriod,
 } from '@/shared/lib/caseMeasures'
@@ -491,15 +496,15 @@ function toCaseInfoBody(
     guardWorkLoc: input.placeWorkplace,
     guardEtcLoc1: input.placeEtc1,
     guardEtcLoc2: input.placeEtc2,
-    summary1: joinMeasureItems(input.safetyMeasures),
+    summary1: joinMeasureItemsAsBits(input.safetyMeasures, SAFETY_MEASURE_OPTIONS),
     summary1Date: formatMeasurePeriod(input.safetyMeasuresPeriod),
-    summary2: joinMeasureItems(input.emergencyMeasures),
+    summary2: joinMeasureItemsAsBits(input.emergencyMeasures, EMERGENCY_MEASURE_OPTIONS),
     summary2Date: formatMeasurePeriod(input.emergencyMeasuresPeriod),
-    summary3: joinMeasureItems(input.provisionalMeasures),
+    summary3: joinMeasureItemsAsBits(input.provisionalMeasures, PROVISIONAL_MEASURE_OPTIONS),
     summary3Date: formatMeasurePeriod(input.provisionalMeasuresPeriod),
-    summary4: joinMeasureItems(input.emergencyTempMeasures),
+    summary4: joinMeasureItemsAsBits(input.emergencyTempMeasures, EMERGENCY_TEMP_MEASURE_OPTIONS),
     summary4Date: formatMeasurePeriod(input.emergencyTempMeasuresPeriod),
-    summary5: joinMeasureItems(input.temporaryMeasures),
+    summary5: joinMeasureItemsAsBits(input.temporaryMeasures, TEMPORARY_MEASURE_OPTIONS),
     summary5Date: formatMeasurePeriod(input.temporaryMeasuresPeriod),
     guards: toGuardItems(input.defaultWorkers),
   }

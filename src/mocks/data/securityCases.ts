@@ -122,7 +122,7 @@ function withDemoDetail(record: SecurityCase, opts: { destructionCert: boolean }
     placeWorkplace: record.location.workplace,
     placeEtc1: '',
     placeEtc2: '',
-    safetyMeasures: ['맞춤형 순찰', '스마트워치'],
+    safetyMeasures: ['맞춤형순찰', '스마트워치'],
     emergencyMeasures: ['1호'],
     provisionalMeasures: ['2호'],
     emergencyTempMeasures: [],

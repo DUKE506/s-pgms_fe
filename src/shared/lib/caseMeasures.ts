@@ -2,14 +2,29 @@
 //
 // 폼(BaseInfoForm)은 섹션(안전조치/긴급응급조치/잠정조치/긴급임시조치/임시조치)마다
 // 다중선택 배열 + {시작일,종료일} 기간을 다루는데, 백엔드는 섹션당 단일 문자열 2개
-// (`summaryN` = 선택 항목, `summaryNDate` = 기간)뿐이다. 그래서 항목은 ", "로 조인,
-// 기간은 "시작일 ~ 종료일" 문자열로 직렬화해 저장하고 읽을 때 역파싱한다.
-// 손실 매핑이라 exclusions.md에 기록, 구조화 요청은 issues.md #11.
+// (`summaryN` = 선택 항목, `summaryNDate` = 기간)뿐이다. 실제로는 섹션 옵션 순서대로
+// 비트 위치 문자열("1001")로 저장한다(2026-09-15 백엔드 확인·실측, 5개 섹션 전부 —
+// 지금 옵션 배열 순서 = 비트 자리 확정. findings #11 종결).
+//
+// 조회(GetGuardCaseDetail/GetDeployDetail/GetHistoryDetail)는 서버가 변환한 값을
+// 주는 것으로 확인돼 `parseMeasureItems`는 그대로 유지(콤마 조인 기준 역파싱).
+// 등록(AddGuardCaseInfo)·수정(PatchCaseInfo) 둘 다 비트 인코딩으로 전환 완료
+// (2026-09-15, 5개 섹션 전부 등록·수정 실측 확인).
 //
 // 본사 경호 상세(GetGuardCaseDetail)와 피전 경호 상세(GetDeployDetail, 2026-09-07부터
 // summaryN 포함)가 같은 포맷을 쓰므로 헬퍼를 공유한다.
 
 import type { MeasurePeriod } from '@/features/police/types/securityCase'
+
+// 조치 5개 섹션의 옵션 배열 — 폼(BaseInfoForm)과 등록 인코더(securityCaseDetail.ts)가
+// 이 배열을 공유해야 비트 위치가 어긋나지 않는다. 순서 = 비트 자리.
+// "맞춤형순찰"은 띄어쓰기 없음이 공식 표기(2026-09-15 확인 — 서버가 조회 시 이
+// 표기로 변환해서 줘서 발견, 프론트가 띄어쓰기를 넣어 잘못 쓰고 있었음).
+export const SAFETY_MEASURE_OPTIONS = ['맞춤형순찰', '임시숙소', '스마트워치', 'CCTV']
+export const EMERGENCY_MEASURE_OPTIONS = ['1호', '2호']
+export const PROVISIONAL_MEASURE_OPTIONS = ['1호', '2호', '3호', '3-2호', '4호', '신청예정']
+export const EMERGENCY_TEMP_MEASURE_OPTIONS = ['1호', '2호', '3호']
+export const TEMPORARY_MEASURE_OPTIONS = ['1호', '2호', '3호', '4호', '5호', '신청예정']
 
 export function parseMeasureItems(text: string | null | undefined): string[] {
   if (!text) return []
@@ -17,6 +32,12 @@ export function parseMeasureItems(text: string | null | undefined): string[] {
     .split(',')
     .map((t) => t.trim())
     .filter(Boolean)
+}
+
+// 선택 항목 배열 → 옵션 순서 기준 비트 위치 문자열("1001"). 미선택 항목은 "0"으로
+// 채워 옵션 개수만큼 항상 고정 길이로 보낸다(등록 전용, findings #11).
+export function joinMeasureItemsAsBits(items: string[], options: readonly string[]): string {
+  return options.map((option) => (items.includes(option) ? '1' : '0')).join('')
 }
 
 export function parseMeasurePeriod(text: string | null | undefined): MeasurePeriod | null {

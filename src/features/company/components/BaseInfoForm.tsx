@@ -14,6 +14,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import {
+  EMERGENCY_MEASURE_OPTIONS,
+  EMERGENCY_TEMP_MEASURE_OPTIONS,
+  PROVISIONAL_MEASURE_OPTIONS,
+  SAFETY_MEASURE_OPTIONS,
+  TEMPORARY_MEASURE_OPTIONS,
+} from '@/shared/lib/caseMeasures'
 import { registerBaseInfo } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import DispatchRequestViewDialog from './DispatchRequestViewDialog'
@@ -27,12 +34,6 @@ import type {
 } from '../../police/types/securityCase'
 
 const EMPTY_PERIOD: MeasurePeriod = { startDate: '', endDate: '' }
-
-const SAFETY_MEASURES = ['맞춤형 순찰', '임시숙소', '스마트워치', 'CCTV']
-const EMERGENCY_MEASURES = ['1호', '2호']
-const PROVISIONAL_MEASURES = ['1호', '2호', '3호', '3-2호', '4호', '신청예정']
-const EMERGENCY_TEMP_MEASURES = ['1호', '2호', '3호']
-const TEMPORARY_MEASURES = ['1호', '2호', '3호', '4호', '5호', '신청예정']
 
 interface FormState {
   workHours: string
@@ -474,7 +475,7 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
 
       <FormSection title="7. 안전조치">
         <MeasureChips
-          options={SAFETY_MEASURES}
+          options={SAFETY_MEASURE_OPTIONS}
           selected={form.safetyMeasures}
           onToggle={(v) => toggleMeasure('safetyMeasures', v)}
         />
@@ -488,7 +489,7 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
 
       <FormSection title="8. 긴급응급조치">
         <MeasureChips
-          options={EMERGENCY_MEASURES}
+          options={EMERGENCY_MEASURE_OPTIONS}
           selected={form.emergencyMeasures}
           onToggle={(v) => toggleMeasure('emergencyMeasures', v)}
         />
@@ -502,7 +503,7 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
 
       <FormSection title="9. 잠정조치">
         <MeasureChips
-          options={PROVISIONAL_MEASURES}
+          options={PROVISIONAL_MEASURE_OPTIONS}
           selected={form.provisionalMeasures}
           onToggle={(v) => toggleMeasure('provisionalMeasures', v)}
         />
@@ -516,7 +517,7 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
 
       <FormSection title="10. 긴급임시조치">
         <MeasureChips
-          options={EMERGENCY_TEMP_MEASURES}
+          options={EMERGENCY_TEMP_MEASURE_OPTIONS}
           selected={form.emergencyTempMeasures}
           onToggle={(v) => toggleMeasure('emergencyTempMeasures', v)}
         />
@@ -530,7 +531,7 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
 
       <FormSection title="11. 임시조치">
         <MeasureChips
-          options={TEMPORARY_MEASURES}
+          options={TEMPORARY_MEASURE_OPTIONS}
           selected={form.temporaryMeasures}
           onToggle={(v) => toggleMeasure('temporaryMeasures', v)}
         />
