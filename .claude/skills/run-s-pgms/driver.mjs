@@ -120,6 +120,15 @@ const COMMANDS = {
     console.log('click', sel, '-> ok')
   },
 
+  // 실제 브라우저 포인터 이동으로 hover 상태 재현(차트 툴팁 등 마우스오버 UI
+  // 검증용) — eval로 MouseEvent를 직접 dispatch하면 recharts 내부 좌표
+  // 트래킹이 반응하지 않아서 Playwright의 진짜 마우스 이동이 필요함.
+  async hover(sel) {
+    if (!page) return console.log('ERROR: launch first')
+    await page.hover(sel)
+    console.log('hover', sel, '-> ok')
+  },
+
   // 파일 업로드: upload <input셀렉터> <파일경로>. <input type=file>에 파일을 주입한다
   // (숨겨진 input이면 셀렉터로 직접 지정). 예: upload input[type=file] C:/tmp/a.pdf
   async upload(args) {

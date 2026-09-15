@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+  body{margin:0;background:#e2e8f0;font-family:Pretendard;display:flex;align-items:center;justify-content:center;min-height:100vh}
+  a{color:#2563eb}
+  a:hover{color:#1d4ed8}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+</style>
+</helmet>
+<div style="width:1920px;height:1080px;background:#eef1f6;overflow:hidden;display:flex;box-shadow:0 20px 50px rgba(15,23,42,.18)">
+  <!-- icon rail -->
+  <div style="width:76px;flex-shrink:0;background:#0f172a;display:flex;flex-direction:column;align-items:center;padding:20px 0;gap:6px">
+    <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(45deg,#edf4ff,#b3cfff);display:flex;align-items:center;justify-content:center;color:#0f172a;font:700 13px Pretendard;margin-bottom:22px">본청</div>
+    <div style="width:60px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0;border-radius:10px;background:#1e293b;color:#fff"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11L12 4l8 7"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg><span style="font:500 10px Pretendard">현황</span></div>
+    <div style="width:60px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0;border-radius:10px;color:#64748b"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></svg><span style="font:500 10px Pretendard">이력</span></div>
+    <div style="flex:1"></div>
+    <div style="width:32px;height:32px;border-radius:50%;background:#334155;color:#fff;display:flex;align-items:center;justify-content:center;font:600 11px Pretendard;margin-bottom:8px">본청</div>
+    <div style="width:60px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 0;color:#64748b"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4"/><path d="M14 8l4 4-4 4"/><line x1="18" y1="12" x2="9" y2="12"/></svg></div>
+  </div>
+  <!-- org tree -->
+  <div style="width:300px;flex-shrink:0;background:#fff;border-right:1px solid #e8edf3;display:flex;flex-direction:column">
+    <div style="padding:22px 20px 14px;border-bottom:1px solid #f1f5f9">
+      <div style="font:400 12px Pretendard;color:#94a3b8;margin-bottom:4px">조회범위</div>
+      <div style="font:700 16px Pretendard;color:#0f172a">조직 계층</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;background:#0f172a;color:#fff;font:700 13px Pretendard">전체 (본청)<span style="margin-left:auto;font:600 11px Pretendard;color:#93c5fd">158건</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard;margin-top:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>서울지방경찰청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">41건</span></div>
+      <div style="display:flex;flex-direction:column;padding-left:34px">
+        <div style="padding:7px 10px;border-radius:6px;color:#64748b;font:400 12px Pretendard;display:flex"><span>강남경찰서</span><span style="margin-left:auto;color:#94a3b8">9건</span></div>
+        <div style="padding:7px 10px;border-radius:6px;color:#64748b;font:400 12px Pretendard;display:flex"><span>서초경찰서</span><span style="margin-left:auto;color:#94a3b8">7건</span></div>
+        <div style="padding:7px 10px;border-radius:6px;color:#64748b;font:400 12px Pretendard;display:flex"><span>송파경찰서</span><span style="margin-left:auto;color:#94a3b8">6건</span></div>
+        <div style="padding:7px 10px;border-radius:6px;color:#64748b;font:400 12px Pretendard;display:flex"><span>강동경찰서</span><span style="margin-left:auto;color:#94a3b8">5건</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>경기남부지방청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">37건</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>부산지방청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">22건</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>인천지방청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">19건</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>대구지방청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">15건</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>경기북부지방청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">3건</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>강원지방청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">3건</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>충북지방청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">2건</span></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:9px 12px 9px 20px;border-radius:8px;color:#334155;font:600 13px Pretendard"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>충남지방청<span style="margin-left:auto;font:500 12px Pretendard;color:#94a3b8">2건</span></div>
+    </div>
+  </div>
+  <!-- main -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <div style="background:linear-gradient(158deg,#243b5c 0%,#16213a 52%,#0f172a 100%);padding:30px 36px 78px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:space-between">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <span style="font:500 14px Pretendard;color:#93c5fd">안녕하세요, 본청 담당자님</span>
+          <span style="font:700 26px Pretendard;color:#fff;letter-spacing:-.02em">오늘의 전체현황</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font:500 13px Pretendard;color:#94a3b8">전체 접수건 · 전국</span>
+          <span style="font:700 44px Pretendard;color:#fff;letter-spacing:-.02em">158</span>
+          <span style="font:600 16px Pretendard;color:#93c5fd">건</span>
+          <span style="font:500 13px Pretendard;color:#64748b;margin-left:6px">경호중 88건 진행 중 · 신규 42건</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:11px 16px;font:600 13px Pretendard;color:#e2e8f0">조회월 2026.02 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:0 36px 36px;margin-top:-48px;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;gap:16px">
+        <div style="flex:1;background:#fff;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(15,23,42,.07)"><span style="font:500 13px Pretendard;color:#64748b;display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#6B7280;display:inline-block"></span>접수</span><span style="font:700 30px Pretendard;color:#0f172a">18<span style="font:500 14px Pretendard;color:#94a3b8">건</span></span></div>
+        <div style="flex:1;background:#fff;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(15,23,42,.07)"><span style="font:500 13px Pretendard;color:#64748b;display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#F0B20A;display:inline-block"></span>배정</span><span style="font:700 30px Pretendard;color:#0f172a">34<span style="font:500 14px Pretendard;color:#94a3b8">건</span></span></div>
+        <div style="flex:1;background:#fff;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(15,23,42,.07)"><span style="font:500 13px Pretendard;color:#64748b;display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#15AB59;display:inline-block"></span>경호중</span><span style="font:700 30px Pretendard;color:#0f172a">88<span style="font:500 14px Pretendard;color:#94a3b8">건</span></span></div>
+        <div style="flex:1;background:#fff;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(15,23,42,.07)"><span style="font:500 13px Pretendard;color:#64748b;display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#2563EB;display:inline-block"></span>경호완료</span><span style="font:700 30px Pretendard;color:#0f172a">18<span style="font:500 14px Pretendard;color:#94a3b8">건</span></span></div>
+        <div style="flex:1;background:#fff;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(15,23,42,.07)"><span style="font:500 13px Pretendard;color:#64748b">평균 경호기간</span><span style="font:700 30px Pretendard;color:#0f172a">14.5<span style="font:500 14px Pretendard;color:#94a3b8">일</span></span></div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:stretch">
+        <div style="flex:1.3;background:#fff;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 24px rgba(15,23,42,.07)">
+          <span style="font:700 15px Pretendard;color:#0f172a">지역별 건수 순위 <span style="font:400 12px Pretendard;color:#94a3b8">· 지방청</span></span>
+          <div style="display:flex;flex-direction:column;gap:13px">
+            <div style="display:flex;align-items:center;gap:14px"><span style="font:700 12px Pretendard;color:#94a3b8;width:16px">1</span><span style="font:500 13px Pretendard;color:#334155;width:100px">서울지방청</span><div style="flex:1;height:10px;border-radius:5px;background:#eef1f6;overflow:hidden"><div style="height:100%;width:100%;background:#0f172a;border-radius:5px"></div></div><span style="font:700 13px Pretendard;color:#0f172a;width:36px;text-align:right">41</span></div>
+            <div style="display:flex;align-items:center;gap:14px"><span style="font:700 12px Pretendard;color:#94a3b8;width:16px">2</span><span style="font:500 13px Pretendard;color:#334155;width:100px">경기남부청</span><div style="flex:1;height:10px;border-radius:5px;background:#eef1f6;overflow:hidden"><div style="height:100%;width:90%;background:#334155;border-radius:5px"></div></div><span style="font:700 13px Pretendard;color:#0f172a;width:36px;text-align:right">37</span></div>
+            <div style="display:flex;align-items:center;gap:14px"><span style="font:700 12px Pretendard;color:#94a3b8;width:16px">3</span><span style="font:500 13px Pretendard;color:#334155;width:100px">부산지방청</span><div style="flex:1;height:10px;border-radius:5px;background:#eef1f6;overflow:hidden"><div style="height:100%;width:54%;background:#64748b;border-radius:5px"></div></div><span style="font:700 13px Pretendard;color:#0f172a;width:36px;text-align:right">22</span></div>
+            <div style="display:flex;align-items:center;gap:14px"><span style="font:700 12px Pretendard;color:#94a3b8;width:16px">4</span><span style="font:500 13px Pretendard;color:#334155;width:100px">인천지방청</span><div style="flex:1;height:10px;border-radius:5px;background:#eef1f6;overflow:hidden"><div style="height:100%;width:46%;background:#64748b;border-radius:5px"></div></div><span style="font:700 13px Pretendard;color:#0f172a;width:36px;text-align:right">19</span></div>
+            <div style="display:flex;align-items:center;gap:14px"><span style="font:700 12px Pretendard;color:#94a3b8;width:16px">5</span><span style="font:500 13px Pretendard;color:#334155;width:100px">대구지방청</span><div style="flex:1;height:10px;border-radius:5px;background:#eef1f6;overflow:hidden"><div style="height:100%;width:37%;background:#94a3b8;border-radius:5px"></div></div><span style="font:700 13px Pretendard;color:#0f172a;width:36px;text-align:right">15</span></div>
+            <div style="display:flex;align-items:center;gap:14px"><span style="font:700 12px Pretendard;color:#cbd5e1;width:16px">-</span><span style="font:500 13px Pretendard;color:#94a3b8;width:100px">그 외 13개</span><div style="flex:1;height:10px;border-radius:5px;background:#eef1f6;overflow:hidden"><div style="height:100%;width:58%;background:#dbe2ec;border-radius:5px"></div></div><span style="font:700 13px Pretendard;color:#94a3b8;width:36px;text-align:right">24</span></div>
+          </div>
+        </div>
+        <div style="flex:1;background:#fff;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 24px rgba(15,23,42,.07)">
+          <span style="font:700 15px Pretendard;color:#0f172a">상태별 비율</span>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:28px">
+            <div style="width:130px;height:130px;border-radius:50%;background:conic-gradient(#6B7280 0deg 41deg,#F0B20A 41deg 118deg,#15AB59 118deg 318deg,#2563EB 318deg 360deg);display:flex;align-items:center;justify-content:center"><div style="width:80px;height:80px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font:700 15px Pretendard;color:#0f172a">158건</div></div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:8px;font:500 12px Pretendard;color:#334155"><span style="width:9px;height:9px;border-radius:2px;background:#6B7280;display:inline-block"></span>접수 18건 (11%)</div>
+              <div style="display:flex;align-items:center;gap:8px;font:500 12px Pretendard;color:#334155"><span style="width:9px;height:9px;border-radius:2px;background:#F0B20A;display:inline-block"></span>배정 34건 (22%)</div>
+              <div style="display:flex;align-items:center;gap:8px;font:500 12px Pretendard;color:#334155"><span style="width:9px;height:9px;border-radius:2px;background:#15AB59;display:inline-block"></span>경호중 88건 (56%)</div>
+              <div style="display:flex;align-items:center;gap:8px;font:500 12px Pretendard;color:#334155"><span style="width:9px;height:9px;border-radius:2px;background:#2563EB;display:inline-block"></span>경호완료 18건 (11%)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:16px;padding:22px 24px;box-shadow:0 8px 24px rgba(15,23,42,.07)">
+        <div style="font:700 15px Pretendard;color:#0f172a;margin-bottom:12px">월별 추이 <span style="font:400 12px Pretendard;color:#94a3b8">· 전체 건수 · 최근 6개월</span></div>
+        <svg width="100%" height="130" viewBox="0 0 560 130" preserveAspectRatio="none" style="overflow:visible">
+          <line x1="0" y1="14" x2="560" y2="14" stroke="#f1f5f9" stroke-width="1"></line>
+          <line x1="0" y1="43" x2="560" y2="43" stroke="#f1f5f9" stroke-width="1"></line>
+          <line x1="0" y1="72" x2="560" y2="72" stroke="#f1f5f9" stroke-width="1"></line>
+          <line x1="0" y1="101" x2="560" y2="101" stroke="#f1f5f9" stroke-width="1"></line>
+          <path d="M20,101 C60,96 80,83 120,78 C160,73 180,64 220,58 C260,53 280,45 320,40 C360,35 380,29 420,25 C460,22 480,16 520,13" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"></path>
+          <circle cx="20" cy="101" r="2.5" fill="#60a5fa"></circle><circle cx="120" cy="78" r="2.5" fill="#60a5fa"></circle><circle cx="220" cy="58" r="2.5" fill="#60a5fa"></circle><circle cx="320" cy="40" r="2.5" fill="#60a5fa"></circle><circle cx="420" cy="25" r="2.5" fill="#60a5fa"></circle><circle cx="520" cy="13" r="2.5" fill="#60a5fa"></circle>
+        </svg>
+        <div style="display:flex;justify-content:space-between;padding:0 4px;margin-top:6px">
+          <span style="font:500 11px Pretendard;color:#94a3b8">9월 <b style="font:700 12px Pretendard;color:#334155">100</b></span>
+          <span style="font:500 11px Pretendard;color:#94a3b8">10월 <b style="font:700 12px Pretendard;color:#334155">115</b></span>
+          <span style="font:500 11px Pretendard;color:#94a3b8">11월 <b style="font:700 12px Pretendard;color:#334155">128</b></span>
+          <span style="font:500 11px Pretendard;color:#94a3b8">12월 <b style="font:700 12px Pretendard;color:#334155">140</b></span>
+          <span style="font:500 11px Pretendard;color:#94a3b8">1월 <b style="font:700 12px Pretendard;color:#334155">150</b></span>
+          <span style="font:500 11px Pretendard;color:#94a3b8">2월 <b style="font:700 12px Pretendard;color:#0f172a">158</b></span>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:16px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 8px 24px rgba(15,23,42,.07)">
+        <span style="font:700 15px Pretendard;color:#0f172a">안전조치 항목별 적용 현황 <span style="font:400 12px Pretendard;color:#94a3b8">· 중복 적용 가능</span></span>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 13px Pretendard;color:#64748b">맞춤형 순찰</span><span style="font:700 26px Pretendard;color:#0f172a">96<span style="font:500 13px Pretendard;color:#94a3b8">건</span></span><div style="height:8px;border-radius:4px;background:#eef1f6"><div style="height:100%;width:100%;background:#0f172a;border-radius:4px"></div></div></div>
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 13px Pretendard;color:#64748b">임시숙소</span><span style="font:700 26px Pretendard;color:#0f172a">41<span style="font:500 13px Pretendard;color:#94a3b8">건</span></span><div style="height:8px;border-radius:4px;background:#eef1f6"><div style="height:100%;width:43%;background:rgba(15,23,42,.45);border-radius:4px"></div></div></div>
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 13px Pretendard;color:#64748b">스마트워치</span><span style="font:700 26px Pretendard;color:#0f172a">72<span style="font:500 13px Pretendard;color:#94a3b8">건</span></span><div style="height:8px;border-radius:4px;background:#eef1f6"><div style="height:100%;width:75%;background:rgba(15,23,42,.78);border-radius:4px"></div></div></div>
+          <div style="display:flex;flex-direction:column;gap:10px"><span style="font:500 13px Pretendard;color:#64748b">CCTV</span><span style="font:700 26px Pretendard;color:#0f172a">28<span style="font:500 13px Pretendard;color:#94a3b8">건</span></span><div style="height:8px;border-radius:4px;background:#eef1f6"><div style="height:100%;width:29%;background:rgba(15,23,42,.3);border-radius:4px"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1920,&quot;height&quot;:1080}}"></script>
+</body>
+</html>

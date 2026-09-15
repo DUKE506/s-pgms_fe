@@ -52,6 +52,7 @@ EOF
 | `upload <input셀렉터> <파일경로>` | `<input type=file>`에 파일 주입 (숨겨진 input도 셀렉터로 직접 지정) |
 | `click <selector>` | CSS 셀렉터로 클릭 |
 | `click-text <text>` | 해당 텍스트를 포함한 요소 클릭 |
+| `hover <selector>` | 실제 브라우저 포인터 이동으로 hover 상태 재현(차트 툴팁 등 마우스오버 UI 검증용) — `eval`로 MouseEvent를 직접 dispatch하는 방식은 recharts 같은 내부 좌표 트래킹에 반응하지 않아서 별도 커맨드로 추가함(2026-09-15) |
 | `wait <selector-or-text=...>` | 셀렉터가 나타날 때까지 최대 10초 대기 (Playwright `text=` 로케이터 사용 가능) |
 | `ss [name]` | 스크린샷 → `shots/<name>.png` |
 | `storage [key]` | `localStorage` 값 출력 (기본 key: `auth-storage`) |
