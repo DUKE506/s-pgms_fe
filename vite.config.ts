@@ -5,6 +5,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -27,6 +28,45 @@ export default defineConfig(({ mode }) => {
       react(),
       babel({ presets: [reactCompilerPreset()] }),
       tailwindcss(),
+      VitePWA({
+        // MSW도 서비스워커를 쓰므로(dev 전용) dev 모드에서는 PWA 서비스워커를
+        // 등록하지 않는다(devOptions.enabled 기본값 false) — 프로덕션 빌드에만 적용.
+        registerType: 'autoUpdate',
+        manifest: {
+          name: 'Safety Link',
+          short_name: 'Safety Link',
+          lang: 'ko',
+          start_url: '/',
+          scope: '/',
+          display: 'standalone',
+          background_color: '#0f172a',
+          theme_color: '#0f172a',
+          icons: [
+            {
+              src: 'safety-link-icon/icon-192.png',
+              sizes: '192x192',
+              type: 'image/png',
+            },
+            {
+              src: 'safety-link-icon/icon-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+            },
+            {
+              src: 'safety-link-icon/icon-maskable-192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+            {
+              src: 'safety-link-icon/icon-maskable-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+      }),
     ],
     resolve: {
       alias: {

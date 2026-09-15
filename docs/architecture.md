@@ -188,3 +188,11 @@ src/
   3. `mkcert -CAROOT`로 확인되는 `rootCA.pem`(공개 인증서 — `rootCA-key.pem`은 개인키라 절대 공유 금지)을 테스트 기기(Android/iOS)에 전달해 "CA 인증서"로 설치
   4. Android는 시스템 브라우저(Chrome)만 사용자 설치 CA를 기본 신뢰함 — 카카오톡/네이버 등 자체 웹뷰를 내장한 앱은 기본적으로 신뢰하지 않는 게 정상 동작(PWA 설치 테스트는 어차피 Chrome으로 하므로 무관)
 - 검증 결과(2026-09-15): PC 로컬(`localhost`)·사내망 IP(`123.2.156.229`) 모두 Chrome에서 인증서 경고 없이 HTTPS 접속 확인됨
+
+### 구현 (Phase 1)
+
+- 플러그인: `vite-plugin-pwa` (`generateSW` 모드, `registerType: 'autoUpdate'`) — `vite.config.ts`
+- dev 모드에서는 서비스워커 미등록(`devOptions.enabled` 기본값 false) — MSW의 dev 전용 서비스워커와 겹치지 않게 함. 프로덕션 빌드(`npm run build`)에만 `dist/sw.js`, `dist/manifest.webmanifest`, `dist/registerSW.js` 생성됨
+- 캐싱 범위: `generateSW` 기본값대로 빌드 산출물(정적 자산)만 precache. API 요청에 대한 `runtimeCaching` 규칙은 추가하지 않아 API 응답은 캐싱되지 않고 항상 네트워크로 나감
+- `index.html`: iOS 대응 meta 태그 추가(`apple-touch-icon`은 maskable 아이콘을 소스로 사용, `apple-mobile-web-app-capable`, `status-bar-style: black-translucent`, `apple-mobile-web-app-title`), `viewport-fit=cover` 추가, `theme-color` meta 추가(브라우저 탭/작업표시줄 색상, 매니페스트 `theme_color`와 별개로 필요)
+- 검증(2026-09-15): `npm run build`/`lint`/`test`(157/157) 통과. `vite preview --host`(HTTPS, 포트 4173)로 프로덕션 빌드를 사내망 IP에 띄워 Android 실기기에서 설치 → standalone 실행 → 로그인(실제 백엔드 연동)까지 확인 완료
