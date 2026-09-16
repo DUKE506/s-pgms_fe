@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { CheckCircle2, ChevronDown, Inbox, Shield, UserCheck } from 'lucide-react'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '../../auth/store/authStore'
 import type { SecurityCaseStatus } from '../types/securityCase'
@@ -90,6 +91,83 @@ function toOrgScopeTree(node: OrgCountNode): { root: OrgScopeOption; regions: Or
   return { root, regions }
 }
 
+// 최초 진입 로딩 스켈레톤 — 차트 모양까지 흉내내지 않고, 히어로/카드/차트 각
+// 슬롯 크기에 맞춘 사각형 블록으로만 채운다(2026-09-16 결정). keepPreviousData를
+// 쓰고 있어 조직 트리 재선택 시엔 이 스켈레톤이 다시 뜨지 않고 이전 데이터를
+// 유지한 채 갱신되므로, 실제로 보이는 건 최초 진입 한 번뿐이라 정밀도보다
+// 공수를 줄이는 쪽을 택함.
+function DashboardSkeleton() {
+  return (
+    <>
+      <main className="flex flex-col xl:hidden">
+        <div className="flex flex-col gap-5 bg-gradient-to-b from-[#243b5c] via-[#16213a] to-[#0f172a] px-4 pt-6 pb-16">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-40 bg-white/10" />
+            <Skeleton className="h-7 w-16 rounded-lg bg-white/10" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-24 rounded-full bg-white/10" />
+            <Skeleton className="mt-1 h-9 w-20 bg-white/10" />
+            <Skeleton className="h-3 w-32 bg-white/10" />
+          </div>
+        </div>
+        <div className="-mt-10 flex flex-col gap-3 px-4 pb-28">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border bg-card p-5.5">
+              <Skeleton className="mb-3 h-4 w-24" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ))}
+        </div>
+      </main>
+
+      <div className="hidden xl:flex xl:h-screen">
+        <aside className="flex w-[270px] shrink-0 flex-col gap-2 border-r border-border bg-card p-[11px]">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+          <div className="shrink-0 bg-gradient-to-b from-[#243b5c] via-[#16213a] to-[#0f172a] px-[32px] pt-[29px] pb-[72px]">
+            <Skeleton className="h-4 w-48 bg-white/10" />
+            <Skeleton className="mt-3 h-6 w-56 bg-white/10" />
+            <Skeleton className="mt-4 h-10 w-40 bg-white/10" />
+          </div>
+          <div className="-mt-[43px] flex shrink-0 flex-col gap-[14px] px-[32px] pb-[32px]">
+            <div className="flex gap-[14px]">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex-1 rounded-xl border border-border bg-card p-4">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="mt-2 h-6 w-12" />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-stretch gap-[14px]">
+              <div className="flex-[1.3] rounded-xl border border-border bg-card p-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="mt-3 h-[216px] w-full" />
+              </div>
+              <div className="flex-1 rounded-xl border border-border bg-card p-4">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="mt-3 h-[216px] w-full" />
+              </div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="mt-3 h-[200px] w-full" />
+            </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="mt-3 h-24 w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function DashboardPage() {
   const user = useAuthStore((state) => state.user)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -133,7 +211,7 @@ function DashboardPage() {
   }
 
   if (orgTreeQuery.isLoading || dashboardQuery.isLoading || !bundle || !scope || !root) {
-    return <p className="py-16 text-center text-sm text-muted-foreground">불러오는 중...</p>
+    return <DashboardSkeleton />
   }
   if (orgTreeQuery.isError || dashboardQuery.isError) {
     return <p className="py-16 text-center text-sm text-destructive">대시보드를 불러오지 못했습니다</p>
