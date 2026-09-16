@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
+import { Eye, EyeOff } from 'lucide-react'
 import { changeInitialPassword, login } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
 import { getDefaultRouteForRole } from '../lib/defaultRoute'
@@ -18,6 +19,7 @@ import { useToastStore } from '@/shared/hooks/useToastStore'
 function LoginPage() {
   const [id, setId] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [forceChangeTargetId, setForceChangeTargetId] = useState<string | null>(null)
   const setSession = useAuthStore((state) => state.setSession)
@@ -49,45 +51,91 @@ function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <h1 className="font-heading text-xl leading-snug font-medium">로그인</h1>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    // xl 미만(모바일): 로그인-모바일 목업처럼 카드 박스 없이 페이지 배경 위에 내용이
+    // 바로 놓이고, 카피라이트는 화면 하단에 고정(justify-between). xl 이상(웹
+    // 목업): 중앙 카드 + 카드 뒤에서 퍼지는 블루 글로우 배경. 인풋(아이콘 없음)과
+    // 비밀번호 눈토글은 두 크기 공통(2026-09-16 사용자 결정).
+    <main className="relative flex min-h-screen flex-col bg-slate-50 pt-14 pb-8 xl:items-center xl:justify-center xl:p-4">
+      <div
+        aria-hidden
+        className="absolute inset-0 hidden xl:block"
+        style={{
+          backgroundImage:
+            'radial-gradient(ellipse 65% 55% at 50% 48%, rgba(191,219,254,0.65), transparent 70%), ' +
+            'radial-gradient(circle at 18% 20%, rgba(191,219,254,0.3), transparent 40%), ' +
+            'radial-gradient(circle at 85% 82%, rgba(219,234,254,0.25), transparent 45%)',
+        }}
+      />
+
+      <Card
+        className={
+          'relative z-10 flex w-full flex-1 flex-col justify-between gap-0 rounded-none border-0 bg-transparent p-0 shadow-none ring-0 ' +
+          '[--card-spacing:--spacing(6)] xl:max-w-md xl:flex-none xl:justify-normal xl:gap-(--card-spacing) xl:rounded-xl xl:bg-white ' +
+          'xl:py-(--card-spacing) xl:shadow-[0_0_60px_rgba(15,23,42,0.2)] xl:[--card-spacing:--spacing(8)]'
+        }
+      >
+        <div className="flex flex-col gap-(--card-spacing)">
+          <CardHeader className="flex flex-col items-start gap-4 text-left xl:items-center xl:text-center">
+            <img
+              src="/safety-link-icon/icon-192.png"
+              alt="Safety Link"
+              className="h-16 w-16 rounded-[16px]"
+            />
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="login-id">아이디</Label>
-              <Input
-                id="login-id"
-                placeholder="아이디를 입력하세요"
-                value={id}
-                onChange={(e) => setId(e.target.value)}
-              />
+              <h1 className="font-heading text-2xl leading-snug font-bold">Safety Link</h1>
+              <p className="text-sm text-muted-foreground">민간경호관리 시스템 로그인</p>
             </div>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="login-id">아이디</Label>
+                <Input
+                  id="login-id"
+                  placeholder="아이디를 입력하세요"
+                  value={id}
+                  onChange={(e) => setId(e.target.value)}
+                />
+              </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="login-password">비밀번호</Label>
-              <Input
-                id="login-password"
-                type="password"
-                placeholder="비밀번호를 입력하세요"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="login-password">비밀번호</Label>
+                <div className="relative">
+                  <Input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="비밀번호를 입력하세요"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-9"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
+                    className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
 
-            {error && (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
 
-            <Button type="submit" className="mt-1.5">
-              로그인
-            </Button>
-          </form>
-        </CardContent>
+              <Button type="submit" className="mt-1.5">
+                로그인
+              </Button>
+            </form>
+          </CardContent>
+        </div>
+
+        <p className="px-(--card-spacing) text-center text-xs text-muted-foreground">
+          © 2026 S-TEC SYSTEM All rights reserved.
+        </p>
       </Card>
 
       <ForceChangePasswordDialog

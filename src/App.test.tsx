@@ -5,6 +5,6 @@ import App from './App'
 describe('App', () => {
   it('renders the login page at the root route', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Safety Link' })).toBeInTheDocument()
   })
 })
