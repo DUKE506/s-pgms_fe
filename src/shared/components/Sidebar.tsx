@@ -75,7 +75,10 @@ function Sidebar({ items, logoLabel, onLogout, settingsHref }: SidebarProps) {
               key={item.href}
               to={item.href}
               aria-label={item.label}
-              className={active ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/60'}
+              className={cn(
+                'transition-transform active:scale-90',
+                active ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/60',
+              )}
             >
               <item.icon size={20} strokeWidth={1.8} />
             </Link>
@@ -88,9 +91,10 @@ function Sidebar({ items, logoLabel, onLogout, settingsHref }: SidebarProps) {
         <Link
           to={settingsHref}
           aria-label="설정"
-          className={
-            isActive(pathname, settingsHref) ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/60'
-          }
+          className={cn(
+            'transition-transform active:scale-90',
+            isActive(pathname, settingsHref) ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/60',
+          )}
         >
           <Settings size={20} strokeWidth={1.8} />
         </Link>

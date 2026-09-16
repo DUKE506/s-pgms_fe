@@ -277,7 +277,7 @@ function SecurityCaseListPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') navigate(`/admin/security-cases/${c.id}`)
                 }}
-                className="flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left"
+                className="flex cursor-pointer flex-col gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors active:bg-secondary"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-foreground">

@@ -97,8 +97,10 @@ function PeriodRequestDialog({ securityCase, open, onOpenChange }: PeriodRequest
             type="button"
             onClick={() => setTab('연장')}
             className={cn(
-              'flex-1 rounded-md py-2 text-sm font-semibold',
-              tab === '연장' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground',
+              'flex-1 rounded-md py-2 text-sm font-semibold transition-colors',
+              tab === '연장'
+                ? 'bg-primary text-primary-foreground active:bg-slate-700'
+                : 'text-muted-foreground active:bg-secondary',
             )}
           >
             연장
@@ -107,8 +109,10 @@ function PeriodRequestDialog({ securityCase, open, onOpenChange }: PeriodRequest
             type="button"
             onClick={() => setTab('단축')}
             className={cn(
-              'flex-1 rounded-md py-2 text-sm font-semibold',
-              tab === '단축' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground',
+              'flex-1 rounded-md py-2 text-sm font-semibold transition-colors',
+              tab === '단축'
+                ? 'bg-primary text-primary-foreground active:bg-slate-700'
+                : 'text-muted-foreground active:bg-secondary',
             )}
           >
             단축

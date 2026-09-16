@@ -86,7 +86,7 @@ function GuestListPage() {
           type="button"
           onClick={() => setDialogState({ mode: 'issue' })}
           aria-label="게스트 계정 발급"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground xl:hidden"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors active:bg-slate-700 xl:hidden"
         >
           <Plus className="size-4.5" />
         </button>

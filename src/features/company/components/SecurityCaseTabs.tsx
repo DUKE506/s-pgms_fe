@@ -11,7 +11,7 @@ import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
 // 순서가 어긋나는 버그 발생) 여기 한 곳에서만 순서/라벨/카운트를 관리하고
 // 페이지는 현재 활성 탭만 알려주면 되도록 뽑았다.
 const TAB_BASE =
-  'inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4.5 text-button font-semibold'
+  'inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4.5 text-button font-semibold transition-colors'
 
 export type SecurityCaseTabKey = '경호목록' | '배치요청' | '연장요청' | '단축요청'
 
@@ -28,7 +28,7 @@ function Tab({ children, isActive, to }: { children: ReactNode; isActive: boolea
     )
   }
   return (
-    <Link to={to} className={cn(TAB_BASE, 'border border-border bg-card text-foreground hover:bg-muted')}>
+    <Link to={to} className={cn(TAB_BASE, 'border border-border bg-card text-foreground hover:bg-muted active:bg-secondary')}>
       <span className="text-trim">{children}</span>
     </Link>
   )

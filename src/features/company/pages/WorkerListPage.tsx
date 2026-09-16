@@ -49,7 +49,7 @@ function WorkerListPage() {
           type="button"
           onClick={() => setDialogOpen(true)}
           aria-label="근무자 등록"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground xl:hidden"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors active:bg-slate-700 xl:hidden"
         >
           <Plus className="size-4.5" />
         </button>
@@ -135,7 +135,7 @@ function WorkerListPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') navigate(`/admin/workers/${w.id}`)
                 }}
-                className="flex cursor-pointer flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left"
+                className="flex cursor-pointer flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-colors active:bg-secondary"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-foreground">{w.name}</span>

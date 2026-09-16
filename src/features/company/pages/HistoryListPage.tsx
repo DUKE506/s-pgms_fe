@@ -252,7 +252,7 @@ function HistoryCard({ record: c, onClick }: RowProps) {
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') onClick()
       }}
-      className="flex cursor-pointer flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left"
+      className="flex cursor-pointer flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-colors active:bg-secondary"
     >
       <div className="flex items-center justify-between">
         <span className="text-sm font-bold text-foreground">

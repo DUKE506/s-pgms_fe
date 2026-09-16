@@ -23,7 +23,7 @@ import type { SecurityCase, SecurityCaseStatus } from '../types/securityCase'
 
 const ALL = '전체'
 const CHIP_BASE =
-  'inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4.5 text-button font-semibold'
+  'inline-flex h-9 shrink-0 items-center justify-center rounded-lg px-4.5 text-button font-semibold transition-colors'
 
 // 종결/취소는 이력 조회 화면(Phase 3, 미구현) 소관이라 경호목록에서는 제외한다 —
 // 본사 경호목록(s6d)과 같은 이유(2026-08-24 결정), 경찰서 목록은 접수 상태도 포함.
@@ -126,7 +126,7 @@ function SecurityCaseListPage() {
             type="button"
             onClick={() => navigate('/security-cases/new')}
             aria-label="신규 접수"
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground xl:hidden"
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors active:bg-slate-700 xl:hidden"
           >
             <Plus className="size-4.5" />
           </button>
@@ -182,8 +182,8 @@ function SecurityCaseListPage() {
             className={cn(
               CHIP_BASE,
               statusFilter === ALL
-                ? 'bg-primary text-primary-foreground'
-                : 'border border-border bg-card text-foreground hover:bg-muted',
+                ? 'bg-primary text-primary-foreground active:bg-slate-700'
+                : 'border border-border bg-card text-foreground hover:bg-muted active:bg-secondary',
             )}
           >
             <span className="text-trim">전체 {cases.length}</span>
@@ -196,8 +196,8 @@ function SecurityCaseListPage() {
               className={cn(
                 CHIP_BASE,
                 statusFilter === status
-                  ? 'bg-primary text-primary-foreground'
-                  : 'border border-border bg-card text-foreground hover:bg-muted',
+                  ? 'bg-primary text-primary-foreground active:bg-slate-700'
+                  : 'border border-border bg-card text-foreground hover:bg-muted active:bg-secondary',
               )}
             >
               <span className="text-trim">
@@ -261,7 +261,7 @@ function SecurityCaseListPage() {
                       key={c.id}
                       className={cn(
                         'cursor-pointer',
-                        urgent && 'bg-destructive/10 hover:bg-destructive/20',
+                        urgent && 'bg-destructive/10 hover:bg-destructive/20 active:bg-destructive/40',
                       )}
                       onClick={() => navigate(`/security-cases/${c.id}`)}
                     >
@@ -302,8 +302,10 @@ function SecurityCaseListPage() {
                     if (e.key === 'Enter' || e.key === ' ') navigate(`/security-cases/${c.id}`)
                   }}
                   className={cn(
-                    'flex cursor-pointer flex-col gap-3 rounded-xl border p-4 text-left',
-                    urgent ? 'border-destructive/30 bg-destructive/10' : 'border-border bg-card',
+                    'flex cursor-pointer flex-col gap-3 rounded-xl border p-4 text-left transition-colors',
+                    urgent
+                      ? 'border-destructive/30 bg-destructive/10 active:bg-destructive/40'
+                      : 'border-border bg-card active:bg-secondary',
                   )}
                 >
                   <div className="flex items-center justify-between">
