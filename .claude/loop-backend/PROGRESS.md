@@ -47,7 +47,31 @@
 | 15 | C | [본청]/[지역청] | 이력 조회 + 진행중 건 상세(조회전용) | 부분완료(△) | `d236ec6`·`536cd5e` | **프로브 결과 전환 불가 → 본청/지역청 이력은 mock 유지.** `GetHistoryList`·`Deploy/Police/GetDeployList` 둘 다 `groupSeq` 경찰서(leaf) 단위 — 부모 노드(본청 22·지방청 24) → 0건, 캐스케이드 없음. `GetHistoryList`는 종결·취소만(status/includeActive/all/isEnd 무시), 진행중은 `GetDeployList?groupSeq=<leaf>`(본청/지역청 토큰도 200). 관할 전체 = `Login/W/GetGroupTree`(3역할 공통 200, 역할 서브트리)로 leaf 뽑아 팬아웃 가능하나 **임시방편이라 미채택(사용자 결정)**. 진행중 상세 `GetDeployDetail?deployReqSeq=`는 본청/지역청 토큰에 200(deployReqSeq 90) — 목록 전환 시 코드 변경 최소. `GetHistoryDetail`도 본청/지역청 200(스코프 미검, `guardWorkLoc`/`guardHomeLoc` 포함 — #14 exclusions와 배치, 논의항목). **그룹 C 섹션 종료 → 백엔드 일괄 요청서 전달**(`docs/backend-integration/requests/2026-09-08-이력-C.md`, issues #14·#15). 종결 건 재검증(#13·#14 공통)·본부관리자 이력 스코프 꼬리는 회신·데이터 후. **2026-09-09 회신 반영 → 실 API 전환 완료**: 스웨거 개정으로 `GetHistoryList`가 `groupSeq` **없이** 부르면 역할 캐스케이드(본청=전국·지역청=관할 이하·전 구간). `listSecurityCaseHistory`/`getSecurityCaseHistoryDetail` mock → 실 API. 접수·진행중 행은 `deploySeq`로 경호상세(`/security-cases/:id`), 종결·취소는 `caseSeq`로 이력상세(`/history/:id`). mock `/security-cases/history*` 제거. 브라우저 검증(SPoliceM1 전국 9건·진행중→`/security-cases/90`·취소→`/history/46` / SPoliceM3 관할 7건). ⚠️ Police `GetHistoryDetail`은 스웨거와 달리 진행중도 200이나 화면 미도달(제외). **2026-09-09 종결 검증**: 지역청(SPoliceM3) 종결 건 `status:3`→'종결' 매핑·목록·상세 정상. △ 유지 이유 = URL 직접접근 스코프 일괄 테스트(CARRYOVER C)만 (종결 데이터 대기는 소진) |
 | 16 | D | [경찰서] 피전 | 게스트 계정 관리 | 완료 | `1a6b4e7` | `User/Police/W/` 6종 실 API 전환(`GetGuestUserList` `groupSeq` 필수·평면 배열 / `GetGuestCaseList` 발급 후보 / `GetGuestCaseDetail` 수정 후보 `isAccess` / `AddGuestUser` `{name:"게스트"(고정),caseSeqs}` 응답 `{data:true}` / `UpdateGuestCaseInfo` / `DeleteGuestUser`). **아이디 미리보기 제거**(issues #3 → 🟢, 프론트 UX 변경 — 발급 후 목록 재조회, `previewNextGuestAccount`/`previewNextGuestId` 삭제). 발급 후보 조회를 `listGuestScopeSecurityCases`(mock `/security-cases`) 대신 전용 EP 2개로 분리. `handlers/guests.ts`(`guestTestHandlers`)를 실 6종 shape로 재작성 + `testOnlyHandlers`로 이동(브라우저는 실백엔드 프록시). `mocks/data/guests.ts`에 `userSeq` 필드 추가(로그인 계정 소스는 존치 — #17용). 중지 계정(`useYn`)은 화면 설계에 없어 숨김(exclusions, #17 종료 시 전달). 실백엔드 `SPoliceM5`(동래) 발급→조회권 수정(회수)→삭제 왕복 브라우저+curl 실측, `SPoliceM3` 403. 응답 샘플 `User-Police-Guest.md` |
 | 17 | D | [경찰서] 게스트 | 경호목록 + 상세(조회전용) | 완료 | `56e04e3` (테스트) + 문서 | **코드 신규 없음** — 피전 경호목록(`SecurityCaseListPage`)/상세(`SecurityCaseDetailPage`)를 role로만 갈라 재사용(이미 구현: `isReadOnlyViewer` 본청/지역청/게스트, 신규접수 버튼 `role !== '게스트'`). 프로브로 게스트 토큰 스코프 검증: `GetDeployList`가 게스트 토큰이면 **`?groupSeq=` 무시하고 `GUEST_CASE_ACCESS` 스코프만 적용**(groupSeq 32/22/999 다 동일 = 조회권 건만). `GetDeployDetail?deployReqSeq=` 조회권 건 200(피전과 동일 shape). 게스트 토큰 403: `CancelGuardCase`·`GuardCase/Stec/GetGuardCaseList`·`User/Police/GetGuestUserList`. 메뉴는 이미 `경호목록` 단일(`PoliceAppShell`). 브라우저(`SPoliceGuest3` 동래): 목록 1건→행클릭→상세(`/security-cases/90`) 기본정보/배치장소/조치5/문서함 렌더·액션버튼 0개, 콘솔 에러 0. `SecurityCaseDetailPage.test.tsx`에 게스트 읽기전용 테스트 1건 추가(122). **그룹 D 섹션 종료 → 요청서 `requests/2026-09-08-게스트-D.md`**(useYn 중지 / 게스트 상세 스코프 확인 2개 논의). 응답 샘플 `Deploy-Police-GetDeployList.md` "#17 관찰". **2026-09-14 사용자 재검증**: SPoliceGuest4(조회권=ST0017/deploySeq 100만)가 조회권 없는 ST0010(deploySeq 92)에 URL 직접 접근 → 다른 조회권 없는 건과 동일하게 **차단 확인**(CARRYOVER B #17 소진, C절 패턴과 일치) |
-| — | 보류 | [본사]/[본청]/[지역청] | 대시보드 | 보류 | | [경찰] 홈 대시보드는 Phase4 화면 완료(정적 더미)·**2026-09-15 사용자가 집계 API 백엔드 요청 전달**(CARRYOVER A절, 화면에 있는 요소 전부 커버). 회신 오면 새 섹션으로 착수. [본사] 전체 대시보드(`s6`)는 화면 자체도 아직 착수 전 — **2026-09-15**: 당분간 개발 안 할 것 같다는 사용자 판단으로 사이드바 메뉴 제외 + 기본 랜딩도 경호관리로 변경 |
+| — | 보류 | [경찰] 본청/지역청/경찰서 | 홈 대시보드 | 부분완료(△) | `cb2dd38` | **2026-09-15 백엔드 요청 후 회신 반영, 2026-09-16 실 API 연동 완료**: 집계 API 9종(`GetDashBoardCount`/`AvgGuardDays`/`GenderCount`/`MonthDashBoardCount`/`AvgAge`/`SummaryCount`/`AgeGroup`/`TopOrder`/`GroupCount`) + 조직트리(`GetDashBoardGroupCount`)로 정적 더미 교체, 3역할 공용. 조직 트리는 진입 시 1회만 조회해 고정(재조회 시 상위 계층 소실 버그 회피), 경찰서는 지역별 순위 대신 월별 추이 배치, 연령대 5→6구간(API 스펙), `GenderSplitBar` total=0 NaN% 버그 수정. 3계정(SPoliceM1/M3/M5) 실백엔드 검증 완료. **△ 사유**: 기간(`fromDate`/`toDate`) 파라미터는 이번 범위에서 제외, `groupSeq`만 연동 — 기간 필터 UI 자체가 화면에 없어 후속 필요 여부 논의 후 완료 전환 |
+| — | 보류 | [본사] | 전체 대시보드 | 보류 | | 목업(`s6`) 자체가 없고 화면 착수 전 — **2026-09-15**: 당분간 개발 안 할 것 같다는 사용자 판단으로 사이드바 메뉴 제외 + 기본 랜딩도 경호관리로 변경 |
+
+## UI 디테일 작업 (표 밖, Phase 5 병행)
+
+위 번호 표(API 연동 단위)와 `loop-screens/PROGRESS.md`(화면 신규 구현 단위) 어느 쪽에도
+안 걸리는 자잘한 UI 폴리시/설정 작업들 — 백엔드 연동 진행 중 곁가지로 나와 그때그때
+커밋만 되고 기록이 빠져 있던 것을 2026-09-16에 소급 정리(사용자 요청). 각 항목 세부
+경위는 커밋 자체를 참고, 여기는 무엇을 했는지만 짧게.
+
+| 날짜 | 항목 | 커밋 | 비고 |
+|---|---|---|---|
+| 2026-09-15 | 모바일 뷰포트 핀치줌(확대) 비활성화 | `fa68276` | |
+| 2026-09-15 | 폼 필드 모바일 폰트 13px로 통일 | `e435207` | 기존 iOS 자동확대 방지용 16px 예외 — 핀치줌 자체가 막혀 불필요해져 제거 |
+| 2026-09-15 | 경찰서 로그인 랜딩을 현황으로, 본사 대시보드 메뉴 제외 | `7d8f45a` | |
+| 2026-09-15 | 본사 경호관리에 상태별 KPI 카드 추가 | `31ec0e4` | |
+| 2026-09-15 | PWA 아이콘 세트 추가 + 로컬 HTTPS 테스트 환경 구성 | `608ae34` | `.certs/`(mkcert 인증서, gitignore) — LAN IP로 휴대폰에서 HTTPS 접속 테스트용 |
+| 2026-09-15 | PWA 매니페스트/서비스워커 적용 (Phase 1) | `cd10f98` | Android 실기기 검증 완료(2026-09-15), iOS 테스트/IDC 배포/설치 매뉴얼은 사용자가 명시적으로 보류 |
+| 2026-09-16 | 파비콘·rail 로고를 safety-link-icon PNG로 통일 | `e9b01b5` | |
+| 2026-09-16 | 홈 대시보드(경찰) 실 API 연동 | `cb2dd38` | 위 번호 표 "홈 대시보드" 행에 부분완료(△)로 반영 완료 |
+| 2026-09-16 | 홈 대시보드 모바일 평균경호기간 카드 추가 + 월별추이 y축 0 고정 | `72d0dfd` | |
+| 2026-09-16 | 목록/상세 화면 스켈레톤 + 액션 로딩 오버레이 적용 | `36786a5` | |
+| 2026-09-16 | 홈 대시보드 최초 로딩 스켈레톤 적용 | `5379628` | |
+| 2026-09-16 | 로그인 화면 목업 반영 | `129cdcd` | |
+| 2026-09-16 | 로그인 화면 input/버튼 높이 확대(h-9→h-11) | `5c0e0f8` | 전역 `Input`/`Button` 기본값(목록·필터 화면 밀도 기준)은 유지, 로그인 화면만 클래스 override. 텍스트/placeholder 크기는 원래 그대로 |
 
 ## 최근 iteration 로그
 
