@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router'
-import { Link2, LogOut, Settings, type LucideIcon } from 'lucide-react'
+import { LogOut, Settings, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface SidebarNavItem {
@@ -29,14 +29,12 @@ function Sidebar({ items, logoLabel, onLogout, settingsHref }: SidebarProps) {
   return (
     <>
       <aside className="hidden xl:sticky xl:top-0 xl:z-40 xl:flex h-screen w-[76px] shrink-0 flex-col items-center gap-1.5 bg-sidebar py-5">
-        <div
-          className="mb-5 flex h-9 w-9 items-center justify-center rounded-[10px] bg-slate-500 text-white"
-          role="img"
-          aria-label={logoLabel}
+        <img
+          src="/safety-link-icon/icon-192.png"
+          alt={logoLabel}
           title={logoLabel}
-        >
-          <Link2 size={18} strokeWidth={1.8} />
-        </div>
+          className="mb-5 h-9 w-9 rounded-[10px]"
+        />
 
         {items.map((item) => {
           const active = isActive(pathname, item.href)
