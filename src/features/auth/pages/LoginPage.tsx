@@ -87,7 +87,7 @@ function LoginPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="login-id">아이디</Label>
                 <Input
@@ -95,6 +95,7 @@ function LoginPage() {
                   placeholder="아이디를 입력하세요"
                   value={id}
                   onChange={(e) => setId(e.target.value)}
+                  className="h-11 px-3.5"
                 />
               </div>
 
@@ -107,13 +108,13 @@ function LoginPage() {
                     placeholder="비밀번호를 입력하세요"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pr-9"
+                    className="h-11 px-3.5 pr-11"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
-                    className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground"
+                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground"
                   >
                     {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
@@ -126,7 +127,7 @@ function LoginPage() {
                 </p>
               )}
 
-              <Button type="submit" className="mt-1.5">
+              <Button type="submit" className="mt-1.5 h-11">
                 로그인
               </Button>
             </form>
