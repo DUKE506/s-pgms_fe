@@ -86,8 +86,10 @@ function HistoryListPage() {
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
       <h1 className="text-xl font-bold text-foreground">이력 조회</h1>
 
-      {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색·필터는 데스크톱 전용. */}
-      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center">
+      {/* 경찰 이력 조회와 같은 이유(2026-09-16, HistoryListPage.tsx police 쪽 주석
+          참고)로 모바일까지 필터 전체 노출 — 데스크톱 가로 배치는 유지하고 모바일만
+          세로 스택으로 전환. */}
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center">
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
           <SelectTrigger className="w-full bg-card sm:w-32" aria-label="최종상태 선택">
             <SelectValue />
@@ -109,7 +111,7 @@ function HistoryListPage() {
             onChange={setDateFrom}
             placeholder="기간 시작"
             maxDate={dateTo}
-            className="w-40 bg-card"
+            className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
             aria-label="기간 시작"
           />
           <span className="text-sm text-muted-foreground">~</span>
@@ -119,7 +121,7 @@ function HistoryListPage() {
             onChange={setDateTo}
             placeholder="기간 종료"
             minDate={dateFrom}
-            className="w-40 bg-card"
+            className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
             aria-label="기간 종료"
           />
         </div>

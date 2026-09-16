@@ -127,10 +127,14 @@ function HistoryListPage() {
         <h1 className="text-xl font-bold text-foreground">이력 조회</h1>
       </div>
 
-      {/* 모바일 목업(docs/mobile-ui)엔 상태 칩 정도만 있고 이 화면 같은 다중
-          셀렉트+기간+검색 필터는 없음 — 경호목록과 같은 규칙(검색·필터는
-          데스크톱 전용)을 적용해 xl 이상에서만 노출. */}
-      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center">
+      {/* 원래는 모바일 목업(docs/mobile-ui)에 상태 칩 정도만 있어 경호목록과 같은
+          규칙(검색·필터는 데스크톱 전용)으로 xl 이상에서만 노출했으나, 본청/지역청은
+          이 화면이 유일한 필터 진입점이라 모바일에서 필터 자체가 사라지는 게 더 큰
+          문제라는 사용자 피드백으로 전체 필터를 모바일까지 노출하도록 변경(2026-09-16,
+          경찰서 이력 상세는 배치장소처럼 노출 범위를 따로 좁힌 선례가 있어 이번에도
+          "화면별로 규칙이 다를 수 있다"는 전제 위에서 결정). 데스크톱 가로 배치는
+          유지하고 모바일만 세로 스택으로 전환. */}
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center">
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
           <SelectTrigger className="w-full bg-card sm:w-32" aria-label="최종상태 선택">
             <SelectValue />
@@ -152,7 +156,7 @@ function HistoryListPage() {
             onChange={setDateFrom}
             placeholder="기간 시작"
             maxDate={dateTo}
-            className="w-40 bg-card"
+            className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
             aria-label="기간 시작"
           />
           <span className="text-sm text-muted-foreground">~</span>
@@ -162,7 +166,7 @@ function HistoryListPage() {
             onChange={setDateTo}
             placeholder="기간 종료"
             minDate={dateFrom}
-            className="w-40 bg-card"
+            className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
             aria-label="기간 종료"
           />
         </div>
