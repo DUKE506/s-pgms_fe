@@ -28,7 +28,10 @@ function MonthlyTrendChart({ data, height = 130 }: MonthlyTrendChartProps) {
           axisLine={false}
           tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
         />
-        <YAxis hide domain={['dataMin - 60', 'dataMax + 60']} />
+        {/* min을 0으로 고정 — 예전엔 dataMin 기준 -60 패딩이라 실 데이터처럼 값이
+            작으면(0~10건대) 0선이 차트 중간에 떠 보였다(2026-09-16 실사용 피드백).
+            max는 dataMax에 20%+1 여유를 줘 선이 위쪽 끝에 붙지 않게 한다. */}
+        <YAxis hide domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.2) + 1]} />
         <Tooltip formatter={(value) => [`${value}건`, '접수 건수']} />
         <Area
           type="natural"

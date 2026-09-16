@@ -240,6 +240,26 @@ function DashboardPage() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardContent className="flex flex-col gap-2">
+              <CardTitle>이번달 신규 접수</CardTitle>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold text-foreground">{byStatus.접수}</span>
+                <span className="text-xs font-medium text-muted-foreground">건</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-col gap-2">
+              <CardTitle>평균 경호기간</CardTitle>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold text-foreground">{bundle.avgGuardDays}</span>
+                <span className="text-xs font-medium text-muted-foreground">일</span>
+              </div>
+            </CardContent>
+          </Card>
+
           {includeTopOrder && (
             <Card>
               <CardContent className="flex flex-col gap-3">
@@ -248,18 +268,6 @@ function DashboardPage() {
               </CardContent>
             </Card>
           )}
-
-          <Card>
-            <CardContent className="flex flex-col gap-2">
-              <CardTitle>이번달 신규 접수</CardTitle>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold text-foreground">{byStatus.접수}</span>
-                <span className="text-xs font-medium text-muted-foreground">
-                  건 · 평균 경호기간 {bundle.avgGuardDays}일
-                </span>
-              </div>
-            </CardContent>
-          </Card>
 
           <Card>
             <CardContent className="flex flex-col gap-3.5">
