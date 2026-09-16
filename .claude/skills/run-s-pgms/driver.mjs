@@ -159,7 +159,10 @@ const COMMANDS = {
     if (!page) return console.log('ERROR: launch first')
     const [id, password] = args.split(' ')
     await page.goto(BASE + '/')
-    await page.waitForSelector('h1:has-text("로그인")')
+    // h1 텍스트는 "Safety Link"(브랜드명) 고정이라 로그인 화면 판별에 못 씀
+    // (2026-09-16 로그인 목업 반영, `129cdcd`로 h1이 "로그인"에서 바뀜) — 폼
+    // 필드 자체로 화면 로드를 확인한다.
+    await page.waitForSelector('#login-id')
     await page.fill('#login-id', id)
     await page.fill('#login-password', password)
     await page.click('button:has-text("로그인")')
@@ -172,7 +175,7 @@ const COMMANDS = {
     if (!page) return console.log('ERROR: launch first')
     const [id, password] = args.split(' ')
     await page.goto(BASE + '/')
-    await page.waitForSelector('h1:has-text("로그인")')
+    await page.waitForSelector('#login-id')
     await page.fill('#login-id', id)
     await page.fill('#login-password', password)
     await page.click('button:has-text("로그인")')

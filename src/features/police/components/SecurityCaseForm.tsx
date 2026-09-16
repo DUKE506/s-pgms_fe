@@ -17,6 +17,7 @@ import DetailHeader from '@/shared/components/DetailHeader'
 import { calcAge } from '@/shared/lib/subject'
 import { cn } from '@/lib/utils'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
+import { useHideMobileNav } from '@/shared/hooks/useMobileNavStore'
 import type { CaseType } from '../types/securityCase'
 
 const CASE_TYPES: CaseType[] = ['스토킹', '가정폭력', '교제폭력', '협박', '기타', '사건미접수']
@@ -173,6 +174,7 @@ function SecurityCaseForm({
   const [errors, setErrors] = useState<Set<keyof FormState>>(new Set())
   const [submitting, setSubmitting] = useState(false)
   const showToast = useToastStore((state) => state.show)
+  useHideMobileNav(true)
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -211,7 +213,7 @@ function SecurityCaseForm({
   const invalid = (field: keyof FormState) => errors.has(field)
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-5 p-4 pb-24 sm:p-8 sm:pb-24 xl:pb-8">
+    <main className="mx-auto flex max-w-3xl flex-col gap-5 p-4 sm:p-8">
       {/* 상세형 헤더 규칙(docs/mobile-ui)과 같은 gap-3(breadcrumb↔제목 묶음) —
           이 화면은 기존에도 mt-1 마진으로 이미 붙어있었지만, 다른 상세형
           화면들과 간격 값을 통일한다. */}

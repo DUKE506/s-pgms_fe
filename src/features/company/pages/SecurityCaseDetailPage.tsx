@@ -12,6 +12,7 @@ import { isNotFoundOrForbidden } from '@/shared/api/errors'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCase } from '../api/securityCaseDetail'
 import { getCaseGuards } from '../api/workers'
+import { useHideMobileNav } from '@/shared/hooks/useMobileNavStore'
 import BaseInfoForm from '../components/BaseInfoForm'
 import CaseBaseInfoCard from '@/shared/components/CaseBaseInfoCard'
 import ScheduleSection from '../components/ScheduleSection'
@@ -39,6 +40,7 @@ function SecurityCaseDetailPage() {
   })
 
   const [editingBaseInfo, setEditingBaseInfo] = useState(false)
+  useHideMobileNav(editingBaseInfo)
   const [scheduleInitOpen, setScheduleInitOpen] = useState(false)
   const [groupDialog, setGroupDialog] = useState<GroupDialogState | null>(null)
   // ScheduleGroupDialog는 상시 마운트된 채 open만 토글되므로, 그 내부 useState(특이사항/
@@ -85,7 +87,12 @@ function SecurityCaseDetailPage() {
   )
 
   return (
-    <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
+    <main
+      className={cn(
+        'flex flex-col gap-4 p-4 sm:p-8 xl:pb-8',
+        editingBaseInfo ? 'pb-8 sm:pb-8' : 'pb-28 sm:pb-28',
+      )}
+    >
       {/* 모바일 목업(docs/mobile-ui)은 breadcrumb 줄과 제목+뱃지 줄을 gap
           12px로 묶은 한 블록으로 그린다 — 데스크톱은 기존 레이아웃 그대로
           두려고 xl에서만 이 wrapper를 `contents`로 없앤다(경찰 상세와 동일). */}

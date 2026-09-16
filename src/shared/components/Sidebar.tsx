@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router'
 import { LogOut, Settings, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useMobileNavStore } from '@/shared/hooks/useMobileNavStore'
 
 export interface SidebarNavItem {
   icon: LucideIcon
@@ -25,6 +26,7 @@ function isActive(pathname: string, href: string) {
 // 하단 플로팅 pill 아이콘 바. 목업 사이드바 패턴을 그대로 반영.
 function Sidebar({ items, logoLabel, onLogout, settingsHref }: SidebarProps) {
   const { pathname } = useLocation()
+  const mobileNavHidden = useMobileNavStore((state) => state.hidden)
 
   return (
     <>
@@ -67,38 +69,40 @@ function Sidebar({ items, logoLabel, onLogout, settingsHref }: SidebarProps) {
         </button>
       </aside>
 
-      <nav className="xl:hidden fixed bottom-[18px] left-1/2 z-40 -translate-x-1/2 flex items-center gap-8 rounded-full bg-sidebar px-8 py-3 shadow-lg">
-        {items.map((item) => {
-          const active = isActive(pathname, item.href)
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              aria-label={item.label}
-              className={cn(
-                'transition-transform active:scale-90',
-                active ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/60',
-              )}
-            >
-              <item.icon size={20} strokeWidth={1.8} />
-            </Link>
-          )
-        })}
+      {!mobileNavHidden && (
+        <nav className="xl:hidden fixed bottom-[18px] left-1/2 z-40 -translate-x-1/2 flex items-center gap-8 rounded-full bg-sidebar px-8 py-3 shadow-lg">
+          {items.map((item) => {
+            const active = isActive(pathname, item.href)
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                aria-label={item.label}
+                className={cn(
+                  'transition-transform active:scale-90',
+                  active ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/60',
+                )}
+              >
+                <item.icon size={20} strokeWidth={1.8} />
+              </Link>
+            )
+          })}
 
-        {/* 전역 상단 헤더(MobileHeader) 폐기(2026-09-14)로 로그아웃 진입점이
-            없어져 하단 nav 맨 우측에 신설 — 목업엔 없는 항목. 팝오버 대신
-            전용 설정 페이지로 이동(사용자 결정, 2026-09-14). */}
-        <Link
-          to={settingsHref}
-          aria-label="설정"
-          className={cn(
-            'transition-transform active:scale-90',
-            isActive(pathname, settingsHref) ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/60',
-          )}
-        >
-          <Settings size={20} strokeWidth={1.8} />
-        </Link>
-      </nav>
+          {/* 전역 상단 헤더(MobileHeader) 폐기(2026-09-14)로 로그아웃 진입점이
+              없어져 하단 nav 맨 우측에 신설 — 목업엔 없는 항목. 팝오버 대신
+              전용 설정 페이지로 이동(사용자 결정, 2026-09-14). */}
+          <Link
+            to={settingsHref}
+            aria-label="설정"
+            className={cn(
+              'transition-transform active:scale-90',
+              isActive(pathname, settingsHref) ? 'text-sidebar-accent-foreground' : 'text-sidebar-foreground/60',
+            )}
+          >
+            <Settings size={20} strokeWidth={1.8} />
+          </Link>
+        </nav>
+      )}
     </>
   )
 }
