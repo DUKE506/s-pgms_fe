@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { CheckCircle2, ChevronDown, Inbox, Shield, UserCheck } from 'lucide-react'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -11,7 +12,8 @@ import RankedBarChart from '../components/RankedBarChart'
 import MonthlyTrendChart from '../components/MonthlyTrendChart'
 import GenderSplitBar from '../components/GenderSplitBar'
 import GaugeRing from '../components/GaugeRing'
-import { ORG_REGIONS, ORG_ROOT, scopeLabelFor, type OrgScopeOption } from '../data/orgScope'
+import { getDashboardBundle, getOrgTree, type OrgCountNode } from '../api/dashboard'
+import type { OrgRegion, OrgScopeOption } from '../data/orgScope'
 
 // [본청/지역청/경찰서] 홈 대시보드 — 모바일: docs/mobile-ui/홈 대시보드 (모바일).dc.html,
 // 데스크톱(xl 이상): docs/mobile-ui/홈 대시보드 (웹).dc.html. 두 목업이 레이아웃
@@ -19,10 +21,9 @@ import { ORG_REGIONS, ORG_ROOT, scopeLabelFor, type OrgScopeOption } from '../da
 // 추가) Sidebar.tsx와 같은 방식으로 xl 기준 완전히 다른 두 트리를 CSS로
 // 토글한다(하나의 JS 미디어쿼리 대신 hidden/xl:hidden 클래스로 분기).
 //
-// 집계 API가 아직 없어(loop-backend 미착수) 전부 정적 더미 데이터다. 실 연동
-// 시 이 파일의 상수들을 쿼리 결과로 교체하면 된다. 월 선택 pill도 그 때까지는
-// 클릭 동작 없는 장식용. 조직 트리 스코프 선택(scope state)은 실제로 동작하되
-// 선택 시 표시되는 건수도 각 트리 노드에 미리 박아둔 더미값이다.
+// #18(2026-09-16) 실 API 전환. 기간(fromDate/toDate) 파라미터는 전부 제외(서버 기본값=
+// 이번 달), 조직 트리 선택(scope)만 groupSeq로 넘긴다. 조직 트리 구조는 별도 API 없이
+// GetDashBoardGroupCount 하나로 해결(A안, src/features/police/api/dashboard.ts 참고).
 const VISIBLE_STATUSES = ['접수', '배정', '경호중', '경호완료'] as const satisfies readonly SecurityCaseStatus[]
 
 const STATUS_ICON: Record<(typeof VISIBLE_STATUSES)[number], typeof Inbox> = {
@@ -39,88 +40,141 @@ const STATUS_DOT_COLOR: Record<(typeof VISIBLE_STATUSES)[number], string> = {
   경호완료: 'bg-status-completed',
 }
 
-// 상태별 비율은 위 KPI 카드들과 중복이라 연령층 비율로 교체(2026-09-15 사용자
-// 결정). 연령대는 순서가 있는 값이라 카테고리색이 아니라 순차(sequential) 블루
-// 램프를 쓴다 — 처음엔 기존 --chart-1~5(무채색 그레이) 토큰을 재사용했는데
-// 가장 밝은 단계가 흰 카드 배경에서 거의 안 보여서(L 0.87, 채도 0) 교체함.
-const AGE_GROUPS = [
-  { label: '10대 이하', count: 13, dot: 'bg-[#93c5fd]', color: '#93c5fd' },
-  { label: '20대', count: 35, dot: 'bg-[#60a5fa]', color: '#60a5fa' },
-  { label: '30대', count: 55, dot: 'bg-[#3b82f6]', color: '#3b82f6' },
-  { label: '40대', count: 38, dot: 'bg-[#2563eb]', color: '#2563eb' },
-  { label: '50대 이상', count: 17, dot: 'bg-[#1e40af]', color: '#1e40af' },
-]
-
-// 성별 비율 — 연령층과 같은 카드에 얹어서 인구통계 정보를 함께 보여줌
-// (2026-09-15 사용자 요청). 합은 SUMMARY.totalCount(158)와 맞춤.
-const GENDER_SPLIT = [
-  { label: '남성', count: 87, color: '#2563eb' },
-  { label: '여성', count: 71, color: '#ec4899' },
-]
-
-// 더미 집계 — 목업 실측값 그대로.
-const SUMMARY = {
-  month: '26.02',
-  totalCount: 158,
-  activeCount: 88,
-  byStatus: { 접수: 18, 배정: 34, 경호중: 88, 경호완료: 18 } satisfies Record<
-    (typeof VISIBLE_STATUSES)[number],
-    number
-  >,
-  newThisMonth: 42,
-  avgDurationDays: 14.5,
+// 연령대 6구간(GetDashBoardAgeGroup 고정 스펙 — 10=19세 이하, 60=60세 이상). 상태별
+// KPI와 중복이라 상태별 비율 대신 연령층 비율을 쓴다(2026-09-15 사용자 결정).
+// 순차(sequential) 블루 램프 — 가장 밝은 단계가 흰 카드 배경에서 안 보여서 기존
+// --chart-1~5(무채색) 토큰 대신 씀.
+const AGE_GROUP_META: Record<number, { label: string; dot: string; color: string }> = {
+  10: { label: '10대 이하', dot: 'bg-[#93c5fd]', color: '#93c5fd' },
+  20: { label: '20대', dot: 'bg-[#60a5fa]', color: '#60a5fa' },
+  30: { label: '30대', dot: 'bg-[#3b82f6]', color: '#3b82f6' },
+  40: { label: '40대', dot: 'bg-[#2563eb]', color: '#2563eb' },
+  50: { label: '50대', dot: 'bg-[#1d4ed8]', color: '#1d4ed8' },
+  60: { label: '60대 이상', dot: 'bg-[#1e40af]', color: '#1e40af' },
 }
 
-// top5+그 외. 모바일 카드도 원래 목업은 top3만이었으나 데스크톱과 동일하게
-// 6개 전부 보여주도록 확장(2026-09-15 사용자 요청).
-const REGION_RANKING = [
-  { name: '서울지방청', count: 41 },
-  { name: '경기남부청', count: 37 },
-  { name: '부산지방청', count: 22 },
-  { name: '인천지방청', count: 19 },
-  { name: '대구지방청', count: 15 },
-  { name: '그 외 13개', count: 24 },
-]
+function pct(n: number, d: number) {
+  return d > 0 ? Math.round((n / d) * 100) : 0
+}
 
-// "그 달에 발생한 접수건" 추이(누적 총 건수 아님, 2026-09-15 사용자 명확화).
-// 값 순위: 9월 > 12월 > 1월 > 2월 > 11월 > 10월 (같은 날 요청 — 우상향 일변도라
-// 밋밋해 보이던 걸 곡선이 잘 보이도록 굴곡을 줌).
-const MONTHLY_TREND = [
-  { month: '9월', count: 158 },
-  { month: '10월', count: 95 },
-  { month: '11월', count: 108 },
-  { month: '12월', count: 145 },
-  { month: '1월', count: 132 },
-  { month: '2월', count: 120 },
-]
+// 조회월 pill — 여전히 장식용(2026-09-16 결정: 기간 파라미터는 이번 섹션 범위 밖,
+// 서버 기본값=이번 달을 그대로 씀). 실제 오늘 날짜의 "YY.MM"만 보여준다.
+function currentMonthLabel() {
+  const now = new Date()
+  const yy = String(now.getFullYear()).slice(2)
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  return `${yy}.${mm}`
+}
 
-// 값 내림차순(docs/mobile-ui/안전조치 항목별 적용률.png 목업 순서 그대로,
-// 2026-09-15). 각 항목은 전체 158건 중 그 조치가 적용된 건수/비율 —
-// 한 건에 여러 조치가 동시에 걸릴 수 있어(중복 적용) 네 값의 합이 158을
-// 넘는다. 게이지 링은 항목별로 독립된 0~100% 값이라 이 중복 데이터에도
-// 문제없음(도넛/파이였다면 부분의 합이 100%를 넘어 의미가 깨졌을 것).
-const SAFETY_MEASURES = [
-  { name: '맞춤형 순찰', count: 96 },
-  { name: '스마트워치', count: 72 },
-  { name: '임시숙소', count: 41 },
-  { name: 'CCTV', count: 28 },
-]
+// GetMonthDashBoardCount의 "date"(yyyy-MM) → 차트 라벨("9월").
+function monthLabel(date: string) {
+  const month = Number(date.split('-')[1])
+  return `${month}월`
+}
+
+// GetDashBoardGroupCount 응답(뿌리 노드 1개, children 재귀)을 OrgScopeTree가 쓰는
+// {root, regions} 형태로 변환. 이 화면 조직은 최대 3계층(본청/지방청/경찰서)이라
+// OrgScopeTree의 2단(regions + region.children) 렌더와 정확히 맞아떨어진다.
+function toOrgScopeTree(node: OrgCountNode): { root: OrgScopeOption; regions: OrgRegion[] } {
+  const root: OrgScopeOption = { id: String(node.groupSeq), label: node.groupName, count: node.totalCount }
+  const regions: OrgRegion[] = node.children.map((child) => ({
+    id: String(child.groupSeq),
+    label: child.groupName,
+    count: child.totalCount,
+    children: child.children.map((grandchild) => ({
+      id: String(grandchild.groupSeq),
+      label: grandchild.groupName,
+      count: grandchild.totalCount,
+    })),
+  }))
+  return { root, regions }
+}
 
 function DashboardPage() {
   const user = useAuthStore((state) => state.user)
-  const [scope, setScope] = useState<OrgScopeOption>(ORG_ROOT)
   const [sheetOpen, setSheetOpen] = useState(false)
+  // null = 조직 트리 선택 안 함(서버 기본 스코프 = 소속 이하 전체, groupSeq 미전달).
+  const [selectedScope, setSelectedScope] = useState<OrgScopeOption | null>(null)
 
+  // 지역별 건수 순위(GetDashBoardTopOrder)는 경찰서 계정엔 의미가 없다(자기 한 줄뿐,
+  // "순위" 개념이 안 맞음) — 경찰서 계정이면 애초에 호출하지 않고 화면에서도 뺀다
+  // (2026-09-16 사용자 결정). 자리엔 접수 월별 추이를 대신 넣는다.
+  const includeTopOrder = user?.role !== '경찰서'
+  const groupSeqParam = selectedScope ? Number(selectedScope.id) : undefined
+
+  // 조직 트리 구조는 로그인 계정 기본 스코프로 딱 한 번만 불러와 고정한다(선택할
+  // 때마다 다시 안 부름) — 그래야 드릴다운해도 상위 계층이 트리에서 안 사라지고,
+  // "전국" 라벨 판정도 매번 좁아지는 뿌리가 아니라 이 고정된 root를 기준으로 한다.
+  const orgTreeQuery = useQuery({ queryKey: ['dashboard-org-tree'], queryFn: getOrgTree })
+  const { root, regions } = useMemo(
+    () => (orgTreeQuery.data ? toOrgScopeTree(orgTreeQuery.data) : { root: null, regions: [] as OrgRegion[] }),
+    [orgTreeQuery.data],
+  )
+
+  const dashboardQuery = useQuery({
+    queryKey: ['dashboard', groupSeqParam, includeTopOrder],
+    queryFn: () => getDashboardBundle(groupSeqParam, includeTopOrder),
+    // 조직 트리에서 다른 노드를 고를 때마다 쿼리 키가 바뀌는데, 매번 전체 화면이
+    // "불러오는 중..."으로 통째로 사라지면 UX가 나쁘다. 이전 데이터를 유지한 채
+    // 백그라운드로 갱신 — 최초 진입 시에만 로딩 화면을 본다.
+    placeholderData: keepPreviousData,
+  })
+
+  const bundle = dashboardQuery.data
+  const scope = selectedScope ?? root
+
+  const handleSelect = (option: OrgScopeOption) => {
+    // 루트를 다시 고르면 기본 스코프로 되돌린다(groupSeq 미전달과 동일 결과).
+    setSelectedScope(option.id === root?.id ? null : option)
+  }
   const handlePickInSheet = (option: OrgScopeOption) => {
-    setScope(option)
+    handleSelect(option)
     setSheetOpen(false)
   }
 
-  const ageDonutData = AGE_GROUPS.map((group) => ({
-    name: group.label,
-    value: group.count,
-    color: group.color,
-  }))
+  if (orgTreeQuery.isLoading || dashboardQuery.isLoading || !bundle || !scope || !root) {
+    return <p className="py-16 text-center text-sm text-muted-foreground">불러오는 중...</p>
+  }
+  if (orgTreeQuery.isError || dashboardQuery.isError) {
+    return <p className="py-16 text-center text-sm text-destructive">대시보드를 불러오지 못했습니다</p>
+  }
+
+  const byStatus: Record<(typeof VISIBLE_STATUSES)[number], number> = {
+    접수: bundle.counts.receipt,
+    배정: bundle.counts.assignment,
+    경호중: bundle.counts.inprogress,
+    경호완료: bundle.counts.complete,
+  }
+  // 히어로 "전체 접수건" 수치는 조직 트리 쪽(GetDashBoardGroupCount)이 아니라 이
+  // 스코프별 상태별 건수 합계를 쓴다 — 두 API의 값이 같음을 프로브로 확인했고,
+  // 트리는 위에서 고정해뒀으니 선택된 노드의 최신 값은 여기서 가져오는 쪽이 맞다.
+  const totalCount = bundle.counts.total
+  // 안전조치 대상(GetDashBoardSummaryCount)은 배정·경호중·경호완료만이라(접수 제외)
+  // 전체 total 대신 이 세 상태 합을 "전체 N건 중" 분모로 쓴다.
+  const measureTarget = bundle.counts.assignment + bundle.counts.inprogress + bundle.counts.complete
+
+  const ageGroups = bundle.ageGroups.map((g) => ({ ...AGE_GROUP_META[g.ageGroup], count: g.count }))
+  const ageDonutData = ageGroups.map((group) => ({ name: group.label, value: group.count, color: group.color }))
+  const genderSplit = [
+    { label: '남성', count: bundle.maleCount, color: '#2563eb' },
+    { label: '여성', count: bundle.femaleCount, color: '#ec4899' },
+  ]
+  const monthlyTrend = bundle.monthly.map((row) => ({ month: monthLabel(row.date), count: row.total }))
+  const safetyMeasures = [
+    { name: '맞춤형 순찰', count: bundle.summary.customized },
+    { name: '스마트워치', count: bundle.summary.watch },
+    { name: '임시숙소', count: bundle.summary.accommodation },
+    { name: 'CCTV', count: bundle.summary.cctv },
+  ]
+  const regionRanking = (bundle.topOrder ?? []).map((row) => ({ name: row.groupName, count: row.count }))
+  // 순위 단위는 로그인 role이 아니라 "지금 고른 조회범위의 꼭대기"로 정해진다(API
+  // 설명 그대로) — 본청이 자기 루트에 있을 때만 지방청 단위, 그 밖(본청이 특정
+  // 지방청을 고르거나 지역청 계정)은 전부 경찰서 단위(2026-09-16 실측으로 확인한
+  // 버그 수정 — 이전엔 role만 보고 고정해서 본청이 지방청을 드릴다운해도 라벨이
+  // "지방청"에 머물러 있었음).
+  const rankingUnitLabel = scope.id === root.id && user?.role === '본청' ? '지방청' : '경찰서'
+
+  const scopeLabel = scope.id === root.id && user?.role === '본청' ? '전국' : scope.label
 
   return (
     <>
@@ -133,7 +187,7 @@ function DashboardPage() {
               안녕하세요, {user?.name} 담당자님
             </span>
             <span className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-semibold text-slate-200">
-              {SUMMARY.month}
+              {currentMonthLabel()}
               <ChevronDown className="size-3" />
             </span>
           </div>
@@ -145,17 +199,17 @@ function DashboardPage() {
               className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 bg-white/10 py-1.5 pr-3 pl-3.5 text-xs font-semibold text-slate-200"
             >
               <span className="size-1.5 rounded-full bg-blue-400" />
-              {scopeLabelFor(scope)}
+              {scopeLabel}
               <ChevronDown className="size-3.5 text-blue-300" />
             </button>
             <div className="mt-1 flex items-baseline gap-2">
               <span data-testid="hero-scope-count" className="text-4xl font-bold tracking-tight text-white">
-                {scope.count}
+                {totalCount}
               </span>
               <span className="text-base font-semibold text-blue-300">건</span>
             </div>
             <span className="text-xs font-medium text-slate-500">
-              경호중 {SUMMARY.activeCount}건 진행 중
+              경호중 {byStatus.경호중}건 진행 중
             </span>
           </div>
         </div>
@@ -176,7 +230,7 @@ function DashboardPage() {
                         {status}
                       </span>
                       <span className="text-lg font-bold text-foreground">
-                        {SUMMARY.byStatus[status]}
+                        {byStatus[status]}
                         <span className="ml-0.5 text-[11px] font-medium text-muted-foreground">건</span>
                       </span>
                     </div>
@@ -186,20 +240,22 @@ function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="flex flex-col gap-3">
-              <CardTitle>지역별 건수 순위</CardTitle>
-              <RankedBarChart data={REGION_RANKING} height={200} yAxisWidth={74} marginRight={20} />
-            </CardContent>
-          </Card>
+          {includeTopOrder && (
+            <Card>
+              <CardContent className="flex flex-col gap-3">
+                <CardTitle>지역별 건수 순위</CardTitle>
+                <RankedBarChart data={regionRanking} height={200} yAxisWidth={74} marginRight={20} />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardContent className="flex flex-col gap-2">
               <CardTitle>이번달 신규 접수</CardTitle>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold text-foreground">{SUMMARY.newThisMonth}</span>
+                <span className="text-2xl font-bold text-foreground">{byStatus.접수}</span>
                 <span className="text-xs font-medium text-muted-foreground">
-                  건 · 평균 경호기간 {SUMMARY.avgDurationDays}일
+                  건 · 평균 경호기간 {bundle.avgGuardDays}일
                 </span>
               </div>
             </CardContent>
@@ -209,20 +265,20 @@ function DashboardPage() {
             <CardContent className="flex flex-col gap-3.5">
               <CardTitle>연령·성별 비율</CardTitle>
               <div className="flex flex-col items-center gap-3.5">
-                <RatioDonut data={ageDonutData} total={SUMMARY.totalCount} size={112} />
+                <RatioDonut data={ageDonutData} total={totalCount} size={112} />
                 <div className="flex flex-wrap justify-center gap-x-3.5 gap-y-2.5">
-                  {AGE_GROUPS.map((group) => (
+                  {ageGroups.map((group) => (
                     <span
                       key={group.label}
                       className="inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground/80"
                     >
                       <span className={cn('size-2.5 rounded-sm', group.dot)} />
-                      {group.label} {Math.round((group.count / SUMMARY.totalCount) * 100)}%
+                      {group.label} {pct(group.count, totalCount)}%
                     </span>
                   ))}
                 </div>
               </div>
-              <GenderSplitBar data={GENDER_SPLIT} total={SUMMARY.totalCount} />
+              <GenderSplitBar data={genderSplit} total={totalCount} />
             </CardContent>
           </Card>
 
@@ -231,7 +287,7 @@ function DashboardPage() {
               <CardTitle>
                 접수 월별 추이 <span className="text-[11px] font-normal text-muted-foreground">· 최근 6개월</span>
               </CardTitle>
-              <MonthlyTrendChart data={MONTHLY_TREND} height={170} />
+              <MonthlyTrendChart data={monthlyTrend} height={170} />
             </CardContent>
           </Card>
 
@@ -240,13 +296,13 @@ function DashboardPage() {
               <CardTitle>
                 안전조치 항목별 적용률{' '}
                 <span className="text-[11px] font-normal text-muted-foreground">
-                  · 전체 {SUMMARY.totalCount}건 중 · 1건당 중복 적용
+                  · 전체 {measureTarget}건 중 · 1건당 중복 적용
                 </span>
               </CardTitle>
               <div className="grid grid-cols-2 gap-x-3 gap-y-5">
-                {SAFETY_MEASURES.map((item) => (
+                {safetyMeasures.map((item) => (
                   <div key={item.name} className="flex items-center gap-3.5">
-                    <GaugeRing percent={Math.round((item.count / SUMMARY.totalCount) * 100)} size={80} />
+                    <GaugeRing percent={pct(item.count, measureTarget)} size={80} />
                     <div className="flex flex-col gap-0.5">
                       <span className="text-[12px] font-medium text-muted-foreground">{item.name}</span>
                       <span className="text-[18px] font-bold text-foreground">
@@ -276,11 +332,11 @@ function DashboardPage() {
               때문에 넘치는 대신 눌려서(찌그러져서) 줄어들어버린다. */}
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
             <OrgScopeTree
-              root={ORG_ROOT}
-              regions={ORG_REGIONS}
+              root={root}
+              regions={regions}
               selectedId={scope.id}
               onSelect={handlePickInSheet}
-              defaultExpandedId="seoul"
+              defaultExpandedId={regions[0]?.id}
               className="shrink-0"
             />
           </div>
@@ -311,11 +367,11 @@ function DashboardPage() {
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-[11px] scrollbar-dark">
             <OrgScopeTree
-              root={ORG_ROOT}
-              regions={ORG_REGIONS}
+              root={root}
+              regions={regions}
               selectedId={scope.id}
-              onSelect={setScope}
-              defaultExpandedId="seoul"
+              onSelect={handleSelect}
+              defaultExpandedId={regions[0]?.id}
               className="shrink-0"
             />
           </div>
@@ -338,22 +394,22 @@ function DashboardPage() {
               </div>
               <div className="flex items-baseline gap-[9px]">
                 <span className="text-[13px] font-medium text-slate-400">
-                  전체 접수건 · {scopeLabelFor(scope)}
+                  전체 접수건 · {scopeLabel}
                 </span>
                 <span
                   data-testid="hero-scope-count"
                   className="text-[40px] leading-none font-bold tracking-tight text-white"
                 >
-                  {scope.count}
+                  {totalCount}
                 </span>
                 <span className="text-[14px] font-semibold text-blue-300">건</span>
                 <span className="ml-[5px] text-[13px] font-medium text-slate-500">
-                  경호중 {SUMMARY.activeCount}건 진행 중 · 신규 {SUMMARY.newThisMonth}건
+                  경호중 {byStatus.경호중}건 진행 중 · 신규 {byStatus.접수}건
                 </span>
               </div>
             </div>
             <div className="inline-flex items-center gap-[7px] rounded-lg border border-white/15 bg-white/10 px-[14px] py-[9px] text-[13px] font-semibold text-slate-200">
-              조회월 {SUMMARY.month}
+              조회월 {currentMonthLabel()}
               <ChevronDown className="size-[13px] text-slate-300" />
             </div>
           </div>
@@ -371,7 +427,7 @@ function DashboardPage() {
                         {status}
                       </span>
                       <span className="text-[27px] font-bold text-foreground">
-                        {SUMMARY.byStatus[status]}
+                        {byStatus[status]}
                         <span className="ml-1 text-[13px] font-medium text-muted-foreground">건</span>
                       </span>
                     </CardContent>
@@ -388,7 +444,7 @@ function DashboardPage() {
                 <CardContent className="flex items-center justify-between">
                   <span className="text-[13px] font-medium text-muted-foreground">이번달 신규 접수</span>
                   <span className="text-[22px] font-bold text-foreground">
-                    {SUMMARY.newThisMonth}
+                    {byStatus.접수}
                     <span className="ml-1 text-[13px] font-medium text-muted-foreground">건</span>
                   </span>
                 </CardContent>
@@ -397,20 +453,38 @@ function DashboardPage() {
                 <CardContent className="flex items-center justify-between">
                   <span className="text-[13px] font-medium text-muted-foreground">평균 경호기간</span>
                   <span className="text-[22px] font-bold text-foreground">
-                    {SUMMARY.avgDurationDays}
+                    {bundle.avgGuardDays}
                     <span className="ml-1 text-[13px] font-medium text-muted-foreground">일</span>
                   </span>
                 </CardContent>
               </Card>
             </div>
 
+            {/* 경찰서 계정은 지역별 건수 순위가 의미 없어(자기 한 줄뿐) 이 자리에
+                접수 월별 추이를 대신 넣는다(2026-09-16 결정) — 본청/지역청은
+                원래대로 지역별 건수 순위 + 아래 별도 월별 추이 행 유지. */}
             <div className="flex items-stretch gap-[14px]">
               <Card className="flex-[1.3]">
                 <CardContent className="flex flex-col gap-[14px]">
-                  <CardTitle className="text-[13px]">
-                    지역별 건수 순위 <span className="text-[11px] font-normal text-muted-foreground">· 지방청</span>
-                  </CardTitle>
-                  <RankedBarChart data={REGION_RANKING} height={216} />
+                  {includeTopOrder ? (
+                    <>
+                      <CardTitle className="text-[13px]">
+                        지역별 건수 순위{' '}
+                        <span className="text-[11px] font-normal text-muted-foreground">· {rankingUnitLabel}</span>
+                      </CardTitle>
+                      <RankedBarChart data={regionRanking} height={216} />
+                    </>
+                  ) : (
+                    <>
+                      <CardTitle className="text-[13px]">
+                        접수 월별 추이{' '}
+                        <span className="text-[11px] font-normal text-muted-foreground">
+                          · 신규 접수 · 최근 6개월
+                        </span>
+                      </CardTitle>
+                      <MonthlyTrendChart data={monthlyTrend} height={216} />
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -418,46 +492,48 @@ function DashboardPage() {
                 <CardContent className="flex flex-1 flex-col gap-[14px]">
                   <CardTitle className="text-[13px]">연령·성별 비율</CardTitle>
                   <div className="flex flex-1 items-center justify-center gap-[25px]">
-                    <RatioDonut data={ageDonutData} total={SUMMARY.totalCount} size={117} />
+                    <RatioDonut data={ageDonutData} total={totalCount} size={117} />
                     <div className="flex flex-col gap-[9px]">
-                      {AGE_GROUPS.map((group) => (
+                      {ageGroups.map((group) => (
                         <span
                           key={group.label}
                           className="inline-flex items-center gap-2 text-[13px] font-medium text-foreground/80"
                         >
                           <span className={cn('size-[10px] rounded-sm', group.dot)} />
-                          {group.label} {group.count}건 ({Math.round((group.count / SUMMARY.totalCount) * 100)}%)
+                          {group.label} {group.count}건 ({pct(group.count, totalCount)}%)
                         </span>
                       ))}
                     </div>
                   </div>
-                  <GenderSplitBar data={GENDER_SPLIT} total={SUMMARY.totalCount} />
+                  <GenderSplitBar data={genderSplit} total={totalCount} />
                 </CardContent>
               </Card>
             </div>
 
-            <Card>
-              <CardContent className="flex flex-col gap-[11px]">
-                <CardTitle className="text-[13px]">
-                  접수 월별 추이{' '}
-                  <span className="text-[11px] font-normal text-muted-foreground">· 신규 접수 · 최근 6개월</span>
-                </CardTitle>
-                <MonthlyTrendChart data={MONTHLY_TREND} height={200} />
-              </CardContent>
-            </Card>
+            {includeTopOrder && (
+              <Card>
+                <CardContent className="flex flex-col gap-[11px]">
+                  <CardTitle className="text-[13px]">
+                    접수 월별 추이{' '}
+                    <span className="text-[11px] font-normal text-muted-foreground">· 신규 접수 · 최근 6개월</span>
+                  </CardTitle>
+                  <MonthlyTrendChart data={monthlyTrend} height={200} />
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardContent className="flex flex-col gap-[14px]">
                 <CardTitle className="text-[13px]">
                   안전조치 항목별 적용률{' '}
                   <span className="text-[11px] font-normal text-muted-foreground">
-                    · 전체 {SUMMARY.totalCount}건 중 · 1건당 중복 적용
+                    · 전체 {measureTarget}건 중 · 1건당 중복 적용
                   </span>
                 </CardTitle>
                 <div className="flex items-center justify-between gap-4">
-                  {SAFETY_MEASURES.map((item) => (
+                  {safetyMeasures.map((item) => (
                     <div key={item.name} className="flex items-center gap-4">
-                      <GaugeRing percent={Math.round((item.count / SUMMARY.totalCount) * 100)} size={92} />
+                      <GaugeRing percent={pct(item.count, measureTarget)} size={92} />
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[13px] font-medium text-muted-foreground">{item.name}</span>
                         <span className="text-[20px] font-bold text-foreground">
