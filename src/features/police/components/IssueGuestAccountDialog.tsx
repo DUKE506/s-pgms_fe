@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { cn } from '@/lib/utils'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import {
@@ -194,6 +195,7 @@ function GuestCaseSelectionForm({
           {isEdit ? '저장' : '발급하기'}
         </Button>
       </div>
+      <LoadingOverlay show={mutation.isPending} variant={isEdit ? '저장' : '발급'} />
     </>
   )
 }

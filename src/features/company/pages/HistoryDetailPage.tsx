@@ -2,6 +2,7 @@ import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import StatusBadge from '@/shared/components/StatusBadge'
 import DetailHeader from '@/shared/components/DetailHeader'
+import DetailSkeleton, { DetailTitleSkeleton } from '@/shared/components/DetailSkeleton'
 import AccessBlockedScreen from '@/shared/components/AccessBlockedScreen'
 import { isNotFoundOrForbidden } from '@/shared/api/errors'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
@@ -55,9 +56,12 @@ function HistoryDetailPage() {
 
   if (caseQuery.isLoading) {
     return (
-      <main className="flex flex-col gap-5 p-4 sm:p-8">
-        {header}
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
+      <main className="flex flex-col gap-5 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
+        <div className="flex flex-col gap-3 xl:contents">
+          {header}
+          <DetailTitleSkeleton />
+        </div>
+        <DetailSkeleton sections={2} withSidebar />
       </main>
     )
   }

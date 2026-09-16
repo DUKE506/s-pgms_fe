@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { deleteWorker, type Worker } from '../api/workers'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 
@@ -68,6 +69,7 @@ function DeleteWorkerDialog({ target, onOpenChange, onSuccess }: DeleteWorkerDia
           </>
         )}
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="삭제" />
     </Dialog>
   )
 }

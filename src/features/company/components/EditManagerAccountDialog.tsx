@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { updateManagerAccountInfo, type ManagerAccount } from '../api/managerAccounts'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 
@@ -79,6 +80,7 @@ function EditManagerAccountForm({
           저장
         </Button>
       </div>
+      <LoadingOverlay show={mutation.isPending} variant="저장" />
     </>
   )
 }

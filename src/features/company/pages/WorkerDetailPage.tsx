@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight, SquarePen, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import DetailHeader from '@/shared/components/DetailHeader'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { resolveDeployStatus } from '@/shared/lib/deployStatus'
@@ -259,7 +260,14 @@ function WorkerDetailPage() {
           <div className="rounded-xl border border-border bg-card p-5.5">
             <div className="mb-2 text-sm font-bold text-foreground">기본정보</div>
             {workersQuery.isLoading && (
-              <p className="py-4 text-sm text-muted-foreground">불러오는 중...</p>
+              <div className="divide-y divide-border/60">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between gap-4 py-2">
+                    <Skeleton className="h-3 w-10" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </div>
             )}
             {workersQuery.isSuccess && !worker && (
               <p className="py-4 text-sm text-destructive">근무자를 찾을 수 없습니다</p>
@@ -302,14 +310,37 @@ function WorkerDetailPage() {
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <div className="text-sm font-bold text-foreground">근무 이력</div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <StatTile label="근무일" value={`${summary.workedDays}일`} />
-            <StatTile label="총 근무시간" value={`${fmtHours(summary.totalHours)}시간`} />
-            <StatTile label="휴무" value={`${summary.offDays}일`} />
-          </div>
+          {scheduleQuery.isLoading ? (
+            <div className="grid grid-cols-3 gap-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-xl border border-border bg-card px-4 py-3">
+                  <Skeleton className="h-6 w-10" />
+                  <Skeleton className="mt-1.5 h-3 w-12" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3">
+              <StatTile label="근무일" value={`${summary.workedDays}일`} />
+              <StatTile label="총 근무시간" value={`${fmtHours(summary.totalHours)}시간`} />
+              <StatTile label="휴무" value={`${summary.offDays}일`} />
+            </div>
+          )}
 
           {scheduleQuery.isLoading && (
-            <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
+            <div className="flex flex-col gap-2.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3"
+                >
+                  <Skeleton className="size-3.5 shrink-0 rounded-sm" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="ml-auto h-4 w-16 shrink-0" />
+                  <Skeleton className="h-5 w-12 shrink-0 rounded-md" />
+                </div>
+              ))}
+            </div>
           )}
           {scheduleQuery.isError && (
             <p className="py-8 text-center text-sm text-destructive">

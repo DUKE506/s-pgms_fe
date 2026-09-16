@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { registerWorker, type WorkerCreateInput } from '../api/workers'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 
@@ -107,6 +108,7 @@ function RegisterWorkerDialog({ open, onOpenChange }: RegisterWorkerDialogProps)
           </Button>
         </div>
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="등록" />
     </Dialog>
   )
 }

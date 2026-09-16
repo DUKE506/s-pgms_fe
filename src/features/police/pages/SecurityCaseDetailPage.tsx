@@ -5,6 +5,10 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import StatusBadge from '@/shared/components/StatusBadge'
 import DetailHeader from '@/shared/components/DetailHeader'
+import DetailSkeleton, {
+  DetailTitleSkeleton,
+  StatusStepperSkeleton,
+} from '@/shared/components/DetailSkeleton'
 import AccessBlockedScreen from '@/shared/components/AccessBlockedScreen'
 import { isNotFoundOrForbidden } from '@/shared/api/errors'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
@@ -125,8 +129,13 @@ function SecurityCaseDetailPage() {
 
   if (caseQuery.isLoading || scheduleQuery.isLoading) {
     return (
-      <main className="p-4 sm:p-8">
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
+      <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
+        <div className="flex flex-col gap-3 xl:contents">
+          <DetailHeader breadcrumb="경호목록" fallbackTo="/security-cases" />
+          <DetailTitleSkeleton />
+        </div>
+        <StatusStepperSkeleton />
+        <DetailSkeleton sections={3} withSidebar />
       </main>
     )
   }

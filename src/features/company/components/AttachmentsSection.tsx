@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Download, FileText } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import {
   downloadDestructionCert,
   uploadDestructionCertDoc,
@@ -268,6 +269,16 @@ function AttachmentsSection({ securityCase, workers }: AttachmentsSectionProps) 
           }
         />
       </div>
+
+      <LoadingOverlay
+        show={
+          securityPlanMutation.isPending ||
+          destructionCertMutation.isPending ||
+          consentMutation.isPending
+        }
+        variant="업로드"
+      />
+      <LoadingOverlay show={destructionDownloadMutation.isPending} variant="다운로드" />
     </div>
   )
 }

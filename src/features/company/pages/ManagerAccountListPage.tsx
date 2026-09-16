@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import ListSkeleton from '@/shared/components/ListSkeleton'
 import { useAuthStore } from '../../auth/store/authStore'
 import { listSecurityCases } from '../api/requests'
 import {
@@ -135,9 +136,7 @@ function ManagerAccountListPage() {
         </div>
       </div>
 
-      {accountsQuery.isLoading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      )}
+      {accountsQuery.isLoading && <ListSkeleton columns={6} />}
       {accountsQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">
           {accountsQuery.error instanceof ManagerListForbiddenError

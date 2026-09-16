@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { resetManagerAccountPassword, type ManagerAccount } from '../api/managerAccounts'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 
@@ -60,6 +61,7 @@ function ResetManagerPasswordDialog({ target, onOpenChange }: ResetManagerPasswo
           </>
         )}
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="초기화" />
     </Dialog>
   )
 }

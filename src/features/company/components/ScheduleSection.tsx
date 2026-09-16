@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight, Plus, SquarePen, Trash2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { setPreMeeting } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import PreMeetingDialog from './PreMeetingDialog'
@@ -273,6 +274,7 @@ function ScheduleSection({
         open={preMeetingDialogOpen}
         onOpenChange={setPreMeetingDialogOpen}
       />
+      <LoadingOverlay show={deletePreMeetingMutation.isPending} variant="삭제" />
     </div>
   )
 }

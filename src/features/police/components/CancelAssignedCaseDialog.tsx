@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { cancelAssignedCase } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
@@ -93,6 +94,7 @@ function CancelAssignedCaseDialog({ securityCase, open, onOpenChange }: CancelAs
           </Button>
         </div>
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="취소" />
     </Dialog>
   )
 }

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { approvePeriodRequest } from '../api/requests'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { SecurityCase } from '../../police/types/securityCase'
@@ -89,6 +90,7 @@ function PeriodRequestActionDialog({ targetCase, onOpenChange }: PeriodRequestAc
           </>
         )}
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="승인" />
     </Dialog>
   )
 }

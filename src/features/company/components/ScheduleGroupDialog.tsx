@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import HourMinuteSelect from './HourMinuteSelect'
 import { deleteScheduleGroup, upsertScheduleGroup } from '../api/securityCaseDetail'
@@ -230,6 +231,8 @@ function ScheduleGroupDialog({
           </div>
         </div>
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="저장" />
+      <LoadingOverlay show={deleteMutation.isPending} variant="삭제" />
     </Dialog>
   )
 }

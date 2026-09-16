@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import ListSkeleton from '@/shared/components/ListSkeleton'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { listCompanyHistory } from '../api/history'
@@ -167,9 +168,7 @@ function HistoryListPage() {
         </div>
       </div>
 
-      {historyQuery.isLoading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      )}
+      {historyQuery.isLoading && <ListSkeleton columns={8} />}
       {historyQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">이력을 불러오지 못했습니다</p>
       )}

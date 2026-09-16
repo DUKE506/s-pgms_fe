@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { cn } from '@/lib/utils'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { requestPeriodChange } from '../api/securityCaseDetail'
@@ -183,6 +184,7 @@ function PeriodRequestDialog({ securityCase, open, onOpenChange }: PeriodRequest
           </Button>
         </div>
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="요청" />
     </Dialog>
   )
 }

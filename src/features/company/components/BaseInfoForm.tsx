@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import DateField from '@/shared/components/DateField'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import {
   Select,
   SelectContent,
@@ -573,6 +574,7 @@ function BaseInfoForm({ securityCase, workers, onCancel, onRegistered }: BaseInf
         open={dispatchViewOpen}
         onOpenChange={setDispatchViewOpen}
       />
+      <LoadingOverlay show={mutation.isPending} variant={isNew ? '등록' : '수정'} />
     </div>
   )
 }

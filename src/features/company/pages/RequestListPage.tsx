@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import ListSkeleton from '@/shared/components/ListSkeleton'
 import { listPendingRequests } from '../api/requests'
 import { listManagers } from '../api/managers'
 import AssignManagerDialog from '../components/AssignManagerDialog'
@@ -127,9 +128,7 @@ function RequestListPage() {
         </div>
       </div>
 
-      {requestsQuery.isLoading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      )}
+      {requestsQuery.isLoading && <ListSkeleton columns={6} />}
       {requestsQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">
           배치요청 목록을 불러오지 못했습니다

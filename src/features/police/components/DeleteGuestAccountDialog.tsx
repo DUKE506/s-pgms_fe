@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { deleteGuestAccount, type GuestAccount } from '../api/guests'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 
@@ -60,6 +61,7 @@ function DeleteGuestAccountDialog({ targetGuest, onOpenChange }: DeleteGuestAcco
           </>
         )}
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="삭제" />
     </Dialog>
   )
 }

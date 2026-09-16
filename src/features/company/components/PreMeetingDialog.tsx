@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import DateField from '@/shared/components/DateField'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { cn } from '@/lib/utils'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { setPreMeeting } from '../api/securityCaseDetail'
@@ -142,6 +143,7 @@ function PreMeetingDialog({ securityCase, workers, open, onOpenChange }: PreMeet
           </Button>
         </div>
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="저장" />
     </Dialog>
   )
 }

@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import ListSkeleton from '@/shared/components/ListSkeleton'
 import { listWorkers, type Worker } from '../api/workers'
 import RegisterWorkerDialog from '../components/RegisterWorkerDialog'
 import EditWorkerDialog from '../components/EditWorkerDialog'
@@ -77,9 +78,7 @@ function WorkerListPage() {
         </div>
       </div>
 
-      {workersQuery.isLoading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      )}
+      {workersQuery.isLoading && <ListSkeleton columns={5} />}
       {workersQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">
           근무자 목록을 불러오지 못했습니다

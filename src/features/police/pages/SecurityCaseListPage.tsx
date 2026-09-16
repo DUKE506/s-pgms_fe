@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import ListSkeleton from '@/shared/components/ListSkeleton'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { cn } from '@/lib/utils'
@@ -230,9 +231,7 @@ function SecurityCaseListPage() {
         </div>
       </div>
 
-      {casesQuery.isLoading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      )}
+      {casesQuery.isLoading && <ListSkeleton columns={6} />}
       {casesQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">경호목록을 불러오지 못했습니다</p>
       )}

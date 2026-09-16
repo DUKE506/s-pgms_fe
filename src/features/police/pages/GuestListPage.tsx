@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import ListSkeleton from '@/shared/components/ListSkeleton'
 import { useAuthStore } from '../../auth/store/authStore'
 import { listGuestAccounts, type GuestAccount } from '../api/guests'
 import IssueGuestAccountDialog, {
@@ -109,9 +110,7 @@ function GuestListPage() {
         </Button>
       </div>
 
-      {guestsQuery.isLoading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      )}
+      {guestsQuery.isLoading && <ListSkeleton columns={5} />}
       {guestsQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">
           게스트 계정 목록을 불러오지 못했습니다

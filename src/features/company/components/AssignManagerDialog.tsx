@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { cn } from '@/lib/utils'
 import { assignManager } from '../api/requests'
 import type { Manager } from '../api/managers'
@@ -129,6 +130,7 @@ function AssignManagerDialog({ targetCase, managers, onOpenChange }: AssignManag
           </>
         )}
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="배정" />
     </Dialog>
   )
 }

@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import ListSkeleton from '@/shared/components/ListSkeleton'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { useAuthStore, type Role } from '../../auth/store/authStore'
@@ -87,6 +88,8 @@ function HistoryListPage() {
 
   const cases = historyQuery.data ?? []
   const role = user?.role
+  // 관리번호/경호시작/경호종료/총경호시간/최종상태/blank(6) + 역할별 지역청·경찰서 열.
+  const historyColumns = 6 + (role === '본청' ? 1 : 0) + (role !== '경찰서' ? 1 : 0)
 
   const scopeLabel =
     role === '본청'
@@ -212,9 +215,7 @@ function HistoryListPage() {
         </div>
       </div>
 
-      {historyQuery.isLoading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      )}
+      {historyQuery.isLoading && <ListSkeleton columns={historyColumns} />}
       {historyQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">이력을 불러오지 못했습니다</p>
       )}

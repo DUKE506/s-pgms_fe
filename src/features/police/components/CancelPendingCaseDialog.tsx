@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router'
 import { useMutation } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { cancelPendingCase } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
 import type { SecurityCase } from '../types/securityCase'
@@ -54,6 +55,7 @@ function CancelPendingCaseDialog({ securityCase, open, onOpenChange }: CancelPen
           </Button>
         </div>
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="취소" />
     </Dialog>
   )
 }

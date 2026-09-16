@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import LoadingOverlay from '@/shared/components/LoadingOverlay'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { closeCase } from '../api/securityCaseDetail'
 import { useToastStore } from '../../../shared/hooks/useToastStore'
@@ -139,6 +140,7 @@ function CloseCaseDialog({ securityCase, open, onOpenChange }: CloseCaseDialogPr
           </Button>
         </div>
       </DialogContent>
+      <LoadingOverlay show={mutation.isPending} variant="종결" />
     </Dialog>
   )
 }

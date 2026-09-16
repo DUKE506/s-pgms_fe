@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import ListSkeleton from '@/shared/components/ListSkeleton'
 import { listPeriodRequests } from '../api/requests'
 import PeriodRequestActionDialog from '../components/PeriodRequestActionDialog'
 import SecurityCaseTabs, { type SecurityCaseTabKey } from '../components/SecurityCaseTabs'
@@ -139,9 +140,7 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
         </div>
       </div>
 
-      {requestsQuery.isLoading && (
-        <p className="py-8 text-center text-sm text-muted-foreground">불러오는 중...</p>
-      )}
+      {requestsQuery.isLoading && <ListSkeleton columns={7} />}
       {requestsQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">{errorLabel}</p>
       )}
