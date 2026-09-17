@@ -24,10 +24,16 @@ import CompanyHistoryListPage from '../features/company/pages/HistoryListPage'
 import CompanyHistoryDetailPage from '../features/company/pages/HistoryDetailPage'
 import GuestListPage from '../features/police/pages/GuestListPage'
 import ManagerAccountListPage from '../features/company/pages/ManagerAccountListPage'
+import PoliceAccountsTab from '../features/company/pages/PoliceAccountsTab'
+import GuestAccountsTab from '../features/company/pages/GuestAccountsTab'
 import SettingsPage from '../shared/pages/SettingsPage'
 import DashboardPage from '../features/police/pages/DashboardPage'
+import AccountManagementPage from '../features/police/pages/AccountManagementPage'
 
 const POLICE_DASHBOARD: Role[] = ['본청', '지역청', '경찰서']
+// 계정 관리(#①, 2026-09-17 설계 확정) — 본청/지역청 전용. 경찰서는 이 화면
+// 자체가 없고 게스트 계정 관리(#②, /guests)에서 "내 계정"으로 대체한다.
+const POLICE_HQ_AND_REGIONAL: Role[] = ['본청', '지역청']
 const POLICE_HISTORY: Role[] = ['본청', '지역청', '경찰서']
 const POLICE_STATION_AND_GUEST: Role[] = ['경찰서', '게스트']
 const POLICE_STATION_ONLY: Role[] = ['경찰서']
@@ -61,6 +67,16 @@ export const routes: RouteObject[] = [
       <ProtectedRoute allow={POLICE_DASHBOARD}>
         <PoliceAppShell>
           <DashboardPage />
+        </PoliceAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/accounts',
+    element: (
+      <ProtectedRoute allow={POLICE_HQ_AND_REGIONAL}>
+        <PoliceAppShell>
+          <AccountManagementPage />
         </PoliceAppShell>
       </ProtectedRoute>
     ),
@@ -261,6 +277,28 @@ export const routes: RouteObject[] = [
       <ProtectedRoute allow={COMPANY_ALL}>
         <CompanyAppShell>
           <ManagerAccountListPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    // 관리자 탭 "경찰"·"게스트"(#③) — 본부관리자는 제외(ManagerTabs에서 탭
+    // 자체를 숨기지만, URL 직접 접근 방어로 라우트 가드도 COMPANY_ADMIN으로 좁힘).
+    path: '/admin/managers/police',
+    element: (
+      <ProtectedRoute allow={COMPANY_ADMIN}>
+        <CompanyAppShell>
+          <PoliceAccountsTab />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/managers/guests',
+    element: (
+      <ProtectedRoute allow={COMPANY_ADMIN}>
+        <CompanyAppShell>
+          <GuestAccountsTab />
         </CompanyAppShell>
       </ProtectedRoute>
     ),

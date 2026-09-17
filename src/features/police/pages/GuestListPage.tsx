@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { KeyRound, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ import IssueGuestAccountDialog, {
   type IssueGuestDialogState,
 } from '../components/IssueGuestAccountDialog'
 import DeleteGuestAccountDialog from '../components/DeleteGuestAccountDialog'
+import ResetPoliceAccountPasswordDialog from '../components/ResetPoliceAccountPasswordDialog'
 
 function formatDate(dateLike: string) {
   const d = new Date(dateLike)
@@ -40,6 +42,7 @@ function GuestListPage() {
   const [search, setSearch] = useState('')
   const [dialogState, setDialogState] = useState<IssueGuestDialogState>(null)
   const [deleteTarget, setDeleteTarget] = useState<GuestAccount | null>(null)
+  const [resetTarget, setResetTarget] = useState<{ loginId: string; userSeq: number } | null>(null)
 
   const guests = guestsQuery.data ?? []
 
@@ -64,6 +67,12 @@ function GuestListPage() {
             <Pencil />
             수정
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => setResetTarget({ loginId: guest.id, userSeq: guest.userSeq })}
+          >
+            <KeyRound />
+            비밀번호 초기화
+          </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onSelect={() => setDeleteTarget(guest)}>
             <Trash2 />
             삭제
@@ -78,7 +87,7 @@ function GuestListPage() {
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <p className="text-xs text-muted-foreground">{user?.name}</p>
-          <h1 className="text-xl font-bold text-foreground">게스트 계정 관리</h1>
+          <h1 className="text-xl font-bold text-foreground">계정 관리</h1>
         </div>
 
         {/* 목록형 헤더 규칙(docs/mobile-ui) — 제목 옆 모바일 전용 "+" 아이콘. */}
@@ -91,6 +100,27 @@ function GuestListPage() {
           <Plus className="size-4.5" />
         </button>
       </div>
+
+      {/* 내 계정(#②, 2026-09-17) — 경찰서는 계정 목록 화면(#①) 자체가 없어,
+          본인 비밀번호 초기화만 여기 카드 하나로 대신한다. userSeq는 로그인
+          시 GetMyProfile에서 받아 세션에 싣어둔 값(authStore.user.userSeq). */}
+      <Card>
+        <CardContent className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-bold text-foreground">내 계정</span>
+            <span className="text-xs text-muted-foreground">{user?.id}</span>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={user?.userSeq == null}
+            onClick={() => user?.userSeq != null && setResetTarget({ loginId: user.id, userSeq: user.userSeq })}
+          >
+            <KeyRound />
+            비밀번호 초기화
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* 검색+데스크톱 발급 버튼은 xl 이상 전용. */}
       <div className="hidden gap-2.5 xl:flex xl:items-center xl:justify-end">
@@ -173,6 +203,11 @@ function GuestListPage() {
       <IssueGuestAccountDialog
         state={dialogState}
         onOpenChange={(open) => !open && setDialogState(null)}
+      />
+      <ResetPoliceAccountPasswordDialog
+        target={resetTarget}
+        onOpenChange={(open) => !open && setResetTarget(null)}
+        invalidateQueryKey={['guests']}
       />
       <DeleteGuestAccountDialog
         targetGuest={deleteTarget}

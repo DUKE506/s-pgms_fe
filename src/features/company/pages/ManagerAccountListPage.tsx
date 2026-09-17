@@ -28,6 +28,7 @@ import {
 import EditManagerAccountDialog from '../components/EditManagerAccountDialog'
 import ResetManagerPasswordDialog from '../components/ResetManagerPasswordDialog'
 import ManagerAssignedCasesDialog from '../components/ManagerAssignedCasesDialog'
+import ManagerTabs from '../components/ManagerTabs'
 
 // 2026-08-31 재확정 권한 매트릭스(roadmap.md Phase 3.6) — 서버(mocks/handlers/
 // companyAccounts.ts)와 동일한 판정을 클라이언트에서도 미러링해 액션 노출 여부를
@@ -121,6 +122,8 @@ function ManagerAccountListPage() {
         <p className="text-xs text-muted-foreground">{user?.name}</p>
         <h1 className="text-xl font-bold text-foreground">관리자 계정 관리</h1>
       </div>
+
+      <ManagerTabs active="본사" />
 
       {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색은 데스크톱 전용. */}
       <div className="hidden xl:flex xl:items-center xl:justify-end">
