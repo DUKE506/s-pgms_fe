@@ -1,16 +1,13 @@
-// [경찰 계정 관리 + 본사 관리자 탭] 신규 "목록조회" API(백엔드 요청 완료, 스펙
-// 미확정) 더블 — 2026-09-17 대화에서 확정한 응답 형태를 그대로 흉내낸다.
-// 실제 스펙 도착 전까지는 features/police/api/accountManagement.ts가 이 더블을
-// 상대로 개발되고, 스펙이 오면 엔드포인트 경로/필드명만 맞춰 교체한다.
+// [경찰 계정 관리 + 본사 관리자 탭] GetPoliceUserList/ResetPassword 더블 —
+// 2026-09-17 실백엔드 실측 확인 완료(docs/backend-integration/responses/
+// User-Stec-GetPoliceUserList.md·User-Stec-ResetPassword.md). vitest 전용
+// (mocks/handlers/index.ts의 testOnlyHandlers) — 브라우저는 실백엔드로 나간다.
 //
-// 스코프 규칙(사용자 확정): 본청=전국(자기 자신이 트리 최상위), 지역청=관할
-// 이하(자기 자신이 최상위), 경찰서=자기 자신 하나(+게스트), 본사(시스템/
-// 운영관리자)=전국. `data`는 항상 배열이고, 호출자 스코프의 "최상위 노드"
-// 1개만 원소로 담는다(본청이면 본청 자신 1개, 지역청이면 그 지역청 1개 …).
+// 스코프: 본청=전국(자기 자신이 트리 최상위), 지역청=관할 이하(자기 자신이
+// 최상위), 경찰서=자기 자신 하나(+guestList), 본사(시스템/운영관리자)=전국.
+// `data`는 항상 배열이고, 호출자 스코프의 "최상위 노드" 1개만 원소로 담는다.
 //
-// 게스트 노드 모양은 아직 백엔드 예시를 못 받아 미확정 — `levelName: '게스트'`,
-// `groupSeq: null`(게스트는 조직이 아니라 그룹 PK가 없음)로 임시 가정한다.
-// 실제 예시 오면 이 파일과 핸들러의 게스트 분기만 조정하면 된다.
+// 게스트는 children이 아니라 노드별 guestList 필드에 붙는다(실측 확인).
 
 export interface PoliceAccountUserInfo {
   userSeq: number
@@ -30,6 +27,7 @@ export interface PoliceAccountNode {
   levelName: string
   parentGroupSeq: number | null
   userInfo: PoliceAccountUserInfo | null
+  guestList: PoliceAccountUserInfo[]
   children: PoliceAccountNode[]
 }
 
@@ -51,6 +49,7 @@ export const policeAccountTree: PoliceAccountNode = {
     useYn: true,
     pwChangedYn: false,
   },
+  guestList: [],
   children: [
     {
       groupSeq: 23,
@@ -68,6 +67,7 @@ export const policeAccountTree: PoliceAccountNode = {
         useYn: true,
         pwChangedYn: false,
       },
+      guestList: [],
       children: [
         {
           groupSeq: 25,
@@ -85,27 +85,19 @@ export const policeAccountTree: PoliceAccountNode = {
             useYn: true,
             pwChangedYn: false,
           },
-          // 게스트 노드 예시(모양 미확정, 위 파일 상단 설명 참고).
-          children: [
+          guestList: [
             {
-              groupSeq: null,
-              groupName: null,
-              level: 4,
-              levelName: '게스트',
-              parentGroupSeq: 25,
-              userInfo: {
-                userSeq: 201,
-                codeSeq: 7,
-                codeName: '게스트',
-                loginId: 'GuestM1',
-                userName: '게스트',
-                phone: null,
-                useYn: true,
-                pwChangedYn: true,
-              },
-              children: [],
+              userSeq: 201,
+              codeSeq: 7,
+              codeName: '게스트',
+              loginId: 'GuestM1',
+              userName: '게스트',
+              phone: null,
+              useYn: true,
+              pwChangedYn: true,
             },
           ],
+          children: [],
         },
         {
           groupSeq: 26,
@@ -114,6 +106,7 @@ export const policeAccountTree: PoliceAccountNode = {
           levelName: '경찰서',
           parentGroupSeq: 23,
           userInfo: null,
+          guestList: [],
           children: [],
         },
       ],
@@ -134,6 +127,7 @@ export const policeAccountTree: PoliceAccountNode = {
         useYn: true,
         pwChangedYn: false,
       },
+      guestList: [],
       children: [
         {
           groupSeq: 27,
@@ -151,6 +145,7 @@ export const policeAccountTree: PoliceAccountNode = {
             useYn: true,
             pwChangedYn: false,
           },
+          guestList: [],
           children: [],
         },
       ],
@@ -167,8 +162,8 @@ function findNodeByLoginId(node: PoliceAccountNode, loginId: string): PoliceAcco
   return undefined
 }
 
-// 호출자 role/loginId에 따라 "이 사람이 보는 최상위 노드"를 찾는다 — 실제
-// 백엔드도 같은 규칙(요청자 노드 이하)일 것으로 가정한 더블 로직.
+// 호출자 role/loginId에 따라 "이 사람이 보는 최상위 노드"를 찾는다 — 실백엔드와
+// 동일 규칙(요청자 노드 이하, 본청/본사는 전체).
 export function scopedTreeFor(role: string, loginId: string): PoliceAccountNode[] {
   if (role === '본청' || role === '시스템관리자' || role === '운영관리자') {
     return [policeAccountTree]
@@ -186,6 +181,8 @@ export function findAccountByUserSeq(userSeq: number): PoliceAccountUserInfo | u
   let found: PoliceAccountUserInfo | undefined
   walk(policeAccountTree, (n) => {
     if (n.userInfo?.userSeq === userSeq) found = n.userInfo
+    const guest = n.guestList.find((g) => g.userSeq === userSeq)
+    if (guest) found = guest
   })
   return found
 }

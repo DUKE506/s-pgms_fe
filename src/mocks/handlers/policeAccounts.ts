@@ -2,19 +2,13 @@ import { http, HttpResponse } from 'msw'
 import { companyAccounts, policeAccounts } from '../data/accounts'
 import { resetPoliceAccountPasswordDouble, scopedTreeFor } from '../data/policeAccountTree'
 
-// [경찰 계정 관리 + 본사 관리자 탭] 신규 API 2종(목록조회/초기화) 더블 —
-// 백엔드에 요청은 이미 전달됐고(2026-09-17) 스펙 미확정이라, 아직 mock인
-// 화면들과 같은 취급으로 browser.ts에도 노출한다(securityCases/workers와 동일
-// 취급 — handlers 배열, testOnlyHandlers 아님). 실제 스펙 도착하면 엔드포인트
-// 경로/필드명만 맞춰 이 핸들러와 features/police/api/accountManagement.ts를
-// 함께 교체한다.
-//
-// ⚠️ 인증 스코프는 vitest 더블 목적으로만 정확하다 — useAuthStore.setState로
-// 로그인하는 테스트는 accessToken이 `access.<id>.test` 형태라 여기서 역할을
-// 정확히 찾아내지만, 실제 브라우저(run-s-pgms 등)는 이미 실백엔드로 로그인해
-// 토큰이 이 형태가 아니다. 그 경우 역할을 특정할 수 없으므로 본청 스코프(전체
-// 트리)로 폴백한다 — 로그인한 계정과 무관하게 항상 같은 데모 데이터가 뜨는 건
-// 의도된 한계다(화면 레이아웃 스캐폴딩 목적, 실 스코프 검증은 실 API 연동 후).
+// ⚠️ 테스트 전용(mocks/server.ts에서만 등록, browser.ts엔 없음) — [경찰 계정
+// 관리 #①②·본사 관리자 탭 #③] 실제 백엔드(User/Stec/W/GetPoliceUserList·
+// ResetPassword)로 연동 완료됐다(2026-09-17 실측, 응답 샘플: docs/
+// backend-integration/responses/User-Stec-GetPoliceUserList.md·
+// User-Stec-ResetPassword.md). 브라우저 dev에서는 이 경로를 MSW 미등록으로
+// 두고 vite 프록시가 실제 백엔드로 보낸다. 여기서는 실제 응답 shape을 흉내내
+// vitest가 오프라인으로 매핑 로직을 검증하게 한다.
 function callerFromBearer(request: Request): { role: string; loginId: string } | undefined {
   const token = (request.headers.get('Authorization') ?? '').replace(/^Bearer /, '')
   const accountId = token.split('.')[1]
@@ -23,16 +17,16 @@ function callerFromBearer(request: Request): { role: string; loginId: string } |
 }
 
 export const policeAccountHandlers = [
-  // 목록조회(신규, 경로 미확정 — 임시로 User/Police/W/ 네임스페이스에 둠).
-  http.get('/api/v1/User/Police/W/GetPoliceAccountTree', ({ request }) => {
+  http.get('/api/v1/User/Stec/W/GetPoliceUserList', ({ request }) => {
     const caller = callerFromBearer(request)
-    const data = caller ? scopedTreeFor(caller.role, caller.loginId) : scopedTreeFor('본청', '')
-    return HttpResponse.json({ message: 'ok', data, code: 200 })
+    if (!caller) {
+      return HttpResponse.json({ message: '인증이 필요합니다.', data: null, code: 401 }, { status: 401 })
+    }
+    const data = scopedTreeFor(caller.role, caller.loginId)
+    return HttpResponse.json({ message: '요청이 정상 처리되었습니다.', data, code: 200 })
   }),
 
-  // 초기화(신규, 경로 미확정). 대상 userSeq를 아이디와 동일한 비밀번호로
-  // 리셋하고 pwChangedYn=true로 세운다 — 본사 UpdateUser 초기화와 같은 관례.
-  http.patch('/api/v1/User/Police/W/ResetPoliceAccountPassword', async ({ request }) => {
+  http.patch('/api/v1/User/Stec/W/ResetPassword', async ({ request }) => {
     const body = (await request.json()) as { userSeq: number }
     const ok = resetPoliceAccountPasswordDouble(Number(body.userSeq))
     if (!ok) {
@@ -41,6 +35,6 @@ export const policeAccountHandlers = [
         { status: 404 },
       )
     }
-    return HttpResponse.json({ message: 'ok', data: true, code: 200 })
+    return HttpResponse.json({ message: '요청이 정상 처리되었습니다.', data: true, code: 200 })
   }),
 ]
