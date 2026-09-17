@@ -63,7 +63,7 @@ function SecurityCaseTabs({ active }: SecurityCaseTabsProps) {
   const shortenCount = shortenRequestsQuery.data?.length
 
   return (
-    <div className="flex gap-2 overflow-x-auto">
+    <div className="flex gap-2 overflow-x-auto scrollbar-hide">
       <Tab isActive={active === '경호목록'} to="/admin/security-cases">
         경호목록{activeCasesCount != null ? ` ${activeCasesCount}` : ''}
       </Tab>

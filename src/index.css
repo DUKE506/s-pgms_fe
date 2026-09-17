@@ -250,3 +250,14 @@
     background-color: #1e293b;
   }
 }
+
+/* 가로 스크롤 칩/탭 마운트 시 네이티브 오버레이 스크롤바가 잠깐 보였다 스와이프
+   후 사라지는 깜빡임을 없앤다(2026-09-17) — 위 html/body 전역 스크롤바처럼
+   track/thumb을 커스터마이징하면 크로미움이 "오버레이 자동숨김"에서 "상시표시"로
+   바뀌는 회귀가 나므로(2026-09-15 메모), 이 요소들만 아예 display:none으로 숨긴다. */
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

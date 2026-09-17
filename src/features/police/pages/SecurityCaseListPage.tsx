@@ -175,7 +175,7 @@ function SecurityCaseListPage() {
       )}
 
       <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
-        <div className="flex min-w-0 gap-2 overflow-x-auto">
+        <div className="flex min-w-0 gap-2 overflow-x-auto scrollbar-hide">
           <button
             type="button"
             onClick={() => setStatusFilter(ALL)}
