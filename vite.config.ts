@@ -16,10 +16,12 @@ export default defineConfig(({ mode }) => {
   // mkcert로 발급한 사내망 LAN IP용 인증서(.certs/, gitignore 대상, PC별로 로컬
   // 생성). PWA 설치 테스트처럼 휴대폰에서 HTTPS로 접속해야 할 때만 있으면 되므로
   // 파일이 없으면 조용히 일반 HTTP로 동작한다.
+  // --mode http(= dev:http 스크립트)면 인증서가 있어도 무시하고 http로 띄운다 —
+  // 인증서 신뢰 등록이 안 된 기기·환경에서 빠르게 접속해야 할 때 용도.
   const certPath = path.resolve(import.meta.dirname, '.certs/cert.pem')
   const keyPath = path.resolve(import.meta.dirname, '.certs/key.pem')
   const https =
-    fs.existsSync(certPath) && fs.existsSync(keyPath)
+    mode !== 'http' && fs.existsSync(certPath) && fs.existsSync(keyPath)
       ? { cert: fs.readFileSync(certPath), key: fs.readFileSync(keyPath) }
       : undefined
 
