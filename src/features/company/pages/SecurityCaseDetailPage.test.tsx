@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import SecurityCaseDetailPage from './SecurityCaseDetailPage'
+import SecurityCaseEditPage from './SecurityCaseEditPage'
 import { companyAccounts } from '../../../mocks/data/accounts'
 import { assignManager, requestPeriodChange, securityCases } from '../../../mocks/data/securityCases'
 import { useAuthStore } from '../../auth/store/authStore'
@@ -10,7 +11,10 @@ import { useAuthStore } from '../../auth/store/authStore'
 function renderPage(caseId: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const router = createMemoryRouter(
-    [{ path: '/admin/security-cases/:id', element: <SecurityCaseDetailPage /> }],
+    [
+      { path: '/admin/security-cases/:id', element: <SecurityCaseDetailPage /> },
+      { path: '/admin/security-cases/:id/edit', element: <SecurityCaseEditPage /> },
+    ],
     { initialEntries: [`/admin/security-cases/${caseId}`] },
   )
   render(
@@ -56,8 +60,8 @@ describe('SecurityCaseDetailPage', () => {
     renderPage(caseId)
     await screen.findByText('경호계획서 정보가 등록되지 않았습니다')
 
-    // 1) 경호계획서 정보 등록: 근무자 2명 추가, 첫 번째만 대표근무자로 지정
-    fireEvent.click(screen.getByRole('button', { name: /경호계획서 정보 등록/ }))
+    // 1) 경호계획서 정보 등록(별도 라우트로 이동): 근무자 2명 추가, 첫 번째만 대표근무자로 지정
+    fireEvent.click(screen.getByRole('link', { name: /경호계획서 정보 등록/ }))
     await screen.findByText('1. 경호대상자')
 
     fireEvent.click(screen.getByRole('button', { name: '근무자 추가' }))

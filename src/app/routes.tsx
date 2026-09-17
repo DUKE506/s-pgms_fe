@@ -18,6 +18,7 @@ import PeriodRequestListPage from '../features/company/pages/PeriodRequestListPa
 import WorkerListPage from '../features/company/pages/WorkerListPage'
 import WorkerDetailPage from '../features/company/pages/WorkerDetailPage'
 import SecurityCaseDetailPage from '../features/company/pages/SecurityCaseDetailPage'
+import CompanySecurityCaseEditPage from '../features/company/pages/SecurityCaseEditPage'
 import SecurityCaseListPage from '../features/company/pages/SecurityCaseListPage'
 import CompanyHistoryListPage from '../features/company/pages/HistoryListPage'
 import CompanyHistoryDetailPage from '../features/company/pages/HistoryDetailPage'
@@ -197,6 +198,16 @@ export const routes: RouteObject[] = [
       <ProtectedRoute allow={COMPANY_ALL}>
         <CompanyAppShell>
           <SecurityCaseDetailPage />
+        </CompanyAppShell>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/security-cases/:id/edit',
+    element: (
+      <ProtectedRoute allow={COMPANY_ALL}>
+        <CompanyAppShell>
+          <CompanySecurityCaseEditPage />
         </CompanyAppShell>
       </ProtectedRoute>
     ),

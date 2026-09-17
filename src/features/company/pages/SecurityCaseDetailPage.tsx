@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { FileText, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -12,8 +12,6 @@ import { isNotFoundOrForbidden } from '@/shared/api/errors'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { getSecurityCase } from '../api/securityCaseDetail'
 import { getCaseGuards } from '../api/workers'
-import { useHideMobileNav } from '@/shared/hooks/useMobileNavStore'
-import BaseInfoForm from '../components/BaseInfoForm'
 import CaseBaseInfoCard from '@/shared/components/CaseBaseInfoCard'
 import ScheduleSection from '../components/ScheduleSection'
 import ScheduleInitDialog from '../components/ScheduleInitDialog'
@@ -28,6 +26,7 @@ interface GroupDialogState {
 
 function SecurityCaseDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const caseQuery = useQuery({
     queryKey: ['security-case', id],
     queryFn: () => getSecurityCase(id!),
@@ -39,8 +38,6 @@ function SecurityCaseDetailPage() {
     enabled: Boolean(id),
   })
 
-  const [editingBaseInfo, setEditingBaseInfo] = useState(false)
-  useHideMobileNav(editingBaseInfo)
   const [scheduleInitOpen, setScheduleInitOpen] = useState(false)
   const [groupDialog, setGroupDialog] = useState<GroupDialogState | null>(null)
   // ScheduleGroupDialog는 상시 마운트된 채 open만 토글되므로, 그 내부 useState(특이사항/
@@ -87,63 +84,42 @@ function SecurityCaseDetailPage() {
   )
 
   return (
-    <main
-      className={cn(
-        'flex flex-col gap-4 p-4 sm:p-8 xl:pb-8',
-        editingBaseInfo ? 'pb-8 sm:pb-8' : 'pb-28 sm:pb-28',
-      )}
-    >
+    <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
       {/* 모바일 목업(docs/mobile-ui)은 breadcrumb 줄과 제목+뱃지 줄을 gap
           12px로 묶은 한 블록으로 그린다 — 데스크톱은 기존 레이아웃 그대로
           두려고 xl에서만 이 wrapper를 `contents`로 없앤다(경찰 상세와 동일). */}
       <div className="flex flex-col gap-3 xl:contents">
         <DetailHeader
-          breadcrumb={
-            '경호관리' +
-            (managementNumber ? ` / ${managementNumber}` : '') +
-            (editingBaseInfo ? ' / 경호계획서 정보 등록' : '')
-          }
+          breadcrumb={'경호관리' + (managementNumber ? ` / ${managementNumber}` : '')}
           fallbackTo="/admin/security-cases"
         />
 
-        {!editingBaseInfo && (
-          <div className="flex flex-wrap items-center gap-3.5">
-            <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
-            <StatusBadge status={securityCase.status} />
-            {securityCase.pendingPeriodRequest && (
-              // 경찰이 연장/단축을 요청해도 본사가 연장요청/단축요청 탭에 직접
-              // 들어가지 않으면 알 방법이 없어 상세 배지 옆에 바로 노출(사용자
-              // 요청, 2026-09-11 — roadmap Phase 3.5 백로그 항목). 클릭 액션은
-              // 없는 안내 문구라 <button>이 아니라 사전미팅 삭제 버튼과 같은
-              // destructive 배색(연한 빨강 테두리·배경)만 재사용, 아이콘 대신
-              // 글자로(사용자 디자인 피드백).
-              <span
-                className={cn(
-                  buttonVariants({ variant: 'destructive', size: 'sm' }),
-                  'pointer-events-none',
-                )}
-              >
-                <span className="text-trim">
-                  현재 {securityCase.pendingPeriodRequest.type} 요청이 있습니다
-                </span>
+        <div className="flex flex-wrap items-center gap-3.5">
+          <h1 className="text-xl font-bold text-foreground">{managementNumber}</h1>
+          <StatusBadge status={securityCase.status} />
+          {securityCase.pendingPeriodRequest && (
+            // 경찰이 연장/단축을 요청해도 본사가 연장요청/단축요청 탭에 직접
+            // 들어가지 않으면 알 방법이 없어 상세 배지 옆에 바로 노출(사용자
+            // 요청, 2026-09-11 — roadmap Phase 3.5 백로그 항목). 클릭 액션은
+            // 없는 안내 문구라 <button>이 아니라 사전미팅 삭제 버튼과 같은
+            // destructive 배색(연한 빨강 테두리·배경)만 재사용, 아이콘 대신
+            // 글자로(사용자 디자인 피드백).
+            <span
+              className={cn(
+                buttonVariants({ variant: 'destructive', size: 'sm' }),
+                'pointer-events-none',
+              )}
+            >
+              <span className="text-trim">
+                현재 {securityCase.pendingPeriodRequest.type} 요청이 있습니다
               </span>
-            )}
-          </div>
-        )}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* BaseInfoForm(폼)은 목업상 760px로 좁게 디자인돼 있어 자체적으로
-          mx-auto max-w-3xl을 갖고 있음 — 여기선 폭을 제한하지 않아야
-          요약/스케줄/첨부 뷰가 XL에서 전체 폭을 쓴다 */}
       <div className="flex flex-col gap-5">
-        {editingBaseInfo ? (
-          <BaseInfoForm
-            securityCase={securityCase}
-            workers={workers}
-            onCancel={() => setEditingBaseInfo(false)}
-            onRegistered={() => setEditingBaseInfo(false)}
-          />
-        ) : !securityCase.baseInfo ? (
+        {!securityCase.baseInfo ? (
           <div className="flex flex-col items-center gap-3.5 rounded-xl border border-border bg-card px-6 py-16 text-center">
             <FileText className="size-9 text-muted-foreground/40" />
             <div className="text-[15px] font-bold text-foreground">
@@ -153,17 +129,20 @@ function SecurityCaseDetailPage() {
               배치요구서를 확인한 후 경호계획서 정보를 등록하면 근무 스케줄·파기확인서
               섹션이 나타납니다.
             </p>
-            <Button type="button" onClick={() => setEditingBaseInfo(true)} className="mt-1.5">
+            <Link
+              to={`/admin/security-cases/${id}/edit`}
+              className={cn(buttonVariants(), 'mt-1.5')}
+            >
               <Plus className="size-3.5" />
               경호계획서 정보 등록
-            </Button>
+            </Link>
           </div>
         ) : (
           <>
             <CaseBaseInfoCard
               securityCase={securityCase}
               variant="company"
-              onEdit={() => setEditingBaseInfo(true)}
+              onEdit={() => navigate(`/admin/security-cases/${id}/edit`)}
             />
 
             {!securityCase.workSchedule ? (
