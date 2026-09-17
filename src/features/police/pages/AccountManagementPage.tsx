@@ -38,7 +38,9 @@ function AccountManagementPage() {
   const [search, setSearch] = useState('')
   const [resetTarget, setResetTarget] = useState<PoliceAccountRow | null>(null)
 
-  const accounts = accountsQuery.data ?? []
+  // 본청/지역청은 조직계정까지만 관리 대상 — 게스트는 각 경찰서 계정 관리
+  // 화면(#②)에서 발급 주체(피전)가 직접 다룬다(2026-09-17 사용자 결정).
+  const accounts = (accountsQuery.data ?? []).filter((a) => a.levelName !== '게스트')
   const filtered = accounts.filter(
     (a) => !search.trim() || a.orgPath.includes(search.trim()) || a.userName.includes(search.trim()),
   )

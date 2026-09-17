@@ -36,21 +36,21 @@ function ManagerTabs({ active }: ManagerTabsProps) {
   const role = useAuthStore((state) => state.user?.role)
   const canSeePoliceAndGuest = role !== '본부관리자'
 
+  // 본부관리자는 경찰·게스트 탭 자체가 안 보이니 "본사" 하나만 고를 게
+  // 없는 탭으로 보여줄 이유가 없다(2026-09-17 사용자 결정) — 탭 바 전체를 숨김.
+  if (!canSeePoliceAndGuest) return null
+
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-hide">
       <Tab isActive={active === '본사'} to="/admin/managers">
         본사
       </Tab>
-      {canSeePoliceAndGuest && (
-        <>
-          <Tab isActive={active === '경찰'} to="/admin/managers/police">
-            경찰
-          </Tab>
-          <Tab isActive={active === '게스트'} to="/admin/managers/guests">
-            게스트
-          </Tab>
-        </>
-      )}
+      <Tab isActive={active === '경찰'} to="/admin/managers/police">
+        경찰
+      </Tab>
+      <Tab isActive={active === '게스트'} to="/admin/managers/guests">
+        게스트
+      </Tab>
     </div>
   )
 }

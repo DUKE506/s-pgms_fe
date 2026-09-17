@@ -38,7 +38,7 @@ describe('AccountManagementPage', () => {
     useAuthStore.setState({ user: null, accessToken: null, refreshToken: null })
   })
 
-  it('본청으로 로그인하면 전국 계정(6개)을 조회할 수 있다', async () => {
+  it('본청으로 로그인하면 전국 조직계정(5개)을 조회할 수 있다', async () => {
     loginAs('hq')
     renderPage()
 
@@ -49,7 +49,10 @@ describe('AccountManagementPage', () => {
     expect(withinTable().getByText('수원경찰서')).toBeInTheDocument()
     // 서초경찰서는 userInfo가 null이라(계정 없음) 행에 나오지 않는다.
     expect(withinTable().queryByText('서초경찰서')).not.toBeInTheDocument()
-    expect(withinTable().getAllByRole('row')).toHaveLength(7) // 헤더 1 + 계정 6
+    // 본청/지역청 화면은 게스트를 다루지 않는다(2026-09-17 결정) —
+    // 강남경찰서에 딸린 GuestM1은 목록에서 빠져야 한다.
+    expect(withinTable().queryByText('GuestM1')).not.toBeInTheDocument()
+    expect(withinTable().getAllByRole('row')).toHaveLength(6) // 헤더 1 + 조직계정 5
   })
 
   it('지역청으로 로그인하면 관할 이하만 조회된다', async () => {

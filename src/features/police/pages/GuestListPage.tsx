@@ -122,6 +122,9 @@ function GuestListPage() {
         </CardContent>
       </Card>
 
+      {/* 내 계정과 구분되는 섹션임을 표시(2026-09-17 사용자 요청). */}
+      <h2 className="text-sm font-bold text-foreground">게스트 계정</h2>
+
       {/* 검색+데스크톱 발급 버튼은 xl 이상 전용. */}
       <div className="hidden gap-2.5 xl:flex xl:items-center xl:justify-end">
         <div className="relative xl:w-64">
