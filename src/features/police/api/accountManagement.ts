@@ -47,12 +47,24 @@ export interface PoliceAccountRow {
   levelName: string
   phone: string | null
   useYn: boolean
-  // 트리 depth를 그대로 조상 이름들로 이어붙인 소속 경로. 예: "서울경찰청 · 강남경찰서".
-  // 게스트는 소속된 경찰서의 경로를 그대로 쓴다(자기 groupName이 없어서).
+  // 트리 depth를 그대로 조상 이름들로 이어붙인 소속 경로(본청 포함). 예:
+  // "본청 · 서울경찰청 · 강남경찰서". 경찰 자체 화면(#①, AccountManagementPage)이
+  // 계속 쓴다 — 거긴 어차피 본청/지역청만 접근하는 화면이라 본청 표기가 있어도
+  // 안 겹친다.
   orgPath: string
+  // 본청은 전부 여기 소속이라 표기가 의미 없다(2026-09-17 사용자 결정) — 본사
+  // 관리자 탭(#③)은 orgPath 대신 이 두 필드로 지방청/경찰서만 나눠 보여준다.
+  // 본청 자신의 행은 둘 다 null.
+  regionName: string | null
+  stationName: string | null
 }
 
-function guestRow(guest: RawUserInfo, orgPath: string): PoliceAccountRow {
+function guestRow(
+  guest: RawUserInfo,
+  orgPath: string,
+  regionName: string | null,
+  stationName: string | null,
+): PoliceAccountRow {
   return {
     userSeq: guest.userSeq,
     loginId: guest.loginId,
@@ -62,12 +74,16 @@ function guestRow(guest: RawUserInfo, orgPath: string): PoliceAccountRow {
     phone: guest.phone,
     useYn: guest.useYn,
     orgPath,
+    regionName,
+    stationName,
   }
 }
 
-function flatten(node: RawAccountNode, ancestors: string[]): PoliceAccountRow[] {
+function flatten(node: RawAccountNode, ancestors: string[], region: string | null): PoliceAccountRow[] {
   const path = node.groupName ? [...ancestors, node.groupName] : ancestors
   const orgPath = path.join(' · ')
+  const thisRegion = node.level === 2 ? node.groupName : region
+  const thisStation = node.level === 3 ? node.groupName : null
   const own: PoliceAccountRow[] = node.userInfo
     ? [
         {
@@ -79,11 +95,13 @@ function flatten(node: RawAccountNode, ancestors: string[]): PoliceAccountRow[] 
           phone: node.userInfo.phone,
           useYn: node.userInfo.useYn,
           orgPath,
+          regionName: thisRegion,
+          stationName: thisStation,
         },
       ]
     : []
-  const guests = node.guestList.map((g) => guestRow(g, orgPath))
-  return [...own, ...guests, ...node.children.flatMap((child) => flatten(child, path))]
+  const guests = node.guestList.map((g) => guestRow(g, orgPath, thisRegion, thisStation))
+  return [...own, ...guests, ...node.children.flatMap((child) => flatten(child, path, thisRegion))]
 }
 
 // 화면: [경찰] 본청/지역청 계정 관리(#①), 경찰서 계정 관리 내 게스트 목록(#②),
@@ -94,7 +112,7 @@ export async function listPoliceAccounts(): Promise<PoliceAccountRow[]> {
     throw new Error('계정 목록을 불러오지 못했습니다')
   }
   const roots = await unwrapEnvelope<RawAccountNode[]>(res)
-  return roots.flatMap((root) => flatten(root, []))
+  return roots.flatMap((root) => flatten(root, [], null))
 }
 
 export async function resetPoliceAccountPassword(userSeq: number): Promise<void> {

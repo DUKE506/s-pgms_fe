@@ -28,6 +28,10 @@ import ManagerTabs from '../components/ManagerTabs'
 // 전국 게스트를 한 화면에서 보는 건 본사(시스템/운영관리자)만 가능 — 경찰서별
 // 게스트 관리(발급/조회권 수정/삭제)는 여전히 각 경찰서의 게스트 계정 관리
 // 화면(#②) 소관이고, 여긴 초기화 액션만 제공한다.
+//
+// 이름·역할 컬럼 제외(2026-09-17 사용자 결정) — 게스트는 userName·codeName이
+// 전부 "게스트" 고정값이라 이 탭 안에서는 무의미한 데이터다. 소속도 전부 본청
+// 산하라 본청 표기 없이 지방청/경찰서 2컬럼으로만 보여준다.
 const QUERY_KEY = ['police-accounts']
 
 function GuestAccountsTab() {
@@ -39,7 +43,11 @@ function GuestAccountsTab() {
 
   const guests = (accountsQuery.data ?? []).filter((a) => a.levelName === '게스트')
   const filtered = guests.filter(
-    (a) => !search.trim() || a.orgPath.includes(search.trim()) || a.userName.includes(search.trim()),
+    (a) =>
+      !search.trim() ||
+      a.loginId.includes(search.trim()) ||
+      (a.regionName ?? '').includes(search.trim()) ||
+      (a.stationName ?? '').includes(search.trim()),
   )
 
   function menuFor(account: PoliceAccountRow) {
@@ -73,16 +81,16 @@ function GuestAccountsTab() {
         <div className="relative xl:w-64">
           <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="소속·이름 검색"
+            placeholder="소속·아이디 검색"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="bg-card pl-8"
-            aria-label="소속·이름 검색"
+            aria-label="소속·아이디 검색"
           />
         </div>
       </div>
 
-      {accountsQuery.isLoading && <ListSkeleton columns={5} />}
+      {accountsQuery.isLoading && <ListSkeleton columns={3} />}
       {accountsQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">게스트 목록을 불러오지 못했습니다</p>
       )}
@@ -96,20 +104,18 @@ function GuestAccountsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>소속</TableHead>
-                  <TableHead>이름</TableHead>
+                  <TableHead>지방청</TableHead>
+                  <TableHead>경찰서</TableHead>
                   <TableHead>아이디</TableHead>
-                  <TableHead>역할</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((a) => (
                   <TableRow key={a.userSeq}>
-                    <TableCell>{a.orgPath}</TableCell>
-                    <TableCell>{a.userName}</TableCell>
+                    <TableCell>{a.regionName ?? '-'}</TableCell>
+                    <TableCell>{a.stationName ?? '-'}</TableCell>
                     <TableCell>{a.loginId}</TableCell>
-                    <TableCell>{a.codeName}</TableCell>
                     <TableCell>
                       <div className="flex justify-end">{menuFor(a)}</div>
                     </TableCell>
@@ -126,15 +132,12 @@ function GuestAccountsTab() {
                 className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-bold text-foreground">{a.userName}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {a.loginId} · {a.codeName}
-                    </span>
-                  </div>
+                  <span className="text-sm font-bold text-foreground">{a.loginId}</span>
                   {menuFor(a)}
                 </div>
-                <div className="text-xs text-muted-foreground">{a.orgPath}</div>
+                <div className="text-xs text-muted-foreground">
+                  {[a.regionName, a.stationName].filter(Boolean).join(' · ')}
+                </div>
               </div>
             ))}
           </div>

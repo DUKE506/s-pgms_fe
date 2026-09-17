@@ -27,6 +27,8 @@ import ManagerTabs from '../components/ManagerTabs'
 // API·평면화 로직을 그대로 재사용(listPoliceAccounts가 호출자 스코프를 서버가
 // 알아서 좁혀주므로, 본사 시스템/운영관리자로 호출하면 전국 범위가 온다).
 // 게스트 노드(levelName==='게스트')는 별도 탭(GuestAccountsTab)에서 다루므로 뺀다.
+// 소속은 전부 본청 산하라 본청 표기 없이 지방청/경찰서 2컬럼으로만 보여준다
+// (2026-09-17 사용자 결정).
 const QUERY_KEY = ['police-accounts']
 
 function PoliceAccountsTab() {
@@ -38,7 +40,11 @@ function PoliceAccountsTab() {
 
   const accounts = (accountsQuery.data ?? []).filter((a) => a.levelName !== '게스트')
   const filtered = accounts.filter(
-    (a) => !search.trim() || a.orgPath.includes(search.trim()) || a.userName.includes(search.trim()),
+    (a) =>
+      !search.trim() ||
+      a.userName.includes(search.trim()) ||
+      (a.regionName ?? '').includes(search.trim()) ||
+      (a.stationName ?? '').includes(search.trim()),
   )
 
   function menuFor(account: PoliceAccountRow) {
@@ -81,7 +87,7 @@ function PoliceAccountsTab() {
         </div>
       </div>
 
-      {accountsQuery.isLoading && <ListSkeleton columns={5} />}
+      {accountsQuery.isLoading && <ListSkeleton columns={6} />}
       {accountsQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">계정 목록을 불러오지 못했습니다</p>
       )}
@@ -95,7 +101,8 @@ function PoliceAccountsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>소속</TableHead>
+                  <TableHead>지방청</TableHead>
+                  <TableHead>경찰서</TableHead>
                   <TableHead>이름</TableHead>
                   <TableHead>아이디</TableHead>
                   <TableHead>역할</TableHead>
@@ -105,7 +112,8 @@ function PoliceAccountsTab() {
               <TableBody>
                 {filtered.map((a) => (
                   <TableRow key={a.userSeq}>
-                    <TableCell>{a.orgPath}</TableCell>
+                    <TableCell>{a.regionName ?? '-'}</TableCell>
+                    <TableCell>{a.stationName ?? '-'}</TableCell>
                     <TableCell>{a.userName}</TableCell>
                     <TableCell>{a.loginId}</TableCell>
                     <TableCell>{a.codeName}</TableCell>
@@ -133,7 +141,9 @@ function PoliceAccountsTab() {
                   </div>
                   {menuFor(a)}
                 </div>
-                <div className="text-xs text-muted-foreground">{a.orgPath}</div>
+                <div className="text-xs text-muted-foreground">
+                  {[a.regionName, a.stationName].filter(Boolean).join(' · ') || '-'}
+                </div>
               </div>
             ))}
           </div>
