@@ -14,6 +14,10 @@ export interface AuthUser {
   // Deploy/Police 계열 API가 groupSeq를 필수 파라미터로 요구해서 세션에 싣는다.
   groupSeq?: number | null
   groupName?: string | null
+  // GetMyProfile의 userSeq — 계정 비밀번호 초기화 API가 대상을 userSeq로
+  // 지정해서, "내 계정"을 별도 조회 없이 바로 식별하려고 세션에 싣는다
+  // (2026-09-17). 기존 테스트 더블들이 안 채워도 되도록 옵셔널로 둔다.
+  userSeq?: number
 }
 
 export interface AuthSession {

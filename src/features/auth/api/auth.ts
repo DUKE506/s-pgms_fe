@@ -57,6 +57,7 @@ export async function login(id: string, password: string): Promise<AuthSession |
       role: roleFromCodeSeq(profile.codeSeq),
       groupSeq: profile.groupSeq,
       groupName: profile.groupName,
+      userSeq: profile.userSeq,
     },
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
