@@ -178,6 +178,10 @@ function DashboardPage() {
   // "순위" 개념이 안 맞음) — 경찰서 계정이면 애초에 호출하지 않고 화면에서도 뺀다
   // (2026-09-16 사용자 결정). 자리엔 접수 월별 추이를 대신 넣는다.
   const includeTopOrder = user?.role !== '경찰서'
+  // 조직계층 선택도 같은 이유로 경찰서 계정엔 의미가 없다 — 조직트리에서 항상
+  // 리프(하위조직 없음)라 고를 게 없다(2026-09-17 사용자 결정). 조회범위
+  // pill·바텀시트(모바일)·좌측 패널(xl)을 전부 숨기고, scopeLabel만 장식 텍스트로 남긴다.
+  const canSelectOrgScope = user?.role !== '경찰서'
   const groupSeqParam = selectedScope ? Number(selectedScope.id) : undefined
 
   // 조직 트리 구조는 로그인 계정 기본 스코프로 딱 한 번만 불러와 고정한다(선택할
@@ -271,15 +275,22 @@ function DashboardPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => setSheetOpen(true)}
-              className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 bg-white/10 py-1.5 pr-3 pl-3.5 text-xs font-semibold text-slate-200"
-            >
-              <span className="size-1.5 rounded-full bg-blue-400" />
-              {scopeLabel}
-              <ChevronDown className="size-3.5 text-blue-300" />
-            </button>
+            {canSelectOrgScope ? (
+              <button
+                type="button"
+                onClick={() => setSheetOpen(true)}
+                className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 bg-white/10 py-1.5 pr-3 pl-3.5 text-xs font-semibold text-slate-200"
+              >
+                <span className="size-1.5 rounded-full bg-blue-400" />
+                {scopeLabel}
+                <ChevronDown className="size-3.5 text-blue-300" />
+              </button>
+            ) : (
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/15 bg-white/10 py-1.5 pr-3 pl-3.5 text-xs font-semibold text-slate-200">
+                <span className="size-1.5 rounded-full bg-blue-400" />
+                {scopeLabel}
+              </span>
+            )}
             <div className="mt-1 flex items-baseline gap-2">
               <span data-testid="hero-scope-count" className="text-4xl font-bold tracking-tight text-white">
                 {totalCount}
@@ -302,14 +313,14 @@ function DashboardPage() {
                   const Icon = STATUS_ICON[status]
                   return (
                     <div key={status} className="flex flex-col gap-1.5 rounded-lg bg-muted/50 p-3">
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-                        <Icon className="size-3" />
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <Icon className="size-3.5" />
                         <span className={cn('size-1.5 rounded-full', STATUS_DOT_COLOR[status])} />
                         {status}
                       </span>
-                      <span className="text-lg font-bold text-foreground">
+                      <span className="text-xl font-bold text-foreground">
                         {byStatus[status]}
-                        <span className="ml-0.5 text-[11px] font-medium text-muted-foreground">건</span>
+                        <span className="ml-0.5 text-xs font-medium text-muted-foreground">건</span>
                       </span>
                     </div>
                   )
@@ -319,7 +330,7 @@ function DashboardPage() {
           </Card>
 
           <Card>
-            <CardContent className="flex flex-col gap-2">
+            <CardContent className="flex items-center justify-between">
               <CardTitle>이번달 신규 접수</CardTitle>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-2xl font-bold text-foreground">{byStatus.접수}</span>
@@ -329,7 +340,7 @@ function DashboardPage() {
           </Card>
 
           <Card>
-            <CardContent className="flex flex-col gap-2">
+            <CardContent className="flex items-center justify-between">
               <CardTitle>평균 경호기간</CardTitle>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-2xl font-bold text-foreground">{bundle.avgGuardDays}</span>
@@ -404,30 +415,32 @@ function DashboardPage() {
         </div>
       </main>
 
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="max-h-[74vh] rounded-t-3xl p-0 xl:hidden">
-          <SheetHeader className="pb-2">
-            <span className="text-xs text-muted-foreground">조회범위 선택</span>
-            <SheetTitle>조직 계층</SheetTitle>
-          </SheetHeader>
-          {/* min-h-0: flex-col 안 flex-1 아이템은 기본 min-height:auto라
-              내용 크기만큼 커져버려서 overflow-y-auto가 무시된다(dialog.tsx의
-              동일 패턴 참고) — 없으면 조직 트리가 길어져도 시트 안에서 안
-              잘리고 그냥 다 펼쳐짐. OrgScopeTree에도 shrink-0을 줘야 하는데,
-              안 그러면 이 컨테이너의 유일한 자식이라도 flex-shrink:1 기본값
-              때문에 넘치는 대신 눌려서(찌그러져서) 줄어들어버린다. */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-            <OrgScopeTree
-              root={root}
-              regions={regions}
-              selectedId={scope.id}
-              onSelect={handlePickInSheet}
-              defaultExpandedId={regions[0]?.id}
-              className="shrink-0"
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      {canSelectOrgScope && (
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetContent side="bottom" className="max-h-[74vh] rounded-t-3xl p-0 xl:hidden">
+            <SheetHeader className="pb-2">
+              <span className="text-xs text-muted-foreground">조회범위 선택</span>
+              <SheetTitle>조직 계층</SheetTitle>
+            </SheetHeader>
+            {/* min-h-0: flex-col 안 flex-1 아이템은 기본 min-height:auto라
+                내용 크기만큼 커져버려서 overflow-y-auto가 무시된다(dialog.tsx의
+                동일 패턴 참고) — 없으면 조직 트리가 길어져도 시트 안에서 안
+                잘리고 그냥 다 펼쳐짐. OrgScopeTree에도 shrink-0을 줘야 하는데,
+                안 그러면 이 컨테이너의 유일한 자식이라도 flex-shrink:1 기본값
+                때문에 넘치는 대신 눌려서(찌그러져서) 줄어들어버린다. */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+              <OrgScopeTree
+                root={root}
+                regions={regions}
+                selectedId={scope.id}
+                onSelect={handlePickInSheet}
+                defaultExpandedId={regions[0]?.id}
+                className="shrink-0"
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* ============ 데스크톱 (xl 이상) ============ */}
       {/* 화면 전체가 100% 배율에서 너무 확대돼 보인다는 피드백으로 히어로/카드/
@@ -446,22 +459,24 @@ function DashboardPage() {
           shrink-0이 필요함 — 안 그러면 flex-shrink 기본값 1 때문에 넘치는 대신
           컨테이너 높이에 맞춰 짜부라들어서 스크롤이 아예 안 생긴다. */}
       <div data-testid="dashboard-desktop" className="hidden xl:flex xl:h-screen">
-        <aside className="flex w-[270px] shrink-0 flex-col border-r border-border bg-card">
-          <div className="border-b border-border px-[18px] pt-[18px] pb-[13px]">
-            <div className="text-[11px] text-muted-foreground">조회범위</div>
-            <div className="text-[14px] font-bold text-foreground">조직 계층</div>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-[11px] scrollbar-dark">
-            <OrgScopeTree
-              root={root}
-              regions={regions}
-              selectedId={scope.id}
-              onSelect={handleSelect}
-              defaultExpandedId={regions[0]?.id}
-              className="shrink-0"
-            />
-          </div>
-        </aside>
+        {canSelectOrgScope && (
+          <aside className="flex w-[270px] shrink-0 flex-col border-r border-border bg-card">
+            <div className="border-b border-border px-[18px] pt-[18px] pb-[13px]">
+              <div className="text-[11px] text-muted-foreground">조회범위</div>
+              <div className="text-[14px] font-bold text-foreground">조직 계층</div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-[11px] scrollbar-dark">
+              <OrgScopeTree
+                root={root}
+                regions={regions}
+                selectedId={scope.id}
+                onSelect={handleSelect}
+                defaultExpandedId={regions[0]?.id}
+                className="shrink-0"
+              />
+            </div>
+          </aside>
+        )}
 
         {/* 여기 하나가 우측 전체(히어로+카드) 스크롤 영역 — aside 트리 스크롤과는
             완전히 별개. 전에는 히어로는 고정해두고 카드 영역만 따로 스크롤되게
