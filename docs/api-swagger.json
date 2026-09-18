@@ -2195,7 +2195,7 @@
       "get": {
         "tags": ["StecHistory"],
         "summary": "경호관리 리스트 이력 =============== [확인 완료]",
-        "description": "끝난 경호건만 나온다 (HIST-001) - 종결·경호취소. 진행 중인 건(배정·경호중·경호완료)은 GetGuardCaseList 가 맡아 두 목록이 상태로 정확히 갈린다. 시스템·운영관리자는 전체, 본부관리자는 자기한테 배정된 건만 본다 (HIST-003). 행마다 status(3:종결 / 4:경호취소)와 statusName 이 함께 나간다 - status 필터도 같은 코드를 받는다. 경찰용(History/Police/W/GetHistoryList)과 달리 접수 건은 오지 않는다 - 접수는 배치요청 목록(GuardCase/Stec/W/GetDeployRequestList)이 맡고, 진행 중인 건은 경호관리 목록(GetGuardCaseList)이 맡는다. remark 는 상태에 따라 갈린다 - 종결이면 종결 코드(END_REASON), 경호취소면 취소 사유(CANCEL_REASON)다. searchKey 는 관리번호(접수번호+경호코드)와 경호취소 사유를 함께 훑는다 - 둘 중 하나만 맞아도 나온다. 종결은 코드라 부분일치 검색에 넣지 않는다 - endReason 으로 정확히 일치하는 코드만 거른다. endReason 을 보내면 경호취소 건은 자연히 빠진다(그 칸이 비어 있다).",
+        "description": "끝난 경호건만 나온다 (HIST-001) - 종결·경호취소. 진행 중인 건(배정·경호중·경호완료)은 GetGuardCaseList 가 맡아 두 목록이 상태로 정확히 갈린다. 시스템·운영관리자는 전체, 본부관리자는 자기한테 배정된 건만 본다 (HIST-003). 행마다 status(3:종결 / 4:경호취소)와 statusName 이 함께 나간다 - status 필터도 같은 코드를 받는다. 경찰용(History/Police/W/GetHistoryList)과 달리 접수 건은 오지 않는다 - 접수는 배치요청 목록(GuardCase/Stec/W/GetDeployRequestList)이 맡고, 진행 중인 건은 경호관리 목록(GetGuardCaseList)이 맡는다. remark 는 상태에 따라 갈린다 - 종결이면 종결 코드(END_REASON), 경호취소면 취소 사유(CANCEL_REASON)다. searchKey 는 관리번호(접수번호+경호코드)와 경호취소 사유를 함께 훑는다 - 둘 중 하나만 맞아도 나온다. 종결은 코드라 부분일치 검색에 넣지 않는다 - endReason 으로 정확히 일치하는 코드만 거른다. endReason 을 보내면 경호취소 건은 자연히 빠진다(그 칸이 비어 있다). regionSeq 는 지방청 필터다 - 그 지방청 소속 경찰서의 건과 지방청 노드에 달린 건이 함께 나온다(GetGuardCaseList 와 같은 조건). groupSeq(경찰서)와 함께 보내면 둘 다 만족하는 건만 남는다 - 다른 지방청의 경찰서를 같이 주면 빈 목록이다.",
         "parameters": [
           {
             "name": "pageNumber",
@@ -2237,6 +2237,14 @@
             "schema": {
               "type": "string",
               "format": "date"
+            }
+          },
+          {
+            "name": "regionSeq",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
             }
           },
           {
