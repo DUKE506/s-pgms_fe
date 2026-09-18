@@ -196,7 +196,7 @@ function DateCalendarField({
   // 사용자 결정: 다른 필터들도 각자 독립적으로 "전체"로 되돌릴 수 있는데 기간만
   // 예외라 통일).
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn('relative rounded-lg', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button

@@ -51,24 +51,6 @@ function PoliceAccountsTab() {
       (a.stationName ?? '').includes(search.trim()),
   )
 
-  function menuFor(account: PoliceAccountRow) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="더보기">
-            <MoreVertical />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setResetTarget(account)}>
-            <KeyRound />
-            비밀번호 초기화
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
-  }
-
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
       <div className="flex flex-col gap-1">
@@ -98,58 +80,7 @@ function PoliceAccountsTab() {
       )}
 
       {accountsQuery.isSuccess && filtered.length > 0 && (
-        <>
-          <div className="hidden overflow-hidden rounded-xl border border-border bg-card xl:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>지방청</TableHead>
-                  <TableHead>경찰서</TableHead>
-                  <TableHead>이름</TableHead>
-                  <TableHead>아이디</TableHead>
-                  <TableHead>역할</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((a) => (
-                  <TableRow key={a.userSeq}>
-                    <TableCell>{a.regionName ?? '-'}</TableCell>
-                    <TableCell>{a.stationName ?? '-'}</TableCell>
-                    <TableCell>{a.userName}</TableCell>
-                    <TableCell>{a.loginId}</TableCell>
-                    <TableCell>{a.codeName}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">{menuFor(a)}</div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex flex-col gap-2.5 xl:hidden">
-            {filtered.map((a) => (
-              <div
-                key={a.userSeq}
-                className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-bold text-foreground">{a.userName}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {a.loginId} · {a.codeName}
-                    </span>
-                  </div>
-                  {menuFor(a)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {[a.regionName, a.stationName].filter(Boolean).join(' · ') || '-'}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+        <PoliceAccountsResults accounts={filtered} onResetPassword={setResetTarget} />
       )}
 
       <ResetPoliceAccountPasswordDialog
@@ -158,6 +89,90 @@ function PoliceAccountsTab() {
         invalidateQueryKey={QUERY_KEY}
       />
     </main>
+  )
+}
+
+interface PoliceAccountsResultsProps {
+  accounts: PoliceAccountRow[]
+  onResetPassword: (account: PoliceAccountRow) => void
+}
+
+// 검색창 타이핑(draft)은 이 컴포넌트의 props(accounts)를 안 건드리므로, 부모가
+// 매 키 입력마다 리렌더돼도 이 큰 리스트는 다시 그리지 않는다 — 전국 스코프라
+// 건수가 많아, 부모와 한 컴포넌트에 있으면 입력마다 테이블 전체가 재조정돼
+// 입력이 밀리는 문제가 있었다(2026-09-19 사용자 리포트).
+function PoliceAccountsResults({ accounts, onResetPassword }: PoliceAccountsResultsProps) {
+  function menuFor(account: PoliceAccountRow) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon-sm" aria-label="더보기">
+            <MoreVertical />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => onResetPassword(account)}>
+            <KeyRound />
+            비밀번호 초기화
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+  }
+
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-card xl:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>지방청</TableHead>
+              <TableHead>경찰서</TableHead>
+              <TableHead>이름</TableHead>
+              <TableHead>아이디</TableHead>
+              <TableHead>역할</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {accounts.map((a) => (
+              <TableRow key={a.userSeq}>
+                <TableCell>{a.regionName ?? '-'}</TableCell>
+                <TableCell>{a.stationName ?? '-'}</TableCell>
+                <TableCell>{a.userName}</TableCell>
+                <TableCell>{a.loginId}</TableCell>
+                <TableCell>{a.codeName}</TableCell>
+                <TableCell>
+                  <div className="flex justify-end">{menuFor(a)}</div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="flex flex-col gap-2.5 xl:hidden">
+        {accounts.map((a) => (
+          <div
+            key={a.userSeq}
+            className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-bold text-foreground">{a.userName}</span>
+                <span className="text-xs text-muted-foreground">
+                  {a.loginId} · {a.codeName}
+                </span>
+              </div>
+              {menuFor(a)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {[a.regionName, a.stationName].filter(Boolean).join(' · ') || '-'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
 
