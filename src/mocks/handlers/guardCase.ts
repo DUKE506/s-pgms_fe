@@ -85,6 +85,24 @@ function codeSeqOf(role: string) {
   return role === '시스템관리자' ? 1 : role === '운영관리자' ? 2 : 3
 }
 
+// GetGuardCaseList의 regionSeq/groupSeq 필터를 vitest에서 재현하기 위한 자체
+// id 매핑 — mocks/data/securityCases.ts의 JURISDICTION_BY_STATION과 짝을 맞춘
+// 것으로, GetPoliceUserList 더블(mocks/data/policeAccountTree.ts, 계정관리 화면용)의
+// id와는 별개다(두 화면 목적이 달라 굳이 하나로 합치지 않음 — 이 화면 테스트는
+// 실백엔드로 별도 검증했다).
+const STATION_GROUP_SEQ: Record<string, number> = {
+  강남경찰서: 1001,
+  서초경찰서: 1002,
+  종로경찰서: 1003,
+  분당경찰서: 1004,
+  부산진경찰서: 1005,
+}
+const REGION_SEQ: Record<string, number> = {
+  서울지방경찰청: 2001,
+  경기남부지방경찰청: 2002,
+  부산지방경찰청: 2003,
+}
+
 // GET GetExtendRequestList / GetShortenRequestList 공용. pendingPeriodRequest.type이
 // 일치하는 진행 중 건을 GetDeployRequestList와 같은 항목 형태로 반환한다. 본부관리자는
 // 본인 배정 건만(WORK-009 재현).
@@ -208,14 +226,27 @@ export const guardCaseTestHandlers = [
         { status: 400 },
       )
     }
+    // 2026-09-18 필터/페이지네이션 파일럿(화면8) — mgmtNo/regionSeq/groupSeq/status
+    // 서버 파라미터 재현(docs/architecture.md "상태관리").
+    const mgmtNoParam = url.searchParams.get('mgmtNo')
+    const regionSeqParam = url.searchParams.get('regionSeq')
+    const groupSeqParam = url.searchParams.get('groupSeq')
+    const statusParam = url.searchParams.get('status')
 
     const all = securityCases
       .filter((c) => ACTIVE_SECURITY_CASE_STATUSES.includes(c.status))
       .filter((c) => account.role !== '본부관리자' || c.assigneeId === account.id)
+      .filter((c) => !mgmtNoParam || `${c.receiptNumber} ${c.securityCode}`.includes(mgmtNoParam))
+      .filter((c) => !regionSeqParam || REGION_SEQ[c.jurisdiction] === Number(regionSeqParam))
+      .filter((c) => !groupSeqParam || STATION_GROUP_SEQ[c.policeStation] === Number(groupSeqParam))
+      .filter(
+        (c) => !statusParam || (GUARD_CASE_STATUS_CODE[c.status] ?? null) === Number(statusParam),
+      )
       .map((c) => ({
         caseSeq: caseSeqOf(c),
         mgmtNo: `${c.receiptNumber} ${c.securityCode}`,
         groupName: c.policeStation,
+        parentGroupName: c.jurisdiction,
         userName: nameOfAssignee(c.assigneeId),
         userSeq: c.assigneeId ? userSeqOf(c.assigneeId) : null,
         statusName: c.status,

@@ -15,6 +15,21 @@ if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {}
 }
 
+// jsdom은 matchMedia를 구현하지 않는다 — 하이브리드 페이지네이션(useIsDesktop)이
+// 쓴다. 테스트는 항상 데스크톱(xl) 분기로 취급해 단일 페이지 fetch 경로를 탄다.
+if (!window.matchMedia) {
+  window.matchMedia = (query: string) => ({
+    matches: true,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }) as unknown as MediaQueryList
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterEach(() => cleanup())

@@ -90,6 +90,10 @@ describe('SecurityCaseListPage', () => {
     fireEvent.click(screen.getByLabelText('상태 선택'))
     fireEvent.click(await screen.findByRole('option', { name: '배정' }))
 
+    // 상태 필터가 서버 파라미터로 전환돼(2026-09-18) 재조회를 거친다 — 로딩 스켈레톤이
+    // 걷힐 때까지 문서 전체 기준으로 기다린 뒤 테이블을 다시 잡는다(within은 캡처
+    // 시점 DOM 노드를 들고 있어, 로딩→완료 사이 테이블이 교체되면 stale해진다).
+    await screen.findAllByText(`26-02-부산진경찰서 · ${record.securityCode}`)
     expect(withinTable().getByText(`26-02-부산진경찰서 · ${record.securityCode}`)).toBeInTheDocument()
   })
 

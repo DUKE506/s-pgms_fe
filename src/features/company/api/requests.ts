@@ -104,13 +104,16 @@ export async function getDeployRequestDetail(base: SecurityCase): Promise<Securi
 }
 
 // GET /api/v1/GuardCase/Stec/W/GetGuardCaseList 의 항목 형태 (실측:
-// docs/backend-integration/responses/GuardCase-Stec-GetGuardCaseList.md).
-// 응답은 {meta:{pageNumber,pageSize,totalCount,totalPages}, data:[...]} 를 한 번 더
+// docs/backend-integration/responses/GuardCase-Stec-GetGuardCaseList.md, 2026-09-18
+// regionSeq 파라미터 추가에 맞춰 parentGroupName 필드도 재확인). 응답은
+// {meta:{pageNumber,pageSize,totalCount,totalPages}, data:[...]} 를 한 번 더
 // envelope로 감싼 형태다.
 interface GuardCaseRow {
   caseSeq: number
   mgmtNo: string
   groupName: string
+  // 2026-09-18부터 응답에 실림 — 지역청 이름(regionSeq 필터와 짝).
+  parentGroupName: string
   // 배정된 본부관리자 계정명(userName) — 표시 전용.
   userName: string
   // 담당자 id. 2026-09-14까지 항상 null이었으나 백엔드 회신으로 값이 채워짐(findings #1
@@ -130,11 +133,10 @@ interface Paged<T> {
   data: T[]
 }
 
-// 본사 경호목록은 이 응답만 쓰므로 화면이 읽는 필드(관리번호·경찰서·담당자명·상태·
-// 경호기간)만 채우고 나머지는 빈 값으로 둔다. mgmtNo는 경호코드가 붙은 완성형
+// 본사 경호목록은 이 응답만 쓰므로 화면이 읽는 필드(관리번호·경찰서·지역청·담당자명·
+// 상태·경호기간)만 채우고 나머지는 빈 값으로 둔다. mgmtNo는 경호코드가 붙은 완성형
 // ("26-09-동래경찰서 ST0004")이라 splitMgmtNo로 나눠 formatManagementNumber가
-// 재조합하게 한다(경찰서 경호목록과 동일). 지역청(jurisdiction)은 응답에 없어 빈 값
-// — 지역청 필터는 사실상 "전체"만 남는다(exclusions).
+// 재조합하게 한다(경찰서 경호목록과 동일).
 function guardCaseRowToSecurityCase(row: GuardCaseRow): SecurityCase {
   const { receiptNumber, securityCode } = splitMgmtNo(row.mgmtNo)
   return {
@@ -142,7 +144,7 @@ function guardCaseRowToSecurityCase(row: GuardCaseRow): SecurityCase {
     receiptNumber,
     securityCode,
     policeStation: row.groupName,
-    jurisdiction: '',
+    jurisdiction: row.parentGroupName ?? '',
     status: resolveDeployStatus(row.statusName, row.guardCaseStatus).status,
     caseType: '사건미접수',
     subject: { nameInitial: '', gender: '', birthDate: '', occupation: '', residence: '' },
@@ -159,32 +161,85 @@ function guardCaseRowToSecurityCase(row: GuardCaseRow): SecurityCase {
   }
 }
 
-// 서버 pageSize 상한이 100이라 전량을 한 번에 못 받는다 — meta.totalPages까지 순회해
-// 이어붙인 뒤 클라이언트에서 필터/정렬한다(화면에 페이지네이션 UI 없음, URL 쿼리
-// 필터는 후속). 방어적으로 최대 페이지 수를 제한한다.
-const GUARD_CASE_PAGE_SIZE = 100
-const GUARD_CASE_MAX_PAGES = 50
+interface GuardCasePageParams {
+  pageNumber: number
+  pageSize: number
+  mgmtNo?: string
+  regionSeq?: number
+  groupSeq?: number
+  status?: number
+}
 
-async function fetchGuardCasePage(pageNumber: number): Promise<Paged<GuardCaseRow>> {
-  const res = await apiFetch(
-    `/v1/GuardCase/Stec/W/GetGuardCaseList?pageNumber=${pageNumber}&pageSize=${GUARD_CASE_PAGE_SIZE}`,
-  )
+async function fetchGuardCasePage(params: GuardCasePageParams): Promise<Paged<GuardCaseRow>> {
+  const qs = new URLSearchParams()
+  qs.set('pageNumber', String(params.pageNumber))
+  qs.set('pageSize', String(params.pageSize))
+  if (params.mgmtNo) qs.set('mgmtNo', params.mgmtNo)
+  if (params.regionSeq != null) qs.set('regionSeq', String(params.regionSeq))
+  if (params.groupSeq != null) qs.set('groupSeq', String(params.groupSeq))
+  if (params.status != null) qs.set('status', String(params.status))
+  const res = await apiFetch(`/v1/GuardCase/Stec/W/GetGuardCaseList?${qs.toString()}`)
   if (!res.ok) {
     throw new Error('경호목록을 불러오지 못했습니다')
   }
   return unwrapEnvelope<Paged<GuardCaseRow>>(res)
 }
 
+// 서버 pageSize 상한이 100이라 전량을 한 번에 못 받는다 — meta.totalPages까지 순회해
+// 이어붙인다. 화면 8(경호목록) 자신의 목록·필터는 이제 아래 searchGuardCases가
+// 서버 파라미터로 담당하지만, 이 무필터 전량 조회는 관리자 계정 관리(배정건수 조인)·
+// SecurityCaseTabs(탭 카운트)가 여전히 필요로 해서 남겨둔다 — 건드리면 두 화면이
+// 함께 회귀한다.
+const GUARD_CASE_PAGE_SIZE = 100
+const GUARD_CASE_MAX_PAGES = 50
+
 // 화면 8: [본사] 경호목록. 운영/시스템관리자는 전국 전체, 본부관리자는 본인 배정
 // 건만(서버가 WORK-009로 강제).
 export async function listSecurityCases(): Promise<SecurityCase[]> {
-  const first = await fetchGuardCasePage(1)
+  const first = await fetchGuardCasePage({ pageNumber: 1, pageSize: GUARD_CASE_PAGE_SIZE })
   const rows = [...first.data]
   const lastPage = Math.min(first.meta.totalPages, GUARD_CASE_MAX_PAGES)
   for (let page = 2; page <= lastPage; page += 1) {
-    rows.push(...(await fetchGuardCasePage(page)).data)
+    rows.push(...(await fetchGuardCasePage({ pageNumber: page, pageSize: GUARD_CASE_PAGE_SIZE })).data)
   }
   return rows.map(guardCaseRowToSecurityCase)
+}
+
+export interface GuardCaseSearchParams {
+  mgmtNo?: string
+  regionSeq?: number
+  groupSeq?: number
+  status?: number
+  pageNumber: number
+  pageSize: number
+}
+
+export interface GuardCaseSearchResult {
+  rows: SecurityCase[]
+  meta: Paged<GuardCaseRow>['meta']
+}
+
+// 화면 8 필터·페이지네이션(URL 쿼리 동기화, docs/architecture.md "상태관리") — xl
+// 이상은 이 함수로 선택된 페이지 1개만 받아 교체 렌더.
+export async function searchGuardCases(params: GuardCaseSearchParams): Promise<GuardCaseSearchResult> {
+  const page = await fetchGuardCasePage(params)
+  return { rows: page.data.map(guardCaseRowToSecurityCase), meta: page.meta }
+}
+
+// xl 미만 "더보기" — 1..pageNumber까지 같은 필터로 이어붙인다(하이브리드
+// 페이지네이션, docs/architecture.md "상태관리").
+export async function searchGuardCasesAccumulated(
+  params: GuardCaseSearchParams,
+): Promise<GuardCaseSearchResult> {
+  const pages = await Promise.all(
+    Array.from({ length: params.pageNumber }, (_, i) =>
+      fetchGuardCasePage({ ...params, pageNumber: i + 1 }),
+    ),
+  )
+  return {
+    rows: pages.flatMap((p) => p.data.map(guardCaseRowToSecurityCase)),
+    meta: pages[pages.length - 1].meta,
+  }
 }
 
 // 본부 배정 — POST GuardCase/Stec/W/AddGuardCase {deploySeq, userSeq}.

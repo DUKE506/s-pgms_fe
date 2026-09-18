@@ -115,6 +115,38 @@ export async function listPoliceAccounts(): Promise<PoliceAccountRow[]> {
   return roots.flatMap((root) => flatten(root, [], null))
 }
 
+// 본사 목록형 화면(경호목록·이력조회)의 지역청→경찰서 캐스케이드 Select가 쓰는
+// id(regionSeq/groupSeq) 소스 — 같은 GetPoliceUserList를 listPoliceAccounts(계정
+// 관리)와 공유하지만, 거긴 트리를 "소속 경로" 문자열로 펼치며 groupSeq를 버려서
+// 여기서 별도로 살려 돌려준다. level 1=본청, 2=지방청, 3=경찰서.
+export interface OrgTreeNode {
+  groupSeq: number
+  groupName: string
+  level: number
+  children: OrgTreeNode[]
+}
+
+function toOrgTreeNode(node: RawAccountNode): OrgTreeNode | null {
+  if (node.groupSeq == null || node.groupName == null) return null
+  return {
+    groupSeq: node.groupSeq,
+    groupName: node.groupName,
+    level: node.level,
+    children: node.children
+      .map(toOrgTreeNode)
+      .filter((n): n is OrgTreeNode => n !== null),
+  }
+}
+
+export async function listOrgTree(): Promise<OrgTreeNode[]> {
+  const res = await apiFetch('/v1/User/Stec/W/GetPoliceUserList')
+  if (!res.ok) {
+    throw new Error('조직 목록을 불러오지 못했습니다')
+  }
+  const roots = await unwrapEnvelope<RawAccountNode[]>(res)
+  return roots.map(toOrgTreeNode).filter((n): n is OrgTreeNode => n !== null)
+}
+
 export async function resetPoliceAccountPassword(userSeq: number): Promise<void> {
   const res = await apiFetch('/v1/User/Stec/W/ResetPassword', {
     method: 'PATCH',
