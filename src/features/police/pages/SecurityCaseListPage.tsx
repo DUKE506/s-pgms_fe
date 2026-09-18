@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router'
-import { CheckCircle2, ChevronRight, Inbox, Plus, Shield, UserCheck } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -38,23 +38,6 @@ const STATUS_BAR_COLOR: Record<SecurityCaseStatus, string> = {
   경호완료: 'bg-status-completed',
   종결: 'bg-status-closed',
   취소: 'bg-status-cancelled',
-}
-
-// 목업 요약카드의 상태별 아이콘(2026-08-25 추가) — 접수는 Inbox, 배정은
-// UserCheck, 경호중은 Shield, 경호완료는 CheckCircle2로 목업 svg 형태에 가장
-// 가까운 lucide 아이콘을 매핑.
-const STATUS_ICON: Record<(typeof VISIBLE_STATUSES)[number], typeof Inbox> = {
-  접수: Inbox,
-  배정: UserCheck,
-  경호중: Shield,
-  경호완료: CheckCircle2,
-}
-
-const STATUS_ICON_COLOR: Record<(typeof VISIBLE_STATUSES)[number], string> = {
-  접수: 'text-status-received',
-  배정: 'text-status-assigned',
-  경호중: 'text-status-active',
-  경호완료: 'text-status-completed',
 }
 
 function formatDate(dateLike: string) {
@@ -138,37 +121,38 @@ function SecurityCaseListPage() {
       {casesQuery.isSuccess && cases.length > 0 && (
         <Card className="hidden xl:flex">
           {/* 요약카드(전체 건수+상태 세그먼트 바)는 목업(s3)에서 데스크톱에만 있고
-              모바일(s3m)에는 없음 — 화면 폭이 좁아 칩+리스트만으로 구성됨. */}
-          <CardContent className="flex flex-col gap-3.5">
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-medium text-muted-foreground">전체</span>
-              <span className="text-3xl font-bold text-foreground">
-                {cases.length}
-                <span className="ml-1 text-sm font-medium text-muted-foreground">건</span>
-              </span>
+              모바일(s3m)에는 없음 — 화면 폭이 좁아 칩+리스트만으로 구성됨.
+              범례(색점+상태명+건수)는 우측 상단, 바는 구간 간 간격+캡슐형
+              (docs/edit-ui 목업 기준, 2026-09-18 개편). */}
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-muted-foreground">전체 경호 건수</span>
+                <span className="text-3xl font-bold text-foreground">
+                  {cases.length}
+                  <span className="ml-1 text-sm font-medium text-muted-foreground">건</span>
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-5">
+                {VISIBLE_STATUSES.map((status) => (
+                  <span key={status} className="inline-flex items-center gap-1.5 text-sm">
+                    <span className={cn('size-2.5 shrink-0 rounded-[3px]', STATUS_BAR_COLOR[status])} />
+                    <span className="text-foreground/80">{status}</span>
+                    <span className="font-semibold text-foreground">{countByStatus(status)}</span>
+                  </span>
+                ))}
+              </div>
             </div>
-            <div className="flex h-3 overflow-hidden rounded-md">
+            <div className="flex h-3 gap-1 animate-bar-grow">
               {VISIBLE_STATUSES.map((status) => {
                 const count = countByStatus(status)
                 if (count === 0) return null
                 return (
                   <div
                     key={status}
-                    className={STATUS_BAR_COLOR[status]}
+                    className={cn('rounded-full', STATUS_BAR_COLOR[status])}
                     style={{ width: `${(count / cases.length) * 100}%` }}
                   />
-                )
-              })}
-            </div>
-            <div className="flex flex-wrap gap-9">
-              {VISIBLE_STATUSES.map((status) => {
-                const Icon = STATUS_ICON[status]
-                return (
-                  <div key={status} className="flex items-center gap-2.5">
-                    <Icon className={cn('size-4.5', STATUS_ICON_COLOR[status])} />
-                    <span className="text-sm font-medium text-foreground/80">{status}</span>
-                    <span className="text-xl font-bold text-foreground">{countByStatus(status)}</span>
-                  </div>
                 )
               })}
             </div>

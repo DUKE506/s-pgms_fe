@@ -2,13 +2,15 @@ import { cn } from '@/lib/utils'
 
 export type SecurityCaseStatus = '접수' | '배정' | '경호중' | '경호완료' | '종결' | '취소'
 
+// outline 스타일(테두리+옅은 배경+진한 글자, 2026-09-18 개편) — 테두리는
+// 글자와 동일한 색(사용자 확인, docs/edit-ui 목업 기준).
 const STATUS_COLOR: Record<SecurityCaseStatus, string> = {
-  접수: 'bg-status-received',
-  배정: 'bg-status-assigned',
-  경호중: 'bg-status-active',
-  경호완료: 'bg-status-completed',
-  종결: 'bg-status-closed',
-  취소: 'bg-status-cancelled',
+  접수: 'border-status-received bg-status-received-bg text-status-received',
+  배정: 'border-status-assigned bg-status-assigned-bg text-status-assigned',
+  경호중: 'border-status-active bg-status-active-bg text-status-active',
+  경호완료: 'border-status-completed bg-status-completed-bg text-status-completed',
+  종결: 'border-status-closed bg-status-closed-bg text-status-closed',
+  취소: 'border-status-cancelled bg-status-cancelled-bg text-status-cancelled',
 }
 
 interface StatusBadgeProps {
@@ -25,7 +27,7 @@ function StatusBadge({ status, className }: StatusBadgeProps) {
         // 높이(약 23.7px)가 같이 줄어드는 걸 막기 위해 고정 높이로 전환 (2026-08-27)
         // w-20: 상태마다 글자 수가 달라(접수 2자 ~ 경호완료 4자) 뱃지 길이가 들쭉날쭉하던 것을
         // 가장 긴 라벨(경호완료) 기준 고정폭+중앙정렬로 통일 (2026-09-11)
-        'inline-flex h-6 w-20 items-center justify-center rounded-md text-[11px] font-semibold text-white',
+        'inline-flex h-6 w-20 items-center justify-center rounded-md border text-[11px] font-semibold',
         STATUS_COLOR[status],
         className,
       )}

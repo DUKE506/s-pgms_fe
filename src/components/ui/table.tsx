@@ -17,13 +17,15 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   )
 }
 
-// bg-slate-50: 목업 테이블 헤더 배경(#f8fafc) 실측값 — shadcn 기본은 헤더 배경이 없어서 추가.
+// bg-slate-200: 목업 테이블 헤더 배경 실측값(docs/edit-ui, 2026-09-18 개편) —
+// shadcn 기본은 헤더 배경이 없어서 추가. 하단 보더는 body 행 구분선과 동일한
+// 스타일(기본 border 색 상속, 사용자 확인 2026-09-18)로 통일 — 별도 색 지정 없음.
 // shadcn CLI로 table을 다시 add하면 이 수정도 함께 사라지니 재적용 필요 (button.tsx의 outline variant와 동일한 사정).
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("bg-slate-50 [&_tr]:border-b", className)}
+      className={cn("bg-slate-200 [&_tr]:border-b", className)}
       {...props}
     />
   )
@@ -67,12 +69,13 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
 
 // text-table-header(11px/600), text-table-body(13px, TableCell 쪽): 목업 실측값
 // (docs/PGMS_UI_mock.dc.html) 기준, shadcn 기본 text-sm(14px) 상속보다 작음 (2026-08-22).
+// text-slate-500: 헤더 글자색 실측값(docs/edit-ui, 2026-09-18 개편) — 기존 text-foreground보다 옅음.
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-5 text-left align-middle text-table-header font-semibold whitespace-nowrap text-foreground text-trim [&:has([role=checkbox])]:pr-0",
+        "h-10 px-5 text-left align-middle text-table-header font-semibold whitespace-nowrap text-slate-500 text-trim [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}

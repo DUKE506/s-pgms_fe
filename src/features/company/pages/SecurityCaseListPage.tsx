@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams } from 'react-router'
-import { CheckCircle2, ChevronRight, Shield, UserCheck } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -34,23 +34,17 @@ import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
 const ALL = '전체'
 const PAGE_SIZE = 10
 
-// KPI 카드용 아이콘/색상 — 대시보드가 없는 본사의 기본 랜딩 화면이라 가벼운
-// 상태별 요약만 가져온다(2026-09-15, 다크 히어로는 대시보드 전용이라 이 화면
-// 성격엔 과함, 세그먼트 바도 불필요해 보인다는 사용자 피드백으로 개별 카드로
-// 분리). 본사 목록은 배정/경호중/경호완료 3개만 다루므로 그 3개만 매핑.
+// 본사 목록은 배정/경호중/경호완료 3개만 다루므로(접수는 경찰서 소관) 그
+// 3개만 매핑. 요약카드는 경찰 경호목록과 같은 스타일(전체+범례+세그먼트 바)로
+// 통일한다 (docs/edit-ui 목업 기준, 2026-09-18 개편 — 기존 개별 KPI 카드 4개
+// 분리안(2026-09-15)을 대체).
 type ActiveStatus = '배정' | '경호중' | '경호완료'
 const SUMMARY_STATUSES: readonly ActiveStatus[] = ['배정', '경호중', '경호완료']
 
-const STATUS_ICON: Record<ActiveStatus, typeof UserCheck> = {
-  배정: UserCheck,
-  경호중: Shield,
-  경호완료: CheckCircle2,
-}
-
-const STATUS_ICON_COLOR: Record<ActiveStatus, string> = {
-  배정: 'text-status-assigned',
-  경호중: 'text-status-active',
-  경호완료: 'text-status-completed',
+const STATUS_BAR_COLOR: Record<ActiveStatus, string> = {
+  배정: 'bg-status-assigned',
+  경호중: 'bg-status-active',
+  경호완료: 'bg-status-completed',
 }
 
 // 배정 직후 건은 경호기간이 아직 비어 있다(경호계획 등록 전). 그때는 "-"로 표시한다.
@@ -160,36 +154,44 @@ function SecurityCaseListPage() {
 
       <SecurityCaseTabs active="경호목록" />
 
-      {/* KPI 카드(전체+상태별 3개, 개별 카드로 분리) — 데스크톱 전용. */}
+      {/* 요약카드(전체 건수+상태 세그먼트 바) — 경찰 경호목록과 동일 스타일
+          (범례는 우측 상단, 바는 구간 간 간격+캡슐형). 데스크톱 전용. */}
       {kpiQuery.isSuccess && kpiCases.length > 0 && (
-        <div className="hidden gap-3.5 xl:flex">
-          <Card className="flex-1">
-            <CardContent className="flex flex-col gap-2.5">
-              <span className="text-sm font-medium text-muted-foreground">전체</span>
-              <span className="text-3xl font-bold text-foreground">
-                {kpiCases.length}
-                <span className="ml-1 text-sm font-medium text-muted-foreground">건</span>
-              </span>
-            </CardContent>
-          </Card>
-          {SUMMARY_STATUSES.map((status) => {
-            const Icon = STATUS_ICON[status]
-            return (
-              <Card key={status} className="flex-1">
-                <CardContent className="flex flex-col gap-2.5">
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                    <Icon className={cn('size-4', STATUS_ICON_COLOR[status])} />
-                    {status}
+        <Card className="hidden xl:flex">
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex items-end justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-muted-foreground">전체 경호 건수</span>
+                <span className="text-3xl font-bold text-foreground">
+                  {kpiCases.length}
+                  <span className="ml-1 text-sm font-medium text-muted-foreground">건</span>
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-5">
+                {SUMMARY_STATUSES.map((status) => (
+                  <span key={status} className="inline-flex items-center gap-1.5 text-sm">
+                    <span className={cn('size-2.5 shrink-0 rounded-[3px]', STATUS_BAR_COLOR[status])} />
+                    <span className="text-foreground/80">{status}</span>
+                    <span className="font-semibold text-foreground">{countByStatus(status)}</span>
                   </span>
-                  <span className="text-3xl font-bold text-foreground">
-                    {countByStatus(status)}
-                    <span className="ml-1 text-sm font-medium text-muted-foreground">건</span>
-                  </span>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex h-3 gap-1 animate-bar-grow">
+              {SUMMARY_STATUSES.map((status) => {
+                const count = countByStatus(status)
+                if (count === 0) return null
+                return (
+                  <div
+                    key={status}
+                    className={cn('rounded-full', STATUS_BAR_COLOR[status])}
+                    style={{ width: `${(count / kpiCases.length) * 100}%` }}
+                  />
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색·필터는 데스크톱 전용, 모바일은

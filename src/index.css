@@ -18,6 +18,24 @@
 }
 
 /*
+  경호목록 요약카드 세그먼트 바가 렌더링될 때 왼쪽→오른쪽으로 채워지는 것처럼
+  보이게 하는 진입 애니메이션(2026-09-18). 세그먼트별 width(%)는 그대로 두고
+  clip-path만 애니메이션해서 각 구간의 실제 레이아웃(간격/둥근 모서리)이
+  틀어지지 않게 한다.
+*/
+@keyframes bar-grow {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@utility animate-bar-grow {
+  animation: bar-grow 0.7s ease-out;
+}
+
+/*
   아래 색상/폰트/radius 값은 docs/PGMS_UI_mock.dc.html 목업에서 실측한 값이다.
   neutral 계열은 Tailwind 기본 slate 팔레트와 정확히 일치해서 그대로 사용했고,
   상태 배지 6색은 docs/project-overview.md의 "상태 정의" 표를 그대로 반영했다
@@ -67,13 +85,20 @@
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
 
-    /* 경호 건 상태 배지 6색 (docs/project-overview.md "상태 정의" 표 기준) */
+    /* 경호 건 상태 배지 6색 (docs/edit-ui 목업 실측값, 2026-09-18 개편 —
+       텍스트/테두리는 진한 색, 배지 배경은 옅은 톤(outline 스타일)을 별도 토큰으로 둔다) */
     --color-status-received: var(--status-received);
     --color-status-assigned: var(--status-assigned);
     --color-status-active: var(--status-active);
     --color-status-completed: var(--status-completed);
     --color-status-closed: var(--status-closed);
     --color-status-cancelled: var(--status-cancelled);
+    --color-status-received-bg: var(--status-received-bg);
+    --color-status-assigned-bg: var(--status-assigned-bg);
+    --color-status-active-bg: var(--status-active-bg);
+    --color-status-completed-bg: var(--status-completed-bg);
+    --color-status-closed-bg: var(--status-closed-bg);
+    --color-status-cancelled-bg: var(--status-cancelled-bg);
 
     /*
       UI 텍스트 스케일 — 목업 실측값. shadcn 기본(text-sm=14px 등)이 목업보다
@@ -137,12 +162,18 @@
     --sidebar-border: #1e293b;
     --sidebar-ring: #2563eb;
 
-    --status-received: #6b7280;
-    --status-assigned: #f0b20a;
-    --status-active: #15ab59;
-    --status-completed: #2563eb;
-    --status-closed: #334155;
+    --status-received: #64748b;
+    --status-assigned: #f97316;
+    --status-active: #16a34a;
+    --status-completed: #4f46e5;
+    --status-closed: #475569;
     --status-cancelled: #dc2626;
+    --status-received-bg: #f1f5f9;
+    --status-assigned-bg: #fff7ed;
+    --status-active-bg: #ecfdf5;
+    --status-completed-bg: #eef2ff;
+    --status-closed-bg: #f1f5f9;
+    --status-cancelled-bg: #fef2f2;
 }
 
 .dark {
@@ -178,12 +209,18 @@
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
 
-    --status-received: #6b7280;
-    --status-assigned: #f0b20a;
-    --status-active: #15ab59;
-    --status-completed: #2563eb;
-    --status-closed: #334155;
+    --status-received: #64748b;
+    --status-assigned: #f97316;
+    --status-active: #16a34a;
+    --status-completed: #4f46e5;
+    --status-closed: #475569;
     --status-cancelled: #dc2626;
+    --status-received-bg: #f1f5f9;
+    --status-assigned-bg: #fff7ed;
+    --status-active-bg: #ecfdf5;
+    --status-completed-bg: #eef2ff;
+    --status-closed-bg: #f1f5f9;
+    --status-cancelled-bg: #fef2f2;
 }
 
 @layer base {
