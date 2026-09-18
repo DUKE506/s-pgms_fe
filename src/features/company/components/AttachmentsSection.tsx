@@ -45,22 +45,22 @@ function UploadedFileRow({
           : 'flex items-center justify-between rounded-lg border border-dashed border-border p-4'
       }
     >
-      <div className="flex items-center gap-3">
-        <FileText className={uploaded ? 'size-5 text-green-700' : 'size-5 text-muted-foreground'} />
-        <div>
-          <div className="text-sm font-semibold text-foreground">{uploaded ? fileName : title}</div>
-          {uploaded && subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
+      <div className="flex min-w-0 items-center gap-3">
+        <FileText className={uploaded ? 'size-5 shrink-0 text-green-700' : 'size-5 shrink-0 text-muted-foreground'} />
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-foreground">{uploaded ? fileName : title}</div>
+          {uploaded && subtitle && <div className="truncate text-[11px] text-muted-foreground">{subtitle}</div>}
           {!uploaded && disabled && disabledHint && (
-            <div className="text-[11px] text-muted-foreground">{disabledHint}</div>
+            <div className="truncate text-[11px] text-muted-foreground">{disabledHint}</div>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         {uploaded && onDownload && (
           <button
             type="button"
             onClick={onDownload}
-            className="flex items-center gap-1 text-xs font-semibold text-green-700"
+            className="flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-green-700"
           >
             <Download className="size-3.5" />
             다운로드
@@ -72,10 +72,10 @@ function UploadedFileRow({
           onClick={() => inputRef.current?.click()}
           className={
             disabled
-              ? 'text-xs font-semibold text-muted-foreground'
+              ? 'whitespace-nowrap text-xs font-semibold text-muted-foreground'
               : uploaded
-                ? 'text-xs font-semibold text-green-700'
-                : 'text-xs font-semibold text-primary'
+                ? 'whitespace-nowrap text-xs font-semibold text-green-700'
+                : 'whitespace-nowrap text-xs font-semibold text-primary'
           }
         >
           {uploaded ? '재업로드' : '업로드'}
