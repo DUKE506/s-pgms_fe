@@ -48,9 +48,21 @@ describe('HistoryListPage', () => {
 
     await screen.findAllByText('25-11-강남경찰서 · ST110')
     expect(withinTable().getByText('25-11-강남경찰서 · ST110')).toBeInTheDocument()
+
+    // 나머지는 페이지네이션(페이지당 10건, 2026-09-18)에 걸려 첫 페이지에 다 안
+    // 나올 수 있어 검색으로 하나씩 짚어 확인한다 — 서버 스코프(전국 전체, 상태
+    // 안 가림) 자체를 보는 게 목적이라 페이지 위치는 무관.
+    fireEvent.change(screen.getByLabelText('관리번호 검색'), { target: { value: 'ST114' } })
+    await screen.findAllByText('25-07-분당경찰서 · ST114')
     expect(withinTable().getByText('25-07-분당경찰서 · ST114')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('관리번호 검색'), { target: { value: 'ST116' } })
+    await screen.findAllByText('25-05-부산진경찰서 · ST116')
     expect(withinTable().getByText('25-05-부산진경찰서 · ST116')).toBeInTheDocument()
+
     // 진행중(배정) 건도 함께 보인다 — Phase4 대시보드 미구현으로 인한 확장(2026-08-27)
+    fireEvent.change(screen.getByLabelText('관리번호 검색'), { target: { value: 'ST101' } })
+    await screen.findAllByText('26-01-강남경찰서 · ST101')
     expect(withinTable().getByText('26-01-강남경찰서 · ST101')).toBeInTheDocument()
   })
 
@@ -102,6 +114,9 @@ describe('HistoryListPage', () => {
     fireEvent.click(screen.getByLabelText('최종상태 선택'))
     fireEvent.click(await screen.findByRole('option', { name: '취소' }))
 
+    // 상태 필터가 서버 파라미터로 전환돼(2026-09-18) 재조회를 거친다 — 데스크톱
+    // 테이블·모바일 카드가 둘 다 마운트돼 있어 findAllByText로 기다린다.
+    await screen.findAllByText('25-08-강남경찰서 · ST112')
     expect(withinTable().getByText('25-08-강남경찰서 · ST112')).toBeInTheDocument()
     expect(screen.queryByText('25-11-강남경찰서 · ST110')).not.toBeInTheDocument()
   })

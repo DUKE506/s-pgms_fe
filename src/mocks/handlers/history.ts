@@ -101,29 +101,44 @@ export const historyTestHandlers = [
     const url = new URL(request.url)
     const pageNumber = Number(url.searchParams.get('pageNumber') ?? '1')
     const pageSize = Number(url.searchParams.get('pageSize') ?? '10')
+    // 2026-09-18 필터/페이지네이션 배치 적용(화면#14·#15) — searchKey/status/startDate/
+    // endDate 서버 파라미터 재현(docs/architecture.md "상태관리").
+    const searchKeyParam = url.searchParams.get('searchKey')
+    const statusParam = url.searchParams.get('status')
+    const startDateParam = url.searchParams.get('startDate')
+    const endDateParam = url.searchParams.get('endDate')
 
-    const all = scopedCases(account).map((c) => {
-      const canceled = c.status === '취소'
-      const terminal = isTerminal(c)
-      const pending = c.status === '접수'
-      return {
-        // 접수 행은 caseSeq 없음, 종결·취소 행은 deploySeq 없음.
-        caseSeq: pending ? null : caseSeqOf(c),
-        deploySeq: terminal ? null : caseSeqOf(c),
-        mgmtNo: `${c.receiptNumber} ${pending ? '접수' : (c.securityCode ?? '접수')}`,
-        groupName: c.policeStation,
-        parentGroupName: c.jurisdiction,
-        startDt: canceled ? null : (c.startDate ?? null),
-        endDt: canceled ? null : (c.endDate ?? null),
-        totalMin:
-          c.status === '종결'
-            ? Math.round(computeCaseHistorySummary(c.workSchedule).totalHours * 60)
-            : null,
-        status: statusCodeOf(c),
-        statusName: canceled ? '경호취소' : c.status,
-        remark: canceled ? (c.cancelReason ?? null) : (c.closureReason ?? null),
-      }
-    })
+    const all = scopedCases(account)
+      .filter((c) => {
+        if (!searchKeyParam) return true
+        const mgmtNo = `${c.receiptNumber} ${c.securityCode ?? ''}`.trim()
+        return mgmtNo.includes(searchKeyParam) || (c.cancelReason ?? '').includes(searchKeyParam)
+      })
+      .filter((c) => !statusParam || statusCodeOf(c) === Number(statusParam))
+      .filter((c) => !startDateParam || c.startDate >= startDateParam)
+      .filter((c) => !endDateParam || c.startDate <= endDateParam)
+      .map((c) => {
+        const canceled = c.status === '취소'
+        const terminal = isTerminal(c)
+        const pending = c.status === '접수'
+        return {
+          // 접수 행은 caseSeq 없음, 종결·취소 행은 deploySeq 없음.
+          caseSeq: pending ? null : caseSeqOf(c),
+          deploySeq: terminal ? null : caseSeqOf(c),
+          mgmtNo: `${c.receiptNumber} ${pending ? '접수' : (c.securityCode ?? '접수')}`,
+          groupName: c.policeStation,
+          parentGroupName: c.jurisdiction,
+          startDt: canceled ? null : (c.startDate ?? null),
+          endDt: canceled ? null : (c.endDate ?? null),
+          totalMin:
+            c.status === '종결'
+              ? Math.round(computeCaseHistorySummary(c.workSchedule).totalHours * 60)
+              : null,
+          status: statusCodeOf(c),
+          statusName: canceled ? '경호취소' : c.status,
+          remark: canceled ? (c.cancelReason ?? null) : (c.closureReason ?? null),
+        }
+      })
 
     const start = (pageNumber - 1) * pageSize
     return HttpResponse.json({

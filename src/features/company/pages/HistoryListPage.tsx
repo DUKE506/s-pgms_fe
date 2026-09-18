@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { ChevronRight, Search } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Input } from '@/components/ui/input'
@@ -21,11 +20,16 @@ import {
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
 import StatusBadge from '@/shared/components/StatusBadge'
+import { Pagination, LoadMoreButton } from '@/shared/components/HybridPagination'
+import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
-import { listCompanyHistory } from '../api/history'
+import { GUARD_CASE_STATUS_CODE } from '@/shared/lib/deployStatus'
+import { searchCompanyHistory, searchCompanyHistoryAccumulated } from '../api/history'
+import { listOrgTree, type OrgTreeNode } from '../../police/api/accountManagement'
 import type { SecurityCase, SecurityCaseStatus } from '../../police/types/securityCase'
 
 const ALL = '전체'
+const PAGE_SIZE = 10
 const TERMINAL_STATUSES: SecurityCaseStatus[] = ['종결', '취소']
 
 function formatDate(dateLike: string) {
@@ -46,41 +50,81 @@ function totalHoursOf(c: SecurityCase) {
   return c.totalGuardMinutes != null ? c.totalGuardMinutes / 60 : 0
 }
 
+function regionsOf(tree: OrgTreeNode[]): OrgTreeNode[] {
+  return tree.flatMap((root) => root.children)
+}
+
 // 화면 12: 본사 이력 조회 — 진행중 건은 이미 /admin/security-cases에서 볼 수 있어
 // 경찰서 이력 목록과 같은 이유로 종결/취소만 대상이지만, 본사는 전국 스코프라
 // 지역청/경찰서 컬럼·필터를 둘 다 갖는 본청 이력 목록 형태를 따른다(2026-08-27,
 // Phase 3 항목2 논의 결정).
 function HistoryListPage() {
   const navigate = useNavigate()
-  const historyQuery = useQuery({ queryKey: ['company-history'], queryFn: listCompanyHistory })
+  const isDesktop = useIsDesktop()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [statusFilter, setStatusFilter] = useState<typeof ALL | SecurityCaseStatus>(ALL)
-  const [jurisdictionFilter, setJurisdictionFilter] = useState(ALL)
-  const [stationFilter, setStationFilter] = useState(ALL)
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [search, setSearch] = useState('')
+  const search = searchParams.get('q') ?? ''
+  const statusFilter = (searchParams.get('status') ?? ALL) as typeof ALL | SecurityCaseStatus
+  const dateFrom = searchParams.get('from') ?? ''
+  const dateTo = searchParams.get('to') ?? ''
+  const regionSeq = searchParams.get('region') ?? ''
+  const groupSeq = searchParams.get('station') ?? ''
+  const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1)
 
-  const cases = historyQuery.data ?? []
+  // 필터가 바뀌면 항상 page를 지운다(1페이지로 복귀) — region이 바뀌면 station도
+  // 함께 지운다("지역청 선택 후 경찰서 선택"만 허용).
+  function patch(next: Record<string, string | undefined>, resetStation = false) {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        for (const [key, value] of Object.entries(next)) {
+          if (!value) params.delete(key)
+          else params.set(key, value)
+        }
+        if (resetStation) params.delete('station')
+        params.delete('page')
+        return params
+      },
+      { replace: true },
+    )
+  }
 
-  const jurisdictions = [ALL, ...Array.from(new Set(cases.map((c) => c.jurisdiction)))]
-  const stationsInScope =
-    jurisdictionFilter === ALL ? cases : cases.filter((c) => c.jurisdiction === jurisdictionFilter)
-  const stations = [ALL, ...Array.from(new Set(stationsInScope.map((c) => c.policeStation)))]
+  function goToPage(next: number) {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        if (next <= 1) params.delete('page')
+        else params.set('page', String(next))
+        return params
+      },
+      { replace: true },
+    )
+  }
 
-  const filteredCases = cases.filter((c) => {
-    if (statusFilter !== ALL && c.status !== statusFilter) return false
-    if (jurisdictionFilter !== ALL && c.jurisdiction !== jurisdictionFilter) return false
-    if (stationFilter !== ALL && c.policeStation !== stationFilter) return false
-    if (dateFrom && c.startDate < dateFrom) return false
-    if (dateTo && c.startDate > dateTo) return false
-    if (search.trim()) {
-      const q = search.trim()
-      const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
-      if (!managementNumber.includes(q) && !c.policeStation.includes(q)) return false
-    }
-    return true
+  const orgTreeQuery = useQuery({ queryKey: ['org-tree'], queryFn: listOrgTree })
+  const regions = regionsOf(orgTreeQuery.data ?? [])
+  const selectedRegion = regions.find((r) => String(r.groupSeq) === regionSeq)
+  const stations = selectedRegion?.children ?? []
+
+  const apiParams = {
+    searchKey: search.trim() || undefined,
+    status: statusFilter === ALL ? undefined : GUARD_CASE_STATUS_CODE[statusFilter as SecurityCaseStatus],
+    startDate: dateFrom || undefined,
+    endDate: dateTo || undefined,
+    regionSeq: regionSeq ? Number(regionSeq) : undefined,
+    groupSeq: groupSeq ? Number(groupSeq) : undefined,
+    pageNumber: page,
+    pageSize: PAGE_SIZE,
+  }
+
+  const historyQuery = useQuery({
+    queryKey: ['company-history-search', isDesktop ? 'page' : 'accumulated', apiParams],
+    queryFn: () =>
+      isDesktop ? searchCompanyHistory(apiParams) : searchCompanyHistoryAccumulated(apiParams),
   })
+
+  const rows = historyQuery.data?.rows ?? []
+  const totalPages = historyQuery.data?.meta.totalPages ?? 1
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
@@ -90,7 +134,10 @@ function HistoryListPage() {
           참고)로 모바일까지 필터 전체 노출 — 데스크톱 가로 배치는 유지하고 모바일만
           세로 스택으로 전환. */}
       <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => patch({ status: v === ALL ? undefined : v })}
+        >
           <SelectTrigger className="w-full bg-card sm:w-32" aria-label="최종상태 선택">
             <SelectValue />
           </SelectTrigger>
@@ -108,7 +155,7 @@ function HistoryListPage() {
           <DateField
             variant="calendar"
             value={dateFrom}
-            onChange={setDateFrom}
+            onChange={(v) => patch({ from: v || undefined })}
             placeholder="기간 시작"
             maxDate={dateTo}
             className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
@@ -118,7 +165,7 @@ function HistoryListPage() {
           <DateField
             variant="calendar"
             value={dateTo}
-            onChange={setDateTo}
+            onChange={(v) => patch({ to: v || undefined })}
             placeholder="기간 종료"
             minDate={dateFrom}
             className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
@@ -127,32 +174,35 @@ function HistoryListPage() {
         </div>
 
         <Select
-          value={jurisdictionFilter}
-          onValueChange={(v) => {
-            setJurisdictionFilter(v)
-            setStationFilter(ALL)
-          }}
+          value={regionSeq || ALL}
+          onValueChange={(v) => patch({ region: v === ALL ? undefined : v }, true)}
         >
           <SelectTrigger className="w-full bg-card sm:w-40" aria-label="지역청 선택">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {jurisdictions.map((j) => (
-              <SelectItem key={j} value={j}>
-                {j === ALL ? '지역청 전체' : j}
+            <SelectItem value={ALL}>지역청 전체</SelectItem>
+            {regions.map((r) => (
+              <SelectItem key={r.groupSeq} value={String(r.groupSeq)}>
+                {r.groupName}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <Select value={stationFilter} onValueChange={setStationFilter}>
+        <Select
+          value={groupSeq || ALL}
+          onValueChange={(v) => patch({ station: v === ALL ? undefined : v })}
+          disabled={!selectedRegion}
+        >
           <SelectTrigger className="w-full bg-card sm:w-40" aria-label="경찰서 선택">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={ALL}>경찰서 전체</SelectItem>
             {stations.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s === ALL ? '경찰서 전체' : s}
+              <SelectItem key={s.groupSeq} value={String(s.groupSeq)}>
+                {s.groupName}
               </SelectItem>
             ))}
           </SelectContent>
@@ -161,11 +211,11 @@ function HistoryListPage() {
         <div className="relative sm:max-w-64 sm:flex-1">
           <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="관리번호 · 경찰서명 검색"
+            placeholder="관리번호 검색"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => patch({ q: e.target.value || undefined })}
             className="bg-card pl-8"
-            aria-label="관리번호 · 경찰서명 검색"
+            aria-label="관리번호 검색"
           />
         </div>
       </div>
@@ -174,11 +224,11 @@ function HistoryListPage() {
       {historyQuery.isError && (
         <p className="py-8 text-center text-sm text-destructive">이력을 불러오지 못했습니다</p>
       )}
-      {historyQuery.isSuccess && filteredCases.length === 0 && (
+      {historyQuery.isSuccess && rows.length === 0 && (
         <p className="py-8 text-center text-sm text-muted-foreground">이력이 없습니다</p>
       )}
 
-      {historyQuery.isSuccess && filteredCases.length > 0 && (
+      {historyQuery.isSuccess && rows.length > 0 && (
         <>
           <div className="hidden overflow-hidden rounded-xl border border-border bg-card xl:block">
             <Table>
@@ -195,17 +245,23 @@ function HistoryListPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCases.map((c) => (
+                {rows.map((c) => (
                   <HistoryRow key={c.id} record={c} onClick={() => navigate(`/admin/history/${c.id}`)} />
                 ))}
               </TableBody>
             </Table>
           </div>
+          <Pagination page={page} totalPages={totalPages} onPageChange={goToPage} className="hidden xl:flex" />
 
           <div className="flex flex-col gap-2.5 xl:hidden">
-            {filteredCases.map((c) => (
+            {rows.map((c) => (
               <HistoryCard key={c.id} record={c} onClick={() => navigate(`/admin/history/${c.id}`)} />
             ))}
+            <LoadMoreButton
+              hasMore={page < totalPages}
+              loading={historyQuery.isFetching}
+              onLoadMore={() => goToPage(page + 1)}
+            />
           </div>
         </>
       )}

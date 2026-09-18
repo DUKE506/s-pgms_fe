@@ -423,10 +423,27 @@ export const guardCaseTestHandlers = [
     const url = new URL(request.url)
     const pageNumber = Number(url.searchParams.get('pageNumber') ?? '1')
     const pageSize = Number(url.searchParams.get('pageSize') ?? '10')
+    // 2026-09-18 필터/페이지네이션 배치 적용(화면13) — searchKey/status/startDate/
+    // endDate/regionSeq/groupSeq 서버 파라미터 재현. regionSeq/groupSeq id 매핑은
+    // 위 GetGuardCaseList 핸들러와 같은 STATION_GROUP_SEQ/REGION_SEQ 표를 공유한다.
+    const searchKeyParam = url.searchParams.get('searchKey')
+    const statusParam = url.searchParams.get('status')
+    const startDateParam = url.searchParams.get('startDate')
+    const endDateParam = url.searchParams.get('endDate')
+    const regionSeqParam = url.searchParams.get('regionSeq')
+    const groupSeqParam = url.searchParams.get('groupSeq')
 
     const all = securityCases
       .filter((c) => c.status === '종결' || c.status === '취소')
       .filter((c) => account.role !== '본부관리자' || c.assigneeId === account.id)
+      .filter((c) => !searchKeyParam || `${c.receiptNumber} ${c.securityCode}`.includes(searchKeyParam))
+      .filter(
+        (c) => !statusParam || (GUARD_CASE_STATUS_CODE[c.status] ?? null) === Number(statusParam),
+      )
+      .filter((c) => !startDateParam || (c.startDate && c.startDate >= startDateParam))
+      .filter((c) => !endDateParam || (c.startDate && c.startDate <= endDateParam))
+      .filter((c) => !regionSeqParam || REGION_SEQ[c.jurisdiction] === Number(regionSeqParam))
+      .filter((c) => !groupSeqParam || STATION_GROUP_SEQ[c.policeStation] === Number(groupSeqParam))
       .map((c) => {
         const canceled = c.status === '취소'
         return {

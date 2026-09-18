@@ -116,11 +116,17 @@ function toSecurityCase(row: DeployListRow): SecurityCase {
 
 // 화면 2: 경찰서 경호목록. 서버가 로그인 계정의 소속 경찰서(groupSeq) 기준으로
 // 필터링하며, 권한 밖 groupSeq는 403으로 막는다. groupSeq는 로그인 시점에
-// GetMyProfile로 받아 세션에 저장해둔 값을 그대로 넘긴다.
-export async function listSecurityCases(): Promise<SecurityCase[]> {
+// GetMyProfile로 받아 세션에 저장해둔 값을 그대로 넘긴다. 검색어(keyword)는
+// 서버 파라미터로 보낸다(docs/architecture.md "상태관리") — 상태 필터는 서버에
+// 파라미터가 없어 클라이언트에서 처리한다(진행중 건이 많지 않다는 전제, 페이지네이션
+// 없음).
+export async function listSecurityCases(keyword?: string): Promise<SecurityCase[]> {
   const groupSeq = useAuthStore.getState().user?.groupSeq
-  const query = groupSeq != null ? `?groupSeq=${groupSeq}` : ''
-  const res = await apiFetch(`/v1/Deploy/Police/W/GetDeployList${query}`)
+  const qs = new URLSearchParams()
+  if (groupSeq != null) qs.set('groupSeq', String(groupSeq))
+  if (keyword) qs.set('keyword', keyword)
+  const query = qs.toString()
+  const res = await apiFetch(`/v1/Deploy/Police/W/GetDeployList${query ? `?${query}` : ''}`)
   if (!res.ok) {
     throw new Error('경호목록을 불러오지 못했습니다')
   }

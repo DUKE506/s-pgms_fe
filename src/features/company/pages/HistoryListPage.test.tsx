@@ -75,6 +75,9 @@ describe('HistoryListPage (본사)', () => {
     fireEvent.click(screen.getByLabelText('최종상태 선택'))
     fireEvent.click(await screen.findByRole('option', { name: '취소' }))
 
+    // 상태 필터가 서버 파라미터로 전환돼(2026-09-18) 재조회를 거친다 — 데스크톱
+    // 테이블·모바일 카드가 둘 다 마운트돼 있어 findAllByText로 기다린다.
+    await screen.findAllByText('25-08-강남경찰서 · ST112')
     expect(withinTable().getByText('25-08-강남경찰서 · ST112')).toBeInTheDocument()
     expect(screen.queryByText('25-11-강남경찰서 · ST110')).not.toBeInTheDocument()
   })

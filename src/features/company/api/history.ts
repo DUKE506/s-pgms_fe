@@ -24,8 +24,8 @@ interface HistoryRow {
   endDt: string | null
   // 서버 집계 총근무시간(분) — 종결 건만 실값, 취소 건은 null.
   totalMin: number | null
-  // 3:종결 / 4:경호취소 (statusName과 함께 옴). 매핑은 statusName으로 하고 이 값은
-  // status 파라미터 필터용 — 목록량이 작아 현재는 클라이언트 필터 유지(exclusions).
+  // 3:종결 / 4:경호취소 (statusName과 함께 옴). 매핑은 statusName으로 하고, 이 값은
+  // 화면의 상태 필터가 서버 status 파라미터로 보낼 때 쓰는 코드와 같은 체계다.
   status: number | null
   // "경호취소" / "종결". 프론트 라벨('취소'/'종결')로 좁힌다.
   statusName: string
@@ -75,31 +75,62 @@ function toSecurityCase(row: HistoryRow): SecurityCase {
   }
 }
 
-// 서버 pageSize 상한이 100이라 meta.totalPages까지 순회해 이어붙인다(본사 경호목록과
-// 동일). 화면에 페이지네이션 UI 없음.
-const HISTORY_PAGE_SIZE = 100
-const HISTORY_MAX_PAGES = 50
+export interface CompanyHistorySearchParams {
+  searchKey?: string
+  status?: number
+  startDate?: string
+  endDate?: string
+  regionSeq?: number
+  groupSeq?: number
+  pageNumber: number
+  pageSize: number
+}
 
-async function fetchHistoryPage(pageNumber: number): Promise<Paged<HistoryRow>> {
-  const res = await apiFetch(
-    `/v1/History/Stec/W/GetHistoryList?pageNumber=${pageNumber}&pageSize=${HISTORY_PAGE_SIZE}`,
-  )
+export interface CompanyHistorySearchResult {
+  rows: SecurityCase[]
+  meta: Paged<HistoryRow>['meta']
+}
+
+async function fetchHistoryPage(params: CompanyHistorySearchParams): Promise<Paged<HistoryRow>> {
+  const qs = new URLSearchParams()
+  qs.set('pageNumber', String(params.pageNumber))
+  qs.set('pageSize', String(params.pageSize))
+  if (params.searchKey) qs.set('searchKey', params.searchKey)
+  if (params.status != null) qs.set('status', String(params.status))
+  if (params.startDate) qs.set('startDate', params.startDate)
+  if (params.endDate) qs.set('endDate', params.endDate)
+  if (params.regionSeq != null) qs.set('regionSeq', String(params.regionSeq))
+  if (params.groupSeq != null) qs.set('groupSeq', String(params.groupSeq))
+  const res = await apiFetch(`/v1/History/Stec/W/GetHistoryList?${qs.toString()}`)
   if (!res.ok) {
     throw new Error('이력 조회 목록을 불러오지 못했습니다')
   }
   return unwrapEnvelope<Paged<HistoryRow>>(res)
 }
 
-// 운영/시스템관리자는 전국 전체, 본부관리자는 본인 배정 건만(서버가 HIST-003으로
-// 강제 — StecM3(배정 0건) → 이력 0건 실측).
-export async function listCompanyHistory(): Promise<SecurityCase[]> {
-  const first = await fetchHistoryPage(1)
-  const rows = [...first.data]
-  const lastPage = Math.min(first.meta.totalPages, HISTORY_MAX_PAGES)
-  for (let page = 2; page <= lastPage; page += 1) {
-    rows.push(...(await fetchHistoryPage(page)).data)
+// 화면 13 필터·페이지네이션 서버 연동(docs/architecture.md "상태관리") — 운영/
+// 시스템관리자는 전국 전체, 본부관리자는 본인 배정 건만(서버가 HIST-003으로 강제).
+// xl 이상은 이 함수로 선택된 페이지 1개만 받아 교체 렌더.
+export async function searchCompanyHistory(
+  params: CompanyHistorySearchParams,
+): Promise<CompanyHistorySearchResult> {
+  const page = await fetchHistoryPage(params)
+  return { rows: page.data.map(toSecurityCase), meta: page.meta }
+}
+
+// xl 미만 "더보기" — 1..pageNumber까지 같은 필터로 이어붙인다.
+export async function searchCompanyHistoryAccumulated(
+  params: CompanyHistorySearchParams,
+): Promise<CompanyHistorySearchResult> {
+  const pages = await Promise.all(
+    Array.from({ length: params.pageNumber }, (_, i) =>
+      fetchHistoryPage({ ...params, pageNumber: i + 1 }),
+    ),
+  )
+  return {
+    rows: pages.flatMap((p) => p.data.map(toSecurityCase)),
+    meta: pages[pages.length - 1].meta,
   }
-  return rows.map(toSecurityCase)
 }
 
 // 화면 13: 본사 이력 상세. id = caseSeq. 상태를 가리지 않으나(진행중 건도 200) 이

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { CheckCircle2, ChevronRight, Inbox, Plus, Search, Shield, UserCheck } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -16,6 +15,7 @@ import {
 import ListSkeleton from '@/shared/components/ListSkeleton'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
+import { useUrlParam } from '@/shared/hooks/useUrlParam'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '../../auth/store/authStore'
 import { listSecurityCases } from '../api/securityCases'
@@ -84,10 +84,16 @@ function RemainDaysBadge({ remainDays }: { remainDays: number }) {
 function SecurityCaseListPage() {
   const user = useAuthStore((state) => state.user)
   const navigate = useNavigate()
-  const casesQuery = useQuery({ queryKey: ['police-security-cases'], queryFn: listSecurityCases })
 
-  const [statusFilter, setStatusFilter] = useState<typeof ALL | SecurityCaseStatus>(ALL)
-  const [search, setSearch] = useState('')
+  // 검색(keyword)은 서버 파라미터로 보낸다. 상태는 GetDeployList에 필터 파라미터가
+  // 없어(스웨거에 groupSeq/keyword뿐) 클라이언트에서 처리 — 진행중 건이 많지 않다는
+  // 전제로 페이지네이션도 없다(docs/architecture.md "상태관리", 2026-09-18 결정).
+  const [search, setSearch] = useUrlParam('q', '')
+  const [statusFilter, setStatusFilter] = useUrlParam('status', ALL)
+  const casesQuery = useQuery({
+    queryKey: ['police-security-cases', search],
+    queryFn: () => listSecurityCases(search.trim() || undefined),
+  })
 
   // 서버(mock)가 이미 내 경찰서 소속 건만 내려주므로 여기서는 종결/취소 상태만 뺀다.
   const cases = (casesQuery.data ?? []).filter((c) =>
@@ -99,14 +105,8 @@ function SecurityCaseListPage() {
     return cases.filter((c) => c.status === status).length
   }
 
-  const filteredCases = cases.filter((c) => {
-    if (statusFilter !== ALL && c.status !== statusFilter) return false
-    if (search.trim()) {
-      const managementNumber = formatManagementNumber(c.receiptNumber, c.securityCode)
-      if (!managementNumber.includes(search.trim())) return false
-    }
-    return true
-  })
+  // 검색은 이미 서버(keyword)가 걸러서 온다 — 여기서는 상태만 클라이언트로 좁힌다.
+  const filteredCases = cases.filter((c) => statusFilter === ALL || c.status === statusFilter)
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">

@@ -195,47 +195,93 @@ export function detailRowToSecurityCase(row: HistoryDetailRow): SecurityCase {
   }
 }
 
-// 서버 pageSize 상한이 100이라 meta.totalPages까지 순회해 이어붙인다(본사 이력·경호목록과
-// 동일). 화면에 페이지네이션 UI 없음.
-const HISTORY_PAGE_SIZE = 100
-const HISTORY_MAX_PAGES = 50
+export interface PoliceHistorySearchParams {
+  searchKey?: string
+  status?: number
+  startDate?: string
+  endDate?: string
+  pageNumber: number
+  pageSize: number
+}
+
+export interface PoliceHistorySearchResult {
+  rows: SecurityCase[]
+  meta: Paged<HistoryListRow>['meta']
+}
 
 async function fetchHistoryPage(
-  pageNumber: number,
   useSessionGroupSeq: boolean,
+  params: PoliceHistorySearchParams,
 ): Promise<Paged<HistoryListRow>> {
   // 피전(#14) 경로만 세션 groupSeq(로그인한 경찰서 조직번호, GetMyProfile로 받아 저장)를
   // 붙인다. 본청/지역청(#15)은 안 붙여야 서버가 관할 이하 전체를 캐스케이드로 준다.
   const groupSeq = useSessionGroupSeq ? useAuthStore.getState().user?.groupSeq : undefined
-  const query = `?pageNumber=${pageNumber}&pageSize=${HISTORY_PAGE_SIZE}${
-    groupSeq != null ? `&groupSeq=${groupSeq}` : ''
-  }`
-  const res = await apiFetch(`/v1/History/Police/W/GetHistoryList${query}`)
+  const qs = new URLSearchParams()
+  qs.set('pageNumber', String(params.pageNumber))
+  qs.set('pageSize', String(params.pageSize))
+  if (groupSeq != null) qs.set('groupSeq', String(groupSeq))
+  if (params.searchKey) qs.set('searchKey', params.searchKey)
+  if (params.status != null) qs.set('status', String(params.status))
+  if (params.startDate) qs.set('startDate', params.startDate)
+  if (params.endDate) qs.set('endDate', params.endDate)
+  const res = await apiFetch(`/v1/History/Police/W/GetHistoryList?${qs.toString()}`)
   if (!res.ok) {
     throw new Error('이력 조회 목록을 불러오지 못했습니다')
   }
   return unwrapEnvelope<Paged<HistoryListRow>>(res)
 }
 
-async function listHistory(useSessionGroupSeq: boolean): Promise<SecurityCase[]> {
-  const first = await fetchHistoryPage(1, useSessionGroupSeq)
-  const rows = [...first.data]
-  const lastPage = Math.min(first.meta.totalPages, HISTORY_MAX_PAGES)
-  for (let page = 2; page <= lastPage; page += 1) {
-    rows.push(...(await fetchHistoryPage(page, useSessionGroupSeq)).data)
+// 필터·페이지네이션 서버 연동(docs/architecture.md "상태관리") — xl 이상은 선택된
+// 페이지 1개만 받아 교체 렌더. "접수"는 서버 status 코드가 없는 상태라(접수 행은
+// status=null) 서버 필터 대상에서 빠진다 — 화면에서 그 옵션만 별도로 현재 페이지
+// 안에서 클라이언트 후처리한다(알려진 한계, 서버가 접수만 격리해 줄 방법이 없음).
+async function searchHistory(
+  useSessionGroupSeq: boolean,
+  params: PoliceHistorySearchParams,
+): Promise<PoliceHistorySearchResult> {
+  const page = await fetchHistoryPage(useSessionGroupSeq, params)
+  return { rows: page.data.map(listRowToSecurityCase), meta: page.meta }
+}
+
+// xl 미만 "더보기" — 1..pageNumber까지 같은 필터로 이어붙인다.
+async function searchHistoryAccumulated(
+  useSessionGroupSeq: boolean,
+  params: PoliceHistorySearchParams,
+): Promise<PoliceHistorySearchResult> {
+  const pages = await Promise.all(
+    Array.from({ length: params.pageNumber }, (_, i) =>
+      fetchHistoryPage(useSessionGroupSeq, { ...params, pageNumber: i + 1 }),
+    ),
+  )
+  return {
+    rows: pages.flatMap((p) => p.data.map(listRowToSecurityCase)),
+    meta: pages[pages.length - 1].meta,
   }
-  return rows.map(listRowToSecurityCase)
 }
 
 // 화면 #14: [경찰서] 이력 조회 목록 — 로그인한 경찰서의 종결·취소 건만(서버 스코프).
-export function listPoliceStationHistory(): Promise<SecurityCase[]> {
-  return listHistory(true)
+export function searchPoliceStationHistory(
+  params: PoliceHistorySearchParams,
+): Promise<PoliceHistorySearchResult> {
+  return searchHistory(true, params)
+}
+export function searchPoliceStationHistoryAccumulated(
+  params: PoliceHistorySearchParams,
+): Promise<PoliceHistorySearchResult> {
+  return searchHistoryAccumulated(true, params)
 }
 
 // 화면 #15: [본청]/[지역청] 이력 조회 목록 — 관할 이하 전 구간(접수·진행중 포함).
 // 서버가 토큰 역할로 스코프를 걸어 준다(본청=전국, 지역청=관할 이하).
-export function listSecurityCaseHistory(): Promise<SecurityCase[]> {
-  return listHistory(false)
+export function searchSecurityCaseHistory(
+  params: PoliceHistorySearchParams,
+): Promise<PoliceHistorySearchResult> {
+  return searchHistory(false, params)
+}
+export function searchSecurityCaseHistoryAccumulated(
+  params: PoliceHistorySearchParams,
+): Promise<PoliceHistorySearchResult> {
+  return searchHistoryAccumulated(false, params)
 }
 
 // 화면 #14·#15: 이력 상세(종결·취소 건). id = caseSeq. 본청/지역청 토큰도 관할 건이면
