@@ -20,7 +20,7 @@ import {
 import ListSkeleton from '@/shared/components/ListSkeleton'
 import SearchInput from '@/shared/components/SearchInput'
 import StatusBadge from '@/shared/components/StatusBadge'
-import { Pagination, LoadMoreButton } from '@/shared/components/HybridPagination'
+import { PaginationBar, LoadMoreButton } from '@/shared/components/HybridPagination'
 import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { useSearchDraft } from '@/shared/hooks/useSearchDraft'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
@@ -30,7 +30,7 @@ import { listOrgTree, type OrgTreeNode } from '../../police/api/accountManagemen
 import type { SecurityCase, SecurityCaseStatus } from '../../police/types/securityCase'
 
 const ALL = '전체'
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 10
 const TERMINAL_STATUSES: SecurityCaseStatus[] = ['종결', '취소']
 
 function formatDate(dateLike: string) {
@@ -71,6 +71,7 @@ function HistoryListPage() {
   const regionSeq = searchParams.get('region') ?? ''
   const groupSeq = searchParams.get('station') ?? ''
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1)
+  const pageSize = Math.max(1, Number(searchParams.get('size') ?? String(DEFAULT_PAGE_SIZE)) || DEFAULT_PAGE_SIZE)
 
   // 검색창은 엔터/검색버튼을 눌러야 커밋(IME 조합 깨짐 방지, 2026-09-18).
   const [searchDraft, setSearchDraft] = useSearchDraft(search)
@@ -109,6 +110,19 @@ function HistoryListPage() {
     )
   }
 
+  function changePageSize(next: number) {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        if (next === DEFAULT_PAGE_SIZE) params.delete('size')
+        else params.set('size', String(next))
+        params.delete('page')
+        return params
+      },
+      { replace: true },
+    )
+  }
+
   const orgTreeQuery = useQuery({ queryKey: ['org-tree'], queryFn: listOrgTree })
   const regions = regionsOf(orgTreeQuery.data ?? [])
   const selectedRegion = regions.find((r) => String(r.groupSeq) === regionSeq)
@@ -122,7 +136,7 @@ function HistoryListPage() {
     regionSeq: regionSeq ? Number(regionSeq) : undefined,
     groupSeq: groupSeq ? Number(groupSeq) : undefined,
     pageNumber: page,
-    pageSize: PAGE_SIZE,
+    pageSize,
   }
 
   const historyQuery = useQuery({
@@ -133,6 +147,7 @@ function HistoryListPage() {
 
   const rows = historyQuery.data?.rows ?? []
   const totalPages = historyQuery.data?.meta.totalPages ?? 1
+  const totalCount = historyQuery.data?.meta.totalCount ?? 0
 
   return (
     <main className="flex flex-col gap-4 p-4 pb-28 sm:p-8 sm:pb-28 xl:pb-8">
@@ -140,81 +155,84 @@ function HistoryListPage() {
 
       {/* 경찰 이력 조회와 같은 이유(2026-09-16, HistoryListPage.tsx police 쪽 주석
           참고)로 모바일까지 필터 전체 노출 — 데스크톱 가로 배치는 유지하고 모바일만
-          세로 스택으로 전환. */}
-      <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center">
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => patch({ status: v === ALL ? undefined : v })}
-        >
-          <SelectTrigger className="w-full bg-card sm:w-32" aria-label="최종상태 선택">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>전체</SelectItem>
-            {TERMINAL_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          세로 스택으로 전환. 필터(드롭다운·기간)는 왼쪽, 검색은 오른쪽으로 통일
+          (2026-09-18 필터 위치 정리). */}
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center">
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => patch({ status: v === ALL ? undefined : v })}
+          >
+            <SelectTrigger className="w-full bg-card sm:w-32" aria-label="최종상태 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>전체</SelectItem>
+              {TERMINAL_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <div className="flex items-center gap-2">
-          <DateField
-            variant="calendar"
-            value={dateFrom}
-            onChange={(v) => patch({ from: v || undefined })}
-            placeholder="기간 시작"
-            maxDate={dateTo}
-            className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
-            aria-label="기간 시작"
-          />
-          <span className="text-sm text-muted-foreground">~</span>
-          <DateField
-            variant="calendar"
-            value={dateTo}
-            onChange={(v) => patch({ to: v || undefined })}
-            placeholder="기간 종료"
-            minDate={dateFrom}
-            className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
-            aria-label="기간 종료"
-          />
+          <div className="flex items-center gap-2">
+            <DateField
+              variant="calendar"
+              value={dateFrom}
+              onChange={(v) => patch({ from: v || undefined })}
+              placeholder="기간 시작"
+              maxDate={dateTo}
+              className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
+              aria-label="기간 시작"
+            />
+            <span className="text-sm text-muted-foreground">~</span>
+            <DateField
+              variant="calendar"
+              value={dateTo}
+              onChange={(v) => patch({ to: v || undefined })}
+              placeholder="기간 종료"
+              minDate={dateFrom}
+              className="flex-1 min-w-0 bg-card sm:w-40 sm:flex-none"
+              aria-label="기간 종료"
+            />
+          </div>
+
+          <Select
+            value={regionSeq || ALL}
+            onValueChange={(v) => patch({ region: v === ALL ? undefined : v }, true)}
+          >
+            <SelectTrigger className="w-full bg-card sm:w-40" aria-label="지역청 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>지역청 전체</SelectItem>
+              {regions.map((r) => (
+                <SelectItem key={r.groupSeq} value={String(r.groupSeq)}>
+                  {r.groupName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={groupSeq || ALL}
+            onValueChange={(v) => patch({ station: v === ALL ? undefined : v })}
+            disabled={!selectedRegion}
+          >
+            <SelectTrigger className="w-full bg-card sm:w-40" aria-label="경찰서 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>경찰서 전체</SelectItem>
+              {stations.map((s) => (
+                <SelectItem key={s.groupSeq} value={String(s.groupSeq)}>
+                  {s.groupName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        <Select
-          value={regionSeq || ALL}
-          onValueChange={(v) => patch({ region: v === ALL ? undefined : v }, true)}
-        >
-          <SelectTrigger className="w-full bg-card sm:w-40" aria-label="지역청 선택">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>지역청 전체</SelectItem>
-            {regions.map((r) => (
-              <SelectItem key={r.groupSeq} value={String(r.groupSeq)}>
-                {r.groupName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={groupSeq || ALL}
-          onValueChange={(v) => patch({ station: v === ALL ? undefined : v })}
-          disabled={!selectedRegion}
-        >
-          <SelectTrigger className="w-full bg-card sm:w-40" aria-label="경찰서 선택">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>경찰서 전체</SelectItem>
-            {stations.map((s) => (
-              <SelectItem key={s.groupSeq} value={String(s.groupSeq)}>
-                {s.groupName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         <SearchInput
           draft={searchDraft}
@@ -222,7 +240,7 @@ function HistoryListPage() {
           onCommit={commitSearch}
           placeholder="관리번호 검색"
           aria-label="관리번호 검색"
-          className="sm:max-w-64 sm:flex-1"
+          className="xl:w-64"
         />
       </div>
 
@@ -257,7 +275,14 @@ function HistoryListPage() {
               </TableBody>
             </Table>
           </div>
-          <Pagination page={page} totalPages={totalPages} onPageChange={goToPage} className="hidden xl:flex" />
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={goToPage}
+            onPageSizeChange={changePageSize}
+          />
 
           <div className="flex flex-col gap-2.5 xl:hidden">
             {rows.map((c) => (

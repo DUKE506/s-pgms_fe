@@ -20,7 +20,7 @@ import {
 import ListSkeleton from '@/shared/components/ListSkeleton'
 import SearchInput from '@/shared/components/SearchInput'
 import StatusBadge from '@/shared/components/StatusBadge'
-import { Pagination, LoadMoreButton } from '@/shared/components/HybridPagination'
+import { PaginationBar, LoadMoreButton } from '@/shared/components/HybridPagination'
 import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
 import { useSearchDraft } from '@/shared/hooks/useSearchDraft'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
@@ -32,7 +32,7 @@ import SecurityCaseTabs from '../components/SecurityCaseTabs'
 import { ACTIVE_SECURITY_CASE_STATUSES } from '../../police/types/securityCase'
 
 const ALL = '전체'
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 // 본사 목록은 배정/경호중/경호완료 3개만 다루므로(접수는 경찰서 소관) 그
 // 3개만 매핑. 요약카드는 경찰 경호목록과 같은 스타일(전체+범례+세그먼트 바)로
@@ -71,6 +71,7 @@ function SecurityCaseListPage() {
   const regionSeq = searchParams.get('region') ?? ''
   const groupSeq = searchParams.get('station') ?? ''
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1)
+  const pageSize = Math.max(1, Number(searchParams.get('size') ?? String(DEFAULT_PAGE_SIZE)) || DEFAULT_PAGE_SIZE)
 
   // 검색창은 엔터/검색버튼을 눌러야 커밋(IME 조합 깨짐 방지, 2026-09-18) — 입력
   // 중 값(draft)은 로컬로 두고, commit에서만 patch로 URL(q)에 반영한다.
@@ -125,16 +126,17 @@ function SecurityCaseListPage() {
       isDesktop ? 'page' : 'accumulated',
       searchParamsForApi,
       page,
-      PAGE_SIZE,
+      pageSize,
     ],
     queryFn: () =>
       isDesktop
-        ? searchGuardCases({ ...searchParamsForApi, pageNumber: page, pageSize: PAGE_SIZE })
-        : searchGuardCasesAccumulated({ ...searchParamsForApi, pageNumber: page, pageSize: PAGE_SIZE }),
+        ? searchGuardCases({ ...searchParamsForApi, pageNumber: page, pageSize })
+        : searchGuardCasesAccumulated({ ...searchParamsForApi, pageNumber: page, pageSize }),
   })
 
   const rows = listQuery.data?.rows ?? []
   const totalPages = listQuery.data?.meta.totalPages ?? 1
+  const totalCount = listQuery.data?.meta.totalCount ?? 0
 
   function goToPage(next: number) {
     setSearchParams(
@@ -142,6 +144,19 @@ function SecurityCaseListPage() {
         const params = new URLSearchParams(prev)
         if (next <= 1) params.delete('page')
         else params.set('page', String(next))
+        return params
+      },
+      { replace: true },
+    )
+  }
+
+  function changePageSize(next: number) {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        if (next === DEFAULT_PAGE_SIZE) params.delete('size')
+        else params.set('size', String(next))
+        params.delete('page')
         return params
       },
       { replace: true },
@@ -195,59 +210,62 @@ function SecurityCaseListPage() {
       )}
 
       {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색·필터는 데스크톱 전용, 모바일은
-          탭+리스트만. */}
-      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center">
-        <Select
-          value={regionSeq || ALL}
-          onValueChange={(v) => patch({ region: v === ALL ? undefined : v }, true)}
-        >
-          <SelectTrigger className="w-full bg-card sm:w-40" aria-label="지역청 선택">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>지역청 전체</SelectItem>
-            {regions.map((r) => (
-              <SelectItem key={r.groupSeq} value={String(r.groupSeq)}>
-                {r.groupName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          탭+리스트만. 필터(드롭다운)는 왼쪽, 검색은 오른쪽으로 통일
+          (2026-09-18 필터 위치 정리). */}
+      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center xl:justify-between">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Select
+            value={regionSeq || ALL}
+            onValueChange={(v) => patch({ region: v === ALL ? undefined : v }, true)}
+          >
+            <SelectTrigger className="w-full bg-card sm:w-40" aria-label="지역청 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>지역청 전체</SelectItem>
+              {regions.map((r) => (
+                <SelectItem key={r.groupSeq} value={String(r.groupSeq)}>
+                  {r.groupName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Select
-          value={groupSeq || ALL}
-          onValueChange={(v) => patch({ station: v === ALL ? undefined : v })}
-          disabled={!selectedRegion}
-        >
-          <SelectTrigger className="w-full bg-card sm:w-40" aria-label="경찰서 선택">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>경찰서 전체</SelectItem>
-            {stations.map((s) => (
-              <SelectItem key={s.groupSeq} value={String(s.groupSeq)}>
-                {s.groupName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select
+            value={groupSeq || ALL}
+            onValueChange={(v) => patch({ station: v === ALL ? undefined : v })}
+            disabled={!selectedRegion}
+          >
+            <SelectTrigger className="w-full bg-card sm:w-40" aria-label="경찰서 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>경찰서 전체</SelectItem>
+              {stations.map((s) => (
+                <SelectItem key={s.groupSeq} value={String(s.groupSeq)}>
+                  {s.groupName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => patch({ status: v === ALL ? undefined : v })}
-        >
-          <SelectTrigger className="w-full bg-card sm:w-40" aria-label="상태 선택">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>상태 전체</SelectItem>
-            {ACTIVE_SECURITY_CASE_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => patch({ status: v === ALL ? undefined : v })}
+          >
+            <SelectTrigger className="w-full bg-card sm:w-40" aria-label="상태 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>상태 전체</SelectItem>
+              {ACTIVE_SECURITY_CASE_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <SearchInput
           draft={searchDraft}
@@ -255,7 +273,7 @@ function SecurityCaseListPage() {
           onCommit={commitSearch}
           placeholder="관리번호 검색"
           aria-label="관리번호 검색"
-          className="sm:max-w-64 sm:flex-1"
+          className="xl:w-64"
         />
       </div>
 
@@ -307,7 +325,14 @@ function SecurityCaseListPage() {
               </TableBody>
             </Table>
           </div>
-          <Pagination page={page} totalPages={totalPages} onPageChange={goToPage} className="hidden xl:flex" />
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={goToPage}
+            onPageSizeChange={changePageSize}
+          />
 
           <div className="flex flex-col gap-2.5 xl:hidden">
             {rows.map((c) => (

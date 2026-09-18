@@ -1,5 +1,12 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
 // 목록/이력 화면 하이브리드 페이지네이션(docs/architecture.md "상태관리") — xl
@@ -91,5 +98,60 @@ export function LoadMoreButton({ hasMore, loading, onLoadMore, className }: Load
     >
       {loading ? '불러오는 중…' : '더보기'}
     </Button>
+  )
+}
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50] as const
+
+interface PageSizeSelectProps {
+  pageSize: number
+  onPageSizeChange: (size: number) => void
+}
+
+function PageSizeSelect({ pageSize, onPageSizeChange }: PageSizeSelectProps) {
+  return (
+    <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+      <SelectTrigger className="w-24 bg-card" aria-label="페이지당 표시 개수">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {PAGE_SIZE_OPTIONS.map((size) => (
+          <SelectItem key={size} value={String(size)}>
+            {size}개씩
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+interface PaginationBarProps {
+  page: number
+  totalPages: number
+  totalCount: number
+  pageSize: number
+  onPageChange: (page: number) => void
+  onPageSizeChange: (size: number) => void
+  className?: string
+}
+
+// 서버 페이지네이션 화면(xl 이상) 전용 — 왼쪽 "총 N건", 가운데 페이지 번호, 오른쪽
+// pageSize 선택. xl 미만은 "더보기"(LoadMoreButton)만 쓰고 pageSize 선택은 누적
+// 로드 방식과 맞지 않아 노출하지 않는다(docs/architecture.md "상태관리").
+export function PaginationBar({
+  page,
+  totalPages,
+  totalCount,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+  className,
+}: PaginationBarProps) {
+  return (
+    <div className={cn('hidden items-center justify-between xl:flex', className)}>
+      <span className="text-sm text-muted-foreground">총 {totalCount}건</span>
+      <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
+      <PageSizeSelect pageSize={pageSize} onPageSizeChange={onPageSizeChange} />
+    </div>
   )
 }

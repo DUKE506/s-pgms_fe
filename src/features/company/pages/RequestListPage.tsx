@@ -85,39 +85,42 @@ function RequestListPage() {
       <SecurityCaseTabs active="배치요청" />
 
       {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색·필터는 데스크톱 전용, 모바일은
-          탭+리스트만. */}
-      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center">
-        <Select
-          value={jurisdictionFilter}
-          onValueChange={(v) => {
-            setJurisdictionFilter(v)
-            setStationFilter(ALL)
-          }}
-        >
-          <SelectTrigger className="w-full bg-card sm:w-40" aria-label="지역청 선택">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {jurisdictions.map((j) => (
-              <SelectItem key={j} value={j}>
-                {j === ALL ? '지역청 전체' : j}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          탭+리스트만. 필터(드롭다운)는 왼쪽, 검색은 오른쪽으로 통일
+          (2026-09-18 필터 위치 정리). */}
+      <div className="hidden gap-2.5 xl:flex xl:flex-wrap xl:items-center xl:justify-between">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Select
+            value={jurisdictionFilter}
+            onValueChange={(v) => {
+              setJurisdictionFilter(v)
+              setStationFilter(ALL)
+            }}
+          >
+            <SelectTrigger className="w-full bg-card sm:w-40" aria-label="지역청 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {jurisdictions.map((j) => (
+                <SelectItem key={j} value={j}>
+                  {j === ALL ? '지역청 전체' : j}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Select value={stationFilter} onValueChange={setStationFilter}>
-          <SelectTrigger className="w-full bg-card sm:w-40" aria-label="경찰서 선택">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {stations.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s === ALL ? '경찰서 전체' : s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select value={stationFilter} onValueChange={setStationFilter}>
+            <SelectTrigger className="w-full bg-card sm:w-40" aria-label="경찰서 선택">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {stations.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s === ALL ? '경찰서 전체' : s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <SearchInput
           draft={draft}
@@ -125,7 +128,7 @@ function RequestListPage() {
           onCommit={commit}
           placeholder="관리번호 검색"
           aria-label="관리번호 검색"
-          className="sm:max-w-64 sm:flex-1"
+          className="xl:w-64"
         />
       </div>
 
