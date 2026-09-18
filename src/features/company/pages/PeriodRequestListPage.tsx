@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, MoreVertical, Search } from 'lucide-react'
+import { Check, MoreVertical } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,7 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -25,6 +24,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
+import SearchInput from '@/shared/components/SearchInput'
+import { useUrlSearchInput } from '@/shared/hooks/useUrlSearchInput'
 import { listPeriodRequests } from '../api/requests'
 import PeriodRequestActionDialog from '../components/PeriodRequestActionDialog'
 import SecurityCaseTabs, { type SecurityCaseTabKey } from '../components/SecurityCaseTabs'
@@ -61,9 +62,11 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
     queryFn: () => listPeriodRequests(type),
   })
 
+  // 지역청/경찰서는 서버 전송 여부 미확정이라 클라이언트 필터 유지(docs/
+  // architecture.md "상태관리"). 검색어만 URL 쿼리(?q=)에 동기화(2026-09-18 배치 B).
   const [jurisdictionFilter, setJurisdictionFilter] = useState(ALL)
   const [stationFilter, setStationFilter] = useState(ALL)
-  const [search, setSearch] = useState('')
+  const { value: search, draft, setDraft, commit } = useUrlSearchInput('q')
   const [approveTarget, setApproveTarget] = useState<SecurityCase | null>(null)
 
   const requests = requestsQuery.data ?? []
@@ -128,16 +131,14 @@ function PeriodRequestListPage({ type }: PeriodRequestListPageProps) {
           </SelectContent>
         </Select>
 
-        <div className="relative sm:max-w-64 sm:flex-1">
-          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="관리번호 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-card pl-8"
-            aria-label="관리번호 검색"
-          />
-        </div>
+        <SearchInput
+          draft={draft}
+          onDraftChange={setDraft}
+          onCommit={commit}
+          placeholder="관리번호 검색"
+          aria-label="관리번호 검색"
+          className="sm:max-w-64 sm:flex-1"
+        />
       </div>
 
       {requestsQuery.isLoading && <ListSkeleton columns={7} />}

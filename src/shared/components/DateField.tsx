@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon, X } from 'lucide-react'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -161,41 +161,60 @@ function DateCalendarField({
     ...(maxDateObj ? [{ after: maxDateObj }] : []),
   ]
 
+  // 선택된 날짜가 있으면 필드 오른쪽에 개별 해제(X) 버튼을 보여준다 — 화면 전체를
+  // 한번에 되돌리는 "초기화" 버튼 대신, 이 필드 하나만 지울 수 있게 한다(2026-09-18
+  // 사용자 결정: 다른 필터들도 각자 독립적으로 "전체"로 되돌릴 수 있는데 기간만
+  // 예외라 통일).
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <div className={cn('relative', className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            id={id}
+            type="button"
+            disabled={disabled}
+            aria-invalid={ariaInvalid}
+            aria-label={ariaLabel}
+            className={cn(
+              FIELD_CLASS,
+              'w-full',
+              selected ? 'pr-7 text-foreground' : 'text-muted-foreground',
+            )}
+          >
+            <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
+            {selected ? formatDisplay(selected) : placeholder}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selected}
+            disabled={calendarDisabled.length > 0 ? calendarDisabled : undefined}
+            yearGrid={yearGrid}
+            startMonth={yearGrid ? minDateObj : undefined}
+            endMonth={yearGrid ? maxDateObj : undefined}
+            onSelect={(date) => {
+              if (!date) return
+              onChange(formatDateOnly(date))
+              setOpen(false)
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+      {selected && !disabled && (
         <button
-          id={id}
           type="button"
-          disabled={disabled}
-          aria-invalid={ariaInvalid}
-          aria-label={ariaLabel}
-          className={cn(
-            FIELD_CLASS,
-            selected ? 'text-foreground' : 'text-muted-foreground',
-            className,
-          )}
-        >
-          <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
-          {selected ? formatDisplay(selected) : placeholder}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={selected}
-          disabled={calendarDisabled.length > 0 ? calendarDisabled : undefined}
-          yearGrid={yearGrid}
-          startMonth={yearGrid ? minDateObj : undefined}
-          endMonth={yearGrid ? maxDateObj : undefined}
-          onSelect={(date) => {
-            if (!date) return
-            onChange(formatDateOnly(date))
-            setOpen(false)
+          onClick={(e) => {
+            e.stopPropagation()
+            onChange('')
           }}
-        />
-      </PopoverContent>
-    </Popover>
+          aria-label={`${ariaLabel ?? placeholder} 지우기`}
+          className="absolute top-1/2 right-2.5 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
+    </div>
   )
 }
 

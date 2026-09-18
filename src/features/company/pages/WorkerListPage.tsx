@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -19,6 +18,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
+import SearchInput from '@/shared/components/SearchInput'
+import { useUrlSearchInput } from '@/shared/hooks/useUrlSearchInput'
 import { listWorkers, type Worker } from '../api/workers'
 import RegisterWorkerDialog from '../components/RegisterWorkerDialog'
 import EditWorkerDialog from '../components/EditWorkerDialog'
@@ -27,7 +28,10 @@ import DeleteWorkerDialog from '../components/DeleteWorkerDialog'
 function WorkerListPage() {
   const navigate = useNavigate()
   const workersQuery = useQuery({ queryKey: ['workers'], queryFn: listWorkers })
-  const [search, setSearch] = useState('')
+  // 검색어만 URL 쿼리(?q=)에 동기화 — 서버 API(GetGuardList)에 파라미터가 없어
+  // 클라이언트 필터는 그대로 둔다(docs/architecture.md "상태관리", 2026-09-18
+  // 배치 B). 엔터/검색버튼을 눌러야 커밋(IME 조합 깨짐 방지).
+  const { value: search, draft, setDraft, commit } = useUrlSearchInput('q')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Worker | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Worker | null>(null)
@@ -61,16 +65,14 @@ function WorkerListPage() {
         </span>
         {/* 검색+데스크톱 등록 버튼은 xl 이상 전용. */}
         <div className="hidden gap-2.5 xl:flex">
-          <div className="relative sm:w-64">
-            <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="이름 · 사번 검색"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-card pl-8"
-              aria-label="이름 사번 검색"
-            />
-          </div>
+          <SearchInput
+            draft={draft}
+            onDraftChange={setDraft}
+            onCommit={commit}
+            placeholder="이름 · 사번 검색"
+            aria-label="이름 사번 검색"
+            className="sm:w-64"
+          />
           <Button onClick={() => setDialogOpen(true)} className="shrink-0">
             <Plus />
             근무자 등록

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { KeyRound, MoreVertical, Search } from 'lucide-react'
+import { KeyRound, MoreVertical } from 'lucide-react'
+import { useUrlSearchInput } from '@/shared/hooks/useUrlSearchInput'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
+import SearchInput from '@/shared/components/SearchInput'
 import { useAuthStore } from '../../auth/store/authStore'
 import { listPoliceAccounts, type PoliceAccountRow } from '../../police/api/accountManagement'
 import ResetPoliceAccountPasswordDialog from '../../police/components/ResetPoliceAccountPasswordDialog'
@@ -38,7 +39,10 @@ function GuestAccountsTab() {
   const user = useAuthStore((state) => state.user)
   const accountsQuery = useQuery({ queryKey: QUERY_KEY, queryFn: listPoliceAccounts })
 
-  const [search, setSearch] = useState('')
+  // 검색어만 URL 쿼리(?q=)에 동기화 — 서버 API에 파라미터가 없어 클라이언트
+  // 필터는 그대로 둔다(docs/architecture.md "상태관리", 2026-09-18 배치 B). 엔터/
+  // 검색버튼을 눌러야 커밋(IME 조합 깨짐 방지).
+  const { value: search, draft, setDraft, commit } = useUrlSearchInput('q')
   const [resetTarget, setResetTarget] = useState<PoliceAccountRow | null>(null)
 
   const guests = (accountsQuery.data ?? []).filter((a) => a.levelName === '게스트')
@@ -78,16 +82,14 @@ function GuestAccountsTab() {
       <ManagerTabs active="게스트" />
 
       <div className="hidden xl:flex xl:items-center xl:justify-end">
-        <div className="relative xl:w-64">
-          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="소속·아이디 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-card pl-8"
-            aria-label="소속·아이디 검색"
-          />
-        </div>
+        <SearchInput
+          draft={draft}
+          onDraftChange={setDraft}
+          onCommit={commit}
+          placeholder="소속·아이디 검색"
+          aria-label="소속·아이디 검색"
+          className="xl:w-64"
+        />
       </div>
 
       {accountsQuery.isLoading && <ListSkeleton columns={3} />}

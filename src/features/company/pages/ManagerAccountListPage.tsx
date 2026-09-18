@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { KeyRound, List, MoreVertical, Pencil, Search } from 'lucide-react'
+import { KeyRound, List, MoreVertical, Pencil } from 'lucide-react'
+import { useUrlSearchInput } from '@/shared/hooks/useUrlSearchInput'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
+import SearchInput from '@/shared/components/SearchInput'
 import { useAuthStore } from '../../auth/store/authStore'
 import { listSecurityCases } from '../api/requests'
 import {
@@ -59,7 +60,11 @@ function ManagerAccountListPage() {
   // 본사 경호목록 화면과 캐시 공유.
   const casesQuery = useQuery({ queryKey: ['security-cases-all'], queryFn: listSecurityCases })
 
-  const [search, setSearch] = useState('')
+  // 검색어만 URL 쿼리(?q=)에 동기화 — 서버 API(GetStecUserList)에 파라미터가 없어
+  // 클라이언트 필터는 그대로 두고, 새로고침 시 검색어만 유지되게 한다
+  // (docs/architecture.md "상태관리", 2026-09-18 배치 B). 엔터/검색버튼을 눌러야
+  // 커밋(IME 조합 깨짐 방지).
+  const { value: search, draft, setDraft, commit } = useUrlSearchInput('q')
   const [editTarget, setEditTarget] = useState<ManagerAccount | null>(null)
   const [resetTarget, setResetTarget] = useState<ManagerAccount | null>(null)
   const [assignedCasesTarget, setAssignedCasesTarget] = useState<ManagerAccount | null>(null)
@@ -127,16 +132,14 @@ function ManagerAccountListPage() {
 
       {/* 목록형 헤더 규칙(docs/mobile-ui) — 검색은 데스크톱 전용. */}
       <div className="hidden xl:flex xl:items-center xl:justify-end">
-        <div className="relative xl:w-64">
-          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="이름 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-card pl-8"
-            aria-label="이름 검색"
-          />
-        </div>
+        <SearchInput
+          draft={draft}
+          onDraftChange={setDraft}
+          onCommit={commit}
+          placeholder="이름 검색"
+          aria-label="이름 검색"
+          className="xl:w-64"
+        />
       </div>
 
       {accountsQuery.isLoading && <ListSkeleton columns={6} />}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { KeyRound, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { KeyRound, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -19,6 +18,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
+import SearchInput from '@/shared/components/SearchInput'
+import { useUrlSearchInput } from '@/shared/hooks/useUrlSearchInput'
 import { useAuthStore } from '../../auth/store/authStore'
 import { listGuestAccounts, type GuestAccount } from '../api/guests'
 import IssueGuestAccountDialog, {
@@ -39,7 +40,10 @@ function GuestListPage() {
   const user = useAuthStore((state) => state.user)
   const guestsQuery = useQuery({ queryKey: ['guests'], queryFn: listGuestAccounts })
 
-  const [search, setSearch] = useState('')
+  // 검색어만 URL 쿼리(?q=)에 동기화 — 서버 API(GetGuestUserList)엔 groupSeq(스코프)
+  // 뿐이라 클라이언트 필터는 그대로 둔다(docs/architecture.md "상태관리", 2026-09-18
+  // 배치 B). 엔터/검색버튼을 눌러야 커밋(IME 조합 깨짐 방지).
+  const { value: search, draft, setDraft, commit } = useUrlSearchInput('q')
   const [dialogState, setDialogState] = useState<IssueGuestDialogState>(null)
   const [deleteTarget, setDeleteTarget] = useState<GuestAccount | null>(null)
   const [resetTarget, setResetTarget] = useState<{ loginId: string; userSeq: number } | null>(null)
@@ -127,16 +131,14 @@ function GuestListPage() {
 
       {/* 검색+데스크톱 발급 버튼은 xl 이상 전용. */}
       <div className="hidden gap-2.5 xl:flex xl:items-center xl:justify-end">
-        <div className="relative xl:w-64">
-          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="아이디 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-card pl-8"
-            aria-label="아이디 검색"
-          />
-        </div>
+        <SearchInput
+          draft={draft}
+          onDraftChange={setDraft}
+          onCommit={commit}
+          placeholder="아이디 검색"
+          aria-label="아이디 검색"
+          className="xl:w-64"
+        />
         <Button onClick={() => setDialogState({ mode: 'issue' })} className="shrink-0">
           <Plus />
           게스트 계정 발급

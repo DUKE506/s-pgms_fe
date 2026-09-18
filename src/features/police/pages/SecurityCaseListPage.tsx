@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router'
-import { CheckCircle2, ChevronRight, Inbox, Plus, Search, Shield, UserCheck } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Inbox, Plus, Shield, UserCheck } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -13,9 +12,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
+import SearchInput from '@/shared/components/SearchInput'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { useUrlParam } from '@/shared/hooks/useUrlParam'
+import { useUrlSearchInput } from '@/shared/hooks/useUrlSearchInput'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '../../auth/store/authStore'
 import { listSecurityCases } from '../api/securityCases'
@@ -88,7 +89,8 @@ function SecurityCaseListPage() {
   // 검색(keyword)은 서버 파라미터로 보낸다. 상태는 GetDeployList에 필터 파라미터가
   // 없어(스웨거에 groupSeq/keyword뿐) 클라이언트에서 처리 — 진행중 건이 많지 않다는
   // 전제로 페이지네이션도 없다(docs/architecture.md "상태관리", 2026-09-18 결정).
-  const [search, setSearch] = useUrlParam('q', '')
+  // 검색은 엔터/검색버튼을 눌러야 커밋(IME 조합 깨짐 방지, 2026-09-18).
+  const { value: search, draft, setDraft, commit } = useUrlSearchInput('q')
   const [statusFilter, setStatusFilter] = useUrlParam('status', ALL)
   const casesQuery = useQuery({
     queryKey: ['police-security-cases', search],
@@ -210,16 +212,14 @@ function SecurityCaseListPage() {
         {/* 검색+신규접수 텍스트 버튼은 데스크톱 전용 — 모바일 목업(docs/mobile-ui)엔
             검색 인풋 자체가 없고, 신규접수는 위 제목 옆 "+" 아이콘 버튼이 대신함. */}
         <div className="hidden gap-2.5 xl:flex">
-          <div className="relative flex-1 sm:max-w-64">
-            <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="관리번호 검색"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-card pl-8"
-              aria-label="관리번호 검색"
-            />
-          </div>
+          <SearchInput
+            draft={draft}
+            onDraftChange={setDraft}
+            onCommit={commit}
+            placeholder="관리번호 검색"
+            aria-label="관리번호 검색"
+            className="flex-1 sm:max-w-64"
+          />
           {/* 신규접수는 경찰서 전용 라우트(/security-cases/new) — 게스트는 조회
               전용이라 버튼 자체를 숨긴다(화면 9/10, 2026-08-27). */}
           {user?.role !== '게스트' && (

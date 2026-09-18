@@ -52,7 +52,9 @@ describe('GuestListPage', () => {
     renderPage()
     await screen.findAllByText('GangnamGuest1')
 
+    // 검색은 엔터를 눌러야 커밋된다(2026-09-18, IME 조합 깨짐 방지).
     fireEvent.change(screen.getByLabelText('아이디 검색'), { target: { value: 'Guest3' } })
+    fireEvent.keyDown(screen.getByLabelText('아이디 검색'), { key: 'Enter' })
 
     expect(withinTable().getByText('GangnamGuest3')).toBeInTheDocument()
     expect(screen.queryByText('GangnamGuest1')).not.toBeInTheDocument()

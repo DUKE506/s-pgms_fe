@@ -59,7 +59,9 @@ describe('RequestListPage', () => {
     renderPage()
     await screen.findAllByText('26-02-강남경찰서')
 
+    // 검색은 엔터를 눌러야 커밋된다(2026-09-18, IME 조합 깨짐 방지).
     fireEvent.change(screen.getByLabelText('관리번호 검색'), { target: { value: '서초' } })
+    fireEvent.keyDown(screen.getByLabelText('관리번호 검색'), { key: 'Enter' })
 
     expect(withinTable().getByText('26-02-서초경찰서')).toBeInTheDocument()
     expect(screen.queryByText('26-02-강남경찰서')).not.toBeInTheDocument()

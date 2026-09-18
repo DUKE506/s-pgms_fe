@@ -63,12 +63,15 @@ describe('WorkerListPage', () => {
     renderPage()
     await screen.findAllByText('최민준')
 
+    // 검색은 엔터를 눌러야 커밋된다(2026-09-18, IME 조합 깨짐 방지).
     fireEvent.change(screen.getByLabelText('이름 사번 검색'), { target: { value: '정우진' } })
+    fireEvent.keyDown(screen.getByLabelText('이름 사번 검색'), { key: 'Enter' })
 
     expect(withinTable().getByText('정우진')).toBeInTheDocument()
     expect(screen.queryByText('최민준')).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('이름 사번 검색'), { target: { value: '220198' } })
+    fireEvent.keyDown(screen.getByLabelText('이름 사번 검색'), { key: 'Enter' })
     expect(withinTable().getByText('이서연')).toBeInTheDocument()
   })
 

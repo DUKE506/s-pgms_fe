@@ -1,8 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router'
-import { CheckCircle2, ChevronRight, Search, Shield, UserCheck } from 'lucide-react'
+import { CheckCircle2, ChevronRight, Shield, UserCheck } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -19,9 +18,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
+import SearchInput from '@/shared/components/SearchInput'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { Pagination, LoadMoreButton } from '@/shared/components/HybridPagination'
 import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
+import { useSearchDraft } from '@/shared/hooks/useSearchDraft'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { GUARD_CASE_STATUS_CODE } from '@/shared/lib/deployStatus'
 import { cn } from '@/lib/utils'
@@ -77,6 +78,10 @@ function SecurityCaseListPage() {
   const groupSeq = searchParams.get('station') ?? ''
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1)
 
+  // 검색창은 엔터/검색버튼을 눌러야 커밋(IME 조합 깨짐 방지, 2026-09-18) — 입력
+  // 중 값(draft)은 로컬로 두고, commit에서만 patch로 URL(q)에 반영한다.
+  const [searchDraft, setSearchDraft] = useSearchDraft(search)
+
   // 필터가 바뀌면 항상 page를 지운다(1페이지로 복귀) — region이 바뀌면 station도
   // 함께 지운다("지역청 선택 후 경찰서 선택"만 허용, 2026-09-18 결정).
   function patch(next: Record<string, string | undefined>, resetStation = false) {
@@ -93,6 +98,10 @@ function SecurityCaseListPage() {
       },
       { replace: true },
     )
+  }
+
+  function commitSearch() {
+    patch({ q: searchDraft || undefined })
   }
 
   // KPI 카드 4개(전체+상태별)는 사용자가 지금 적용한 필터와 무관하게 항상 전체
@@ -238,16 +247,14 @@ function SecurityCaseListPage() {
           </SelectContent>
         </Select>
 
-        <div className="relative sm:max-w-64 sm:flex-1">
-          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="관리번호 검색"
-            value={search}
-            onChange={(e) => patch({ q: e.target.value || undefined })}
-            className="bg-card pl-8"
-            aria-label="관리번호 검색"
-          />
-        </div>
+        <SearchInput
+          draft={searchDraft}
+          onDraftChange={setSearchDraft}
+          onCommit={commitSearch}
+          placeholder="관리번호 검색"
+          aria-label="관리번호 검색"
+          className="sm:max-w-64 sm:flex-1"
+        />
       </div>
 
       {listQuery.isLoading && <ListSkeleton columns={7} />}

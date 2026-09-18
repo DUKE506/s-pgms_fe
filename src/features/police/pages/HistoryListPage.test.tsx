@@ -51,17 +51,21 @@ describe('HistoryListPage', () => {
 
     // 나머지는 페이지네이션(페이지당 10건, 2026-09-18)에 걸려 첫 페이지에 다 안
     // 나올 수 있어 검색으로 하나씩 짚어 확인한다 — 서버 스코프(전국 전체, 상태
-    // 안 가림) 자체를 보는 게 목적이라 페이지 위치는 무관.
+    // 안 가림) 자체를 보는 게 목적이라 페이지 위치는 무관. 검색은 엔터를 눌러야
+    // 커밋된다(IME 조합 깨짐 방지).
     fireEvent.change(screen.getByLabelText('관리번호 검색'), { target: { value: 'ST114' } })
+    fireEvent.keyDown(screen.getByLabelText('관리번호 검색'), { key: 'Enter' })
     await screen.findAllByText('25-07-분당경찰서 · ST114')
     expect(withinTable().getByText('25-07-분당경찰서 · ST114')).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('관리번호 검색'), { target: { value: 'ST116' } })
+    fireEvent.keyDown(screen.getByLabelText('관리번호 검색'), { key: 'Enter' })
     await screen.findAllByText('25-05-부산진경찰서 · ST116')
     expect(withinTable().getByText('25-05-부산진경찰서 · ST116')).toBeInTheDocument()
 
     // 진행중(배정) 건도 함께 보인다 — Phase4 대시보드 미구현으로 인한 확장(2026-08-27)
     fireEvent.change(screen.getByLabelText('관리번호 검색'), { target: { value: 'ST101' } })
+    fireEvent.keyDown(screen.getByLabelText('관리번호 검색'), { key: 'Enter' })
     await screen.findAllByText('26-01-강남경찰서 · ST101')
     expect(withinTable().getByText('26-01-강남경찰서 · ST101')).toBeInTheDocument()
   })

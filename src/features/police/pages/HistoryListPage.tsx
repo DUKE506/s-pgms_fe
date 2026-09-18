@@ -1,7 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router'
-import { ChevronRight, Search } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { Input } from '@/components/ui/input'
 import DateField from '@/shared/components/DateField'
 import {
   Select,
@@ -19,9 +18,11 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import ListSkeleton from '@/shared/components/ListSkeleton'
+import SearchInput from '@/shared/components/SearchInput'
 import StatusBadge from '@/shared/components/StatusBadge'
 import { Pagination, LoadMoreButton } from '@/shared/components/HybridPagination'
 import { useIsDesktop } from '@/shared/hooks/useIsDesktop'
+import { useSearchDraft } from '@/shared/hooks/useSearchDraft'
 import { formatManagementNumber } from '@/shared/lib/managementNumber'
 import { GUARD_CASE_STATUS_CODE } from '@/shared/lib/deployStatus'
 import { useAuthStore, type Role } from '../../auth/store/authStore'
@@ -88,6 +89,9 @@ function HistoryListPage() {
   const dateTo = searchParams.get('to') ?? ''
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1)
 
+  // 검색창은 엔터/검색버튼을 눌러야 커밋(IME 조합 깨짐 방지, 2026-09-18).
+  const [searchDraft, setSearchDraft] = useSearchDraft(search)
+
   function patch(next: Record<string, string | undefined>) {
     setSearchParams(
       (prev) => {
@@ -101,6 +105,10 @@ function HistoryListPage() {
       },
       { replace: true },
     )
+  }
+
+  function commitSearch() {
+    patch({ q: searchDraft || undefined })
   }
 
   function goToPage(next: number) {
@@ -209,16 +217,14 @@ function HistoryListPage() {
           />
         </div>
 
-        <div className="relative sm:max-w-64 sm:flex-1">
-          <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="관리번호 검색"
-            value={search}
-            onChange={(e) => patch({ q: e.target.value || undefined })}
-            className="bg-card pl-8"
-            aria-label="관리번호 검색"
-          />
-        </div>
+        <SearchInput
+          draft={searchDraft}
+          onDraftChange={setSearchDraft}
+          onCommit={commitSearch}
+          placeholder="관리번호 검색"
+          aria-label="관리번호 검색"
+          className="sm:max-w-64 sm:flex-1"
+        />
       </div>
 
       {historyQuery.isLoading && <ListSkeleton columns={historyColumns} />}
