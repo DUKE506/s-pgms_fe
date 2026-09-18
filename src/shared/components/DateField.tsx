@@ -90,6 +90,20 @@ function withinRange(iso: string, minDate?: string, maxDate?: string): boolean {
   return true
 }
 
+// 시작일/종료일처럼 상대편 값을 minDate·maxDate로 받는 필드에서, 입력이 그
+// 범위를 벗어났을 때 보여줄 문구. 필드가 "시작일"인지 "종료일"인지는 모르므로
+// 경계값 기준으로만 안내한다.
+function rangeErrorMessage(minDate?: string, maxDate?: string): string {
+  const minObj = parseDateOnly(minDate ?? '')
+  const maxObj = parseDateOnly(maxDate ?? '')
+  if (minObj && maxObj) {
+    return `${formatDisplay(minObj)} ~ ${formatDisplay(maxObj)} 사이의 날짜를 입력하세요`
+  }
+  if (minObj) return `${formatDisplay(minObj)} 이후 날짜를 입력하세요`
+  if (maxObj) return `${formatDisplay(maxObj)} 이전 날짜를 입력하세요`
+  return ''
+}
+
 function DateTextField({
   id,
   value,
@@ -102,12 +116,21 @@ function DateTextField({
   'aria-label': ariaLabel,
 }: DateFieldProps) {
   const [digits, setDigits] = useState(() => isoToDigits(value))
-  // 렌더 중 상태 조정(React 공식 패턴) — 부모 value가 밖에서 바뀌면(프리필·상대편
-  // 값에 의한 클램프) 표시를 맞춘다. 사용자가 타이핑 중인 미완성 상태(digits가
-  // 완성 iso와 불일치)는 그대로 둔다. useEffect로 하면 커밋 후 한 번 더 렌더가
-  // 도는 cascading render라 렌더 중 setState로 처리한다.
   const [prevValue, setPrevValue] = useState(value)
-  if (value !== prevValue && digitsToIso(digits) !== value) {
+
+  // 8자리가 다 채워졌는데 minDate/maxDate 범위를 벗어난 경우 — 실시간으로(타이핑
+  // 완료 즉시) 안내 문구를 보여준다. submit까지 기다리면 이 입력이 그냥 빈 값으로
+  // 사라진 이유를 사용자가 알 수 없다(2026-09-18 버그 리포트: 종료일이 시작일보다
+  // 빠른 날짜를 입력해도 아무 표시 없이 조용히 지워짐).
+  const parsedIso = digitsToIso(digits)
+  const rangeInvalid = digits.length === 8 && parsedIso !== '' && !withinRange(parsedIso, minDate, maxDate)
+
+  // 렌더 중 상태 조정(React 공식 패턴) — 부모 value가 밖에서 바뀌면(프리필·상대편
+  // 값에 의한 클램프) 표시를 맞춘다. 사용자가 타이핑 중인 미완성 상태와, 범위를
+  // 벗어나 onChange('')로 되돌아온 직후(rangeInvalid)는 사용자가 고칠 수 있게
+  // 입력값을 그대로 둔다. useEffect로 하면 커밋 후 한 번 더 렌더가 도는 cascading
+  // render라 렌더 중 setState로 처리한다.
+  if (value !== prevValue && !rangeInvalid && parsedIso !== value) {
     setPrevValue(value)
     setDigits(isoToDigits(value))
   } else if (value !== prevValue) {
@@ -122,19 +145,26 @@ function DateTextField({
   }
 
   return (
-    <input
-      id={id}
-      type="text"
-      inputMode="numeric"
-      autoComplete="off"
-      disabled={disabled}
-      aria-invalid={ariaInvalid}
-      aria-label={ariaLabel}
-      placeholder="YYYY.MM.DD"
-      value={formatDigits(digits)}
-      onChange={handleChange}
-      className={cn(FIELD_CLASS, className)}
-    />
+    <div className={cn('flex flex-col gap-1', className)}>
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        disabled={disabled}
+        aria-invalid={ariaInvalid || rangeInvalid}
+        aria-label={ariaLabel}
+        placeholder="YYYY.MM.DD"
+        value={formatDigits(digits)}
+        onChange={handleChange}
+        className={FIELD_CLASS}
+      />
+      {rangeInvalid && (
+        <p role="alert" className="text-[11px] text-destructive">
+          {rangeErrorMessage(minDate, maxDate)}
+        </p>
+      )}
+    </div>
   )
 }
 

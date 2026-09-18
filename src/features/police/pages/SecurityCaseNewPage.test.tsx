@@ -98,4 +98,28 @@ describe('SecurityCaseNewPage', () => {
       policeStation: account.name,
     })
   })
+
+  it('shows an inline error and rejects an end date earlier than the start date', async () => {
+    loginAsStation()
+    renderAtRoot()
+
+    typeDate('시작일', '20260610')
+    typeDate('종료일', '20260601')
+
+    expect(await screen.findByText(/2026\.06\.10 이후 날짜를 입력하세요/)).toBeInTheDocument()
+    expect(byLabel('종료일')).toHaveAttribute('aria-invalid', 'true')
+    expect((byLabel('종료일') as HTMLInputElement).value).toBe('2026.06.01')
+  })
+
+  it('shows an inline error and rejects a start date later than the end date', async () => {
+    loginAsStation()
+    renderAtRoot()
+
+    typeDate('종료일', '20260601')
+    typeDate('시작일', '20260610')
+
+    expect(await screen.findByText(/2026\.06\.01 이전 날짜를 입력하세요/)).toBeInTheDocument()
+    expect(byLabel('시작일')).toHaveAttribute('aria-invalid', 'true')
+    expect((byLabel('시작일') as HTMLInputElement).value).toBe('2026.06.10')
+  })
 })
